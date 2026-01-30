@@ -190,6 +190,7 @@ section {
 
 .common {
   grid-area: common;
+  position: relative;
   background-color: white;
   align-items: center;
 
@@ -205,6 +206,6 @@ section {
 
 .top-right {
   position: absolute;
-  top: 48px;
-  right: 48px;
+  top: 8px;
+  right: 8px;
 }
