@@ -203,10 +203,8 @@ section {
     justify-self: center;
 }
 
-
-/* Top left text */
-.top-left {
+.top-right {
   position: absolute;
   top: 8px;
-  left: 16px;
+  right: 16px;
 }
