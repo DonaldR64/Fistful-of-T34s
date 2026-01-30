@@ -2,15 +2,13 @@
 
 /*Configure the tab buttons*/
 .sheet-input,
-.sheet-display,
-.sheet-abilities {
+.sheet-display {
     display: none;
 }
 
 /* show the selected tab */
 .sheet-tabstoggle[value="input"] ~ div.sheet-input,
-.sheet-tabstoggle[value="display"] ~ div.sheet-display,
-.sheet-tabstoggle[value="abilities"] ~ div.sheet-abilities {
+.sheet-tabstoggle[value="display"] ~ div.sheet-display {
     display: block;
 }
 
@@ -23,14 +21,14 @@
     padding: 15px 0px 0px 15px;
 }
 
-input[type="hidden"][name="attr_faction"] ~ .mysheet {
+input[type="hidden"][name="attr_nation"] ~ .mysheet {
     background-color: lightgray;
 }
-input[type="hidden"][name="attr_faction"][value="Marauders"] ~ .mysheet {
-    background-color: green;
+input[type="hidden"][name="attr_nation"][value="Wermacht"] ~ .mysheet {
+    background-color: black;
 }
-input[type="hidden"][name="attr_faction"][value="Enforcers"] ~ .mysheet {
-    background-color: blue;
+input[type="hidden"][name="attr_nation"][value="Red Army"] ~ .mysheet {
+    background-color: red;
 }
 
 
@@ -48,10 +46,8 @@ main {
   grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
   grid-template-areas:"header common"
                       "header common"
-                      "attr   attr2"
-                      "weap   weap"
-                      "weap   weap"
-                      "spec   spec";
+                      "attr   attr"
+                      "attr2   attr2";
 }
 
 
@@ -191,181 +187,3 @@ section {
 }
 
 
-
-.weap {
-  grid-area: weap;
-  background-color: white;
-    align-items: center;
-}
-
-.weap h3 {
-  text-align: center;
-  color: black;
-}
-
-
-.weaponinfo{
-  grid-area: weaponinfo;
-  display: grid;
-  grid-gap: 2px;
-  grid-template-columns: 3fr 1fr 1fr 3fr;
-  grid-template-rows: 1fr;
-  background-color: white;
-  text-align: center;
-  align-items: center;
-}
-
-/* Weapon 1 */
-input[type="hidden"][value="Off"].weapon1-status ~ .weapon1{
-    display: none;
-}
-
-.weapon1 {
-    display: grid;
-    grid-gap: 1px;
-    grid-template-columns: 3fr 1fr 1fr 3fr;
-    grid-template-rows: 1;
-    background-color: white;
-    text-align: center;
-    align-items: center;
-    padding: 3px;
-}
-
-
-/* Weapon 2 */
-input[type="hidden"][value="Off"].weapon2-status ~ .weapon2{
-    display: none;
-}
- 
-.weapon2 {
-    display: grid;
-    grid-gap: 1px;
-  grid-template-columns: 3fr 1fr 1fr 3fr;
-    grid-template-rows: 1;
-    background-color: white;
-    text-align: center;
-    align-items: center;
-    padding: 3px;
-}
-
-/* Weapon 3 */
-input[type="hidden"][value="Off"].weapon3-status ~ .weapon3{
-    display: none;
-}
-input[type="hidden"][value="Equipped"].weapon3-status ~ .weapon3{
-    display: grid;
-}
-  
-.weapon3 {
-    display: grid;
-    grid-gap: 1px;
-  grid-template-columns: 3fr 1fr 1fr 3fr;
-    grid-template-rows: 1;
-    text-align: center;
-    align-items: center;
-    padding: 3px;
-}
-
-/* Weapon 4 */
-input[type="hidden"][value="Off"].weapon4-status ~ .weapon4{
-    display: none;
-}
-input[type="hidden"][value="Equipped"].weapon4-status ~ .weapon4{
-    display: grid;
-}
-  
-.weapon4 {
-    display: grid;
-    grid-gap: 1px;
-  grid-template-columns: 3fr 1fr 1fr 3fr;
-    grid-template-rows: 1;
-    text-align: center;
-    align-items: center;
-    padding: 3px;
-}
-
-/* Weapon 5 */
-input[type="hidden"][value="Off"].weapon5-status ~ .weapon5{
-    display: none;
-}
-input[type="hidden"][value="Equipped"].weapon5-status ~ .weapon5{
-    display: grid;
-}
-  
-.weapon5 {
-    display: grid;
-    grid-gap: 1px;
-  grid-template-columns: 3fr 1fr 1fr 3fr;
-    grid-template-rows: 1;
-    text-align: center;
-    align-items: center;
-    padding: 3px;
-}
-
-
-/* Special */
-
-.spec {
-  grid-area: spec;
-  background-color: white;
-    align-items: center;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-.specials {
-  grid-area: specials;
-  background-color: white;
-}
-
-.spheader {
-  text-align: center;
-}
-
-.spheader h2 {
-  text-align: center;
-  color: white;
-}
-
-input[type="hidden"][name="attr_nation"]:is([value="Canada"]) ~ .spheader h2 {
-  color: black;
-}
-
-.spbody h4 {
-  color: white;
-}
-input[type="hidden"][name="attr_nation"]:is([value="Canada"]) ~ .spbody {
-  color: black;
-}
-
-
-.item span {
-  font-size: 14px;
-}
-
-.spbody {
-  color: white;
-  align-items: center;
-  text-align: center;
-  padding: 0px 0px 0px 20px;
-}
-
-.item {
-  align-items: center;
-  width: fit-content;
-  padding: 5px;
-  text-align: left;
-  margin-bottom: 1em;
-}
