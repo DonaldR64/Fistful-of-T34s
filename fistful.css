@@ -44,8 +44,8 @@ main {
   grid-gap: 4px;
   grid-template-columns: 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr 1fr 1fr;
-  grid-template-areas:"header common common"
-                      "header common common"
+  grid-template-areas:"common common common"
+                      "common common common"
                       "attr   attr attr"
                       "attr2   attr2 attr2";
 }
