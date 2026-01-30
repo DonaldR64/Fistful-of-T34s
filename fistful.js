@@ -1,6 +1,6 @@
-const Warpath = (() => {
-    const version = '2025.11.8';
-    if (!state.Warpath) {state.Warpath = {}};
+const FFT = (() => {
+    const version = '2026.1.30';
+    if (!state.FFT) {state.FFT = {}};
 
     const pageInfo = {};
     const rowLabels = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","AA","AB","AC","AD","AE","AF","AG","AH","AI","AJ","AK","AL","AM","AN","AO","AP","AQ","AR","AS","AT","AU","AV","AW","AX","AY","AZ","BA","BB","BC","BD","BE","BF","BG","BH","BI"];
@@ -81,46 +81,27 @@ const Warpath = (() => {
 
     let ModelArray = {};
     let UnitArray = {};
-    let PlayerInfo = {};
-    let currentUnitID = "";
+
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
 
-    const playerCodes = {
-        "Don": "2520699",
-        "DonAlt": "5097409",
-        "Ted": "6951960",
-        "Vic": "4892",
-        "Ian": "4219310",
-    }
 
-    const PlayerIDs = () => {
-        let players = Object.keys(playerCodes);
-        for (let i=0;i<players.length;i++) {
-            let roll20ID = playerCodes[players[i]];
-            let playerObj = findObjs({_type:'player',_d20userid: roll20ID})[0];
-            if (playerObj) {
-                PlayerInfo[playerObj.get("id")] = players[i];
-            }
-        }
-    }
-
-    const Factions = {
-        "Marauders": {
+    const Nations = {
+        "Red Army": {
             "image": "",
-            "backgroundColour": "#00ff00",
+            "backgroundColour": "#ff0000",
             "titlefont": "Anton",
             "fontColour": "#000000",
-            "borderColour": "#00ff00",
+            "borderColour": "#ff0000",
             "borderStyle": "5px groove",
 
         },
-        "Enforcers": {
+        "Wermacht": {
             "image": "",
             "backgroundColour": "#ffffff",
             "titlefont": "Bokor",
-            "fontColour": "#0000ff",
-            "borderColour": "#0000ff",
+            "fontColour": "#000000",
+            "borderColour": "#000000",
             "borderStyle": "5px double",
         },
 
@@ -137,22 +118,17 @@ const Warpath = (() => {
 
 
     const SM = {
-       hover: "status_brown",
+       suppressed: "status_yellow",
+       qc: "status_red",
     }
 
 
     //height is height of terrain element
-    //Hills will be elevations lines - height 3 per elevation
     //move: Open, Difficult, Impassable
-    //move arrays are: Infantry + Heavy Infantry / Bike / Walker / Vehicle / Super-Heavy
-    //cover - ignore wall adjacent for firing unit 
-    //woods LOS Is 2 hexes in, ignore edge hex for cover firing out
-
+    //cover for area fire: 0 = none, 1 = light, 2 = heavy
 
     const LinearTerrain = {
-        "#00ff00": {name: "Hedge",height: 1,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Difficult", Walker: "Difficult", Vehicle: "Difficult", "Super-Heavy": "Open"},cover: {Infantry: true,"Heavy Infantry": true,Bike: true, Walker: true, Vehicle: true, "Super-Heavy": false}},
-       "#980000": {name: "Wall",height: 1,move: {Infantry: "Open","Heavy Infantry": "Open",Bike: "Difficult", Walker: "Difficult", Vehicle: "Difficult", "Super-Heavy": "Open"},cover: {Infantry: true,"Heavy Infantry": true, Bike: true, Walker: true, Vehicle: true, "Super-Heavy": false}},
-        "#ff0000 Wall": {name: "High Wall",height: 2,move: {Infantry: "Difficult","Heavy Infantry": "Difficult", Bike: "Impassable", Walker: "Difficult", Vehicle: "Impassable", "Super-Heavy": "Open"},cover: {Infantry: true,"Heavy Infantry": true, Bike: true, Walker: true, Vehicle: true, "Super-Heavy": false}},
+
 
 
 
@@ -163,25 +139,16 @@ const Warpath = (() => {
 
 
     const TerrainInfo = {
-        "Woods": {name: "Woods",height: 4,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Difficult", Walker: "Difficult", Vehicle: "Difficult", "Super-Heavy": "Difficult"},cover:  {Infantry: true,"Heavy Infantry": true, Bike: true, Walker: true, Vehicle: true, "Super-Heavy": true}},
-        "Craters": {name: "Craters",height: 0,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Difficult", Walker: "Open", Vehicle: "Open", "Super-Heavy": "Open"}, cover: {Infantry: true,"Heavy Infantry": true, Bike: true, Walker: true, Vehicle: false, "Super-Heavy": false}},
-        "Rubble": {name: "Rubble",height: 0,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Difficult", Walker: "Open", Vehicle: "Open", "Super-Heavy": "Open"}, cover: {Infantry: true,"Heavy Infantry": true, Bike: true, Walker: true, Vehicle: false, "Super-Heavy": false}},
-        "Broken Ground": {name: "Broken Ground",height: 0,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Difficult", Walker: "Open", Vehicle: "Open", "Super-Heavy": "Open"}, cover: {Infantry: true,"Heavy Infantry": true, Bike: true, Walker: true, Vehicle: false, "Super-Heavy": false}},
-        "Low Building": {name: "Low Building",height: 4,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Impassable", Walker: "Open", Vehicle: "Impassable", "Super-Heavy": "Impassable"}, cover: {Infantry: true,"Heavy Infantry": true, Bike: false, Walker: false, Vehicle: false, "Super-Heavy": false}},
-        "Med Building": {name: "Med Building",height: 6,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Impassable", Walker: "Open", Vehicle: "Impassable", "Super-Heavy": "Impassable"},cover: {Infantry: true,"Heavy Infantry": true, Bike: false, Walker: false, Vehicle: false, "Super-Heavy": false}},
-        "Tall Building": {name: "Tall Building",height: 8,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Impassable", Walker: "Open", Vehicle: "Impassable", "Super-Heavy": "Impassable"},cover: {Infantry: true,"Heavy Infantry": true, Bike: false, Walker: false, Vehicle: false, "Super-Heavy": false}},
-        "River": {name: "River",height: 0, move: {Infantry: "Difficult","Heavy Infantry": "Difficult", Bike: "Impassable", Walker: "Difficult", Vehicle: "Impassable", "Super-Heavy": "Difficult"},cover: {Infantry: true,"Heavy Infantry": true, Bike: false, Walker: false, Vehicle: false, "Super-Heavy": false}},
-        "Ruins": {name: "Ruins", height: 4,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Impassable", Walker: "Open", Vehicle: "Impassable", "Super-Heavy": "Impassable"},cover: {Infantry: true,"Heavy Infantry": true, Bike: true, Walker: true, Vehicle: true, "Super-Heavy": false}},
-        "Open": {name: "Open Ground", height: 0,move: {Infantry: "Open","Heavy Infantry": "Open", Bike: "Open", Walker: "Open", Vehicle: "Open", "Super-Heavy": "Open"},cover: {Infantry: false,"Heavy Infantry": false, Bike: false, Walker: false, Vehicle: false, "Super-Heavy": false}},
+        "Heavy Woods": {name: "Heavy Woods",height: 1, difficult: true, },
+        
 
 
 
     }
 
     const HillHeights = {
-        //each level has a height of 3
-        "#000000": 3,
-        "#666666": 6,
+        "#000000": 1,
+        "#666666": 2,
     }
 
 
@@ -618,6 +585,7 @@ const Warpath = (() => {
             this.label = offset.label();
             this.elevation = 0;
             this.terrain = "Open";
+            this.difficult = false;
             this.edges = {};
             _.each(DIRECTIONS,a => {
                 this.edges[a] = "Open";
@@ -648,56 +616,32 @@ const Warpath = (() => {
             this.charID = charID;
             this.hexLabel = label;
 
-            this.faction = aa.faction || "Neutral";
-            if (state.Warpath.factions[0] === "") {
-                state.Warpath.factions[0] = this.faction;
-            } else if (state.Warpath.factions[0] !== this.faction && state.Warpath.factions[1] === "") {
-                state.Warpath.factions[1] = this.faction;
+            this.nation = aa.nation || "Neutral";
+            if (state.FFT.nations[0] === "") {
+                state.FFT.nations[0] = this.nation;
+            } else if (state.FFT.nations[0] !== this.nation && state.FFT.nations[1] === "") {
+                state.FFT.nations[1] = this.nation;
             }
-            this.player = (this.faction === "Neutral") ? 2:(state.Warpath.factions[0] === this.faction)? 0:1;
-            this.keywords = aa.unitkey || " ";
-            this.bases = parseInt(aa.bases);
+            this.player = (this.nation === "Neutral") ? 2:(state.FFT.nations[0] === this.nation)? 0:1;
             this.type = aa.type;
-            this.height = parseInt(aa.height);
-            this.speed = aa.speed.split("/").map(e => {return parseInt(e)}) || [0,0];
-            this.unitStrength = aa.us.split("/").map(e => {return parseInt(e)}) || [1,1];
-            this.shoot = parseInt(aa.shoot) || 0;
-            this.assault = parseInt(aa.assault) || 0;
-            this.armour = parseInt(aa.armour) || 0;
-            this.save = parseInt(aa.save) || 0;
-            
+            this.movement = parseInt(aa.movement);
+            this.moveType = aa.moveType;
+            this.quality = aa.quality;
+            this.armourF = parseInt(aa.armourF) || "NA"; 
+            this.armourSR = parseInt(aa.armourSR) || "NA"; 
+            this.rof = parseInt(aa.rof);
+            this.range = aa.range.split("/");
+            _.each(this.range, band => {
+                band = parseInt(band);
+            })
+            this.antiInf = parseInt(aa.antiInf) || 0;
+            let pen = aa.pen;
+
+
+
+
             this.unitID = "";
 
-
-
-            let weapons = [];
-            for (let i=0;i<5;i++) {
-                let w=i+1;
-                let prefix = "weapon" + w;
-                let wname = aa[prefix + "name"];
-                let wequip = aa[prefix + "equipped"];
-                if (!wequip || wequip === undefined || wequip === "Off") {continue};
-                if (!wname || wname === undefined || wname === null) {continue};
-
-                let wrange = aa[prefix + "range"];
-                if (wrange !== "A") {
-                    wrange = parseInt(wrange);
-                }
-                
-                let watt = aa[prefix + "attack"];
-                watt = parseInt(watt);
-
-                let weapon = {
-                    name: wname,
-                    range: wrange,
-                    attack: watt,
-                    keywords: aa[prefix + "keywords"],
-                    fx: aa[prefix + "fx"],
-                    sound: aa[prefix + "sound"],
-                }
-                weapons.push(weapon);
-            }
-            this.weapons = weapons;
 
 
 
@@ -737,7 +681,7 @@ const Warpath = (() => {
     class Unit {
         constructor(mID,uID) {
             let refModel = ModelArray[mID];
-            this.faction = refModel.faction;
+            this.nation = refModel.nation;
             this.player = refModel.player;
             this.bases = refModel.bases;
             this.type = refModel.type;
@@ -877,20 +821,20 @@ const Warpath = (() => {
             output += "/desc ";
         }
 
-        if (!outputCard.side || !Factions[outputCard.side]) {
+        if (!outputCard.side || !Nations[outputCard.side]) {
             outputCard.side = "Neutral";
         }
 
         //start of card
-        output += `<div style="display: table; border: ` + Factions[outputCard.side].borderStyle + " " + Factions[outputCard.side].borderColour + `; `;
+        output += `<div style="display: table; border: ` + Nations[outputCard.side].borderStyle + " " + Nations[outputCard.side].borderColour + `; `;
         output += `background-color: #EEEEEE; width: 100%; text-align: center; `;
         output += `border-radius: 1px; border-collapse: separate; box-shadow: 5px 3px 3px 0px #aaa;;`;
         output += `"><div style="display: table-header-group; `;
-        output += `background-color: ` + Factions[outputCard.side].backgroundColour + `; `;
-        output += `background-image: url(` + Factions[outputCard.side].image + `), url(` + Factions[outputCard.side].image + `); `;
+        output += `background-color: ` + Nations[outputCard.side].backgroundColour + `; `;
+        output += `background-image: url(` + Nations[outputCard.side].image + `), url(` + Nations[outputCard.side].image + `); `;
         output += `background-position: left,right; background-repeat: no-repeat, no-repeat; background-size: contain, contain; align: center,center; `;
         output += `border-bottom: 2px solid #444444; "><div style="display: table-row;"><div style="display: table-cell; padding: 2px 2px; text-align: center;"><span style="`;
-        output += `font-family: ` + Factions[outputCard.side].titlefont + `; `;
+        output += `font-family: ` + Nations[outputCard.side].titlefont + `; `;
         output += `font-style: normal; `;
 
         let titlefontsize = "1.4em";
@@ -900,11 +844,11 @@ const Warpath = (() => {
 
         output += `font-size: ` + titlefontsize + `; `;
         output += `line-height: 1.2em; font-weight: strong; `;
-        output += `color: ` + Factions[outputCard.side].fontColour + `; `;
+        output += `color: ` + Nations[outputCard.side].fontColour + `; `;
         output += `text-shadow: none; `;
         output += `">`+ outputCard.title + `</span><br /><span style="`;
         output += `font-family: Arial; font-variant: normal; font-size: 13px; font-style: normal; font-weight: bold; `;
-        output += `color: ` +  Factions[outputCard.side].fontColour + `; `;
+        output += `color: ` +  Nations[outputCard.side].fontColour + `; `;
         output += `">` + outputCard.subtitle + `</span></div></div></div>`;
 
         //body of card
@@ -930,9 +874,9 @@ const Warpath = (() => {
 
                 for (let q=0;q<num;q++) {
                     let info = outputCard.inline[inline];
-                    out += `<a style ="background-color: ` + Factions[outputCard.side].backgroundColour + `; padding: 5px;`
-                    out += `color: ` + Factions[outputCard.side].fontColour + `; text-align: center; vertical-align: middle; border-radius: 5px;`;
-                    out += `border-color: ` + Factions[outputCard.side].borderColour + `; font-family: Tahoma; font-size: x-small; `;
+                    out += `<a style ="background-color: ` + Nations[outputCard.side].backgroundColour + `; padding: 5px;`
+                    out += `color: ` + Nations[outputCard.side].fontColour + `; text-align: center; vertical-align: middle; border-radius: 5px;`;
+                    out += `border-color: ` + Nations[outputCard.side].borderColour + `; font-family: Tahoma; font-size: x-small; `;
                     out += `"href = "` + info.action + `">` + info.phrase + `</a>`;
                     inline++;                    
                 }
@@ -948,9 +892,9 @@ const Warpath = (() => {
                     let ind1 = line.indexOf("[F]") + 3;
                     let ind2 = line.indexOf("[/f]");
                     let fac = line.substring(ind1,ind2);
-                    if (Factions[fac]) {
-                        lineBack = Factions[fac].backgroundColour;
-                        fontcolour = Factions[fac].fontColour;
+                    if (Nations[fac]) {
+                        lineBack = Nations[fac].backgroundColour;
+                        fontcolour = Nations[fac].fontColour;
                     }
                     line = line.replace("[F]" + fac + "[/f]","");
 
@@ -976,7 +920,7 @@ const Warpath = (() => {
                     output += '<hr style="width:95%; align:center; margin:0px 0px 5px 5px; border-top:2px solid $1;">';
                 }
                 let out = "";
-                let borderColour = Factions[outputCard.side].borderColour;
+                let borderColour = Nations[outputCard.side].borderColour;
                 
                 if (inline === false || i===0) {
                     out += `<div style="display: table-row; background: #FFFFFF;; ">`;
@@ -987,8 +931,8 @@ const Warpath = (() => {
                 if (inline === true) {
                     out += '<span>     </span>';
                 }
-                out += `<a style ="background-color: ` + Factions[outputCard.side].backgroundColour + `; padding: 5px;`
-                out += `color: ` + Factions[outputCard.side].fontColour + `; text-align: center; vertical-align: middle; border-radius: 5px;`;
+                out += `<a style ="background-color: ` + Nations[outputCard.side].backgroundColour + `; padding: 5px;`
+                out += `color: ` + Nations[outputCard.side].fontColour + `; text-align: center; vertical-align: middle; border-radius: 5px;`;
                 out += `border-color: ` + borderColour + `; font-family: Tahoma; font-size: x-small; `;
                 out += `"href = "` + info.action + `">` + info.phrase + `</a>`
                 
@@ -1111,6 +1055,10 @@ const Warpath = (() => {
                 let centreLabel = centre.toCube().label();
                 let hex = HexMap[centreLabel];
                 hex.terrain = name;
+                hex.height = terrain.height;
+                if (terrain.difficult === true) {
+                    hex.difficult = true;
+                }
             }
         })
 
@@ -1262,16 +1210,14 @@ const Warpath = (() => {
         let id = msg.selected[0]._id;
         let model = ModelArray[id];
         if (!model) {return};
-        SetupCard(model.name,"",model.faction);
+        SetupCard(model.name,"",model.nation);
         let hex = HexMap[model.hexLabel];
         let terInfo = TerrainInfo[hex.terrain];
         outputCard.body.push("Hex: " + model.hexLabel);
         outputCard.body.push("Terrain: " + hex.terrain);
         outputCard.body.push("Elevation: " + hex.elevation);
-        outputCard.body.push("Height of Terrain: " + terInfo.height);
-        outputCard.body.push("Height of Base: " + model.height);
-        outputCard.body.push("Movement: " + terInfo.move[model.type]);
-        outputCard.body.push("Cover: " + terInfo.cover[model.type]);
+        outputCard.body.push("Difficult Terrain: " + hex.difficult);
+
 
 
         for (let i=0;i<6;i++) {
@@ -1339,7 +1285,7 @@ const Warpath = (() => {
         if (msg.selected) {
             id = msg.selected[0]._id;
         }
-        let faction = "Neutral";
+        let nation = "Neutral";
 
         if (!id && !playerID) {
             log("Back")
@@ -1348,24 +1294,24 @@ const Warpath = (() => {
         if (id) {
             model = ModelArray[id];
             if (model) {
-                faction = model.faction;
+                nation = model.nation;
                 player = model.player;
             }
         }
         if ((!id || !model) && playerID) {
-            faction = state.Warpath.players[playerID];
-            player = (state.Warpath.factions[0] === faction) ? 0:1;
+            nation = state.FFT.players[playerID];
+            player = (state.FFT.nations[0] === nation) ? 0:1;
         }
 
-        if (!state.Warpath.players[playerID] || state.Warpath.players[playerID] === undefined) {
-            if (faction !== "Neutral") {    
-                state.Warpath.players[playerID] = faction;
+        if (!state.FFT.players[playerID] || state.FFT.players[playerID] === undefined) {
+            if (nation !== "Neutral") {    
+                state.FFT.players[playerID] = nation;
             } else {
                 sendChat("","Click on one of your tokens then select Roll again");
                 return;
             }
         } 
-        let res = "/direct " + DisplayDice(roll,faction,40);
+        let res = "/direct " + DisplayDice(roll,nation,40);
         sendChat("player|" + playerID,res);
     }
 
@@ -1408,10 +1354,10 @@ const Warpath = (() => {
     
         RemoveDead("All");
 
-        state.Warpath = {
+        state.FFT = {
             playerIDs: ["",""],
             players: {},
-            factions: ["",""],
+            nations: ["",""],
             markers: [[],[]],
             lines: [],
             turn: 0,
@@ -1419,8 +1365,8 @@ const Warpath = (() => {
         }
 
         for (let i=0;i<UnitMarkers.length;i++) {
-            state.Warpath.markers[0].push(i);
-            state.Warpath.markers[1].push(i);
+            state.FFT.markers[0].push(i);
+            state.FFT.markers[1].push(i);
         }
 
         sendChat("","Cleared State/Arrays");
@@ -1428,8 +1374,8 @@ const Warpath = (() => {
 
 
     const RemoveDepLines = () => {
-        for (let i=0;i<state.Warpath.deployLines.length;i++) {
-            let id = state.Warpath.deployLines[i];
+        for (let i=0;i<state.FFT.deployLines.length;i++) {
+            let id = state.FFT.deployLines[i];
             let path = findObjs({_type: "path", id: id})[0];
             if (path) {
                 path.remove();
@@ -1472,7 +1418,7 @@ const Warpath = (() => {
                 name = model.name + " " + (i+1);
             }
             if (i===0) {
-                markerNumber = randomInteger(state.Warpath.markers[model.player].length - 1) || 1;
+                markerNumber = randomInteger(state.FFT.markers[model.player].length - 1) || 1;
                 unit = new Unit(mID);
                 unit.symbol = UnitMarkers[markerNumber];
             }
@@ -1566,7 +1512,7 @@ const Warpath = (() => {
         }
         let distance;
 
-        SetupCard(shooter.name,"LOS",shooter.faction);
+        SetupCard(shooter.name,"LOS",shooter.nation);
         let losResult = LOS(shooter,target);
         outputCard.body.push("Distance: " + losResult.distance);
         if (losResult.los === false) {
@@ -1855,7 +1801,7 @@ log("Target Hex offers Cover")
         switch(args[0]) {
             case '!Dump':
                 log("State");
-                log(state.Warpath);
+                log(state.FFT);
                 log("Models");
                 log(ModelArray);
                 log("Units");
@@ -1899,10 +1845,9 @@ log("Target Hex offers Cover")
         on('destroy:graphic',destroyGraphic);
     };
     on('ready', () => {
-        log("===> Epic Warpath <===");
+        log("===>Fistful of T34s<===");
         log("===> Software Version: " + version + " <===")
         LoadPage();
-        PlayerIDs();
         DefineHexInfo();
         BuildMap();
         registerEventHandlers();
