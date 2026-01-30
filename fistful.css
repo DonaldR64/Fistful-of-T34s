@@ -206,6 +206,6 @@ section {
 
 .top-right {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 16px;
+  right: 16px;
 }
