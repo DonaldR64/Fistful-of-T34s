@@ -635,7 +635,7 @@ const FFT = (() => {
                 band = parseInt(band);
             })
             this.antiInf = parseInt(aa.antiInf) || 0;
-            let pen = aa.pen;
+            this.pen = aa.pen;
 
 
 
