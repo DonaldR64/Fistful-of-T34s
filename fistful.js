@@ -9,7 +9,7 @@ const FFT = (() => {
 
     const TurnMarkers = ["","https://s3.amazonaws.com/files.d20.io/images/361055772/zDURNn_0bbTWmOVrwJc6YQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055766/UZPeb6ZiiUImrZoAS58gvQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055764/yXwGQcriDAP8FpzxvjqzTg/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055768/7GFjIsnNuIBLrW_p65bjNQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055770/2WlTnUslDk0hpwr8zpZIOg/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055771/P9DmGozXmdPuv4SWq6uDvw/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055765/V5oPsriRTHJQ7w3hHRBA3A/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055767/EOXU3ujXJz-NleWX33rcgA/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055769/925-C7XAEcQCOUVN1m1uvQ/thumb.png?1695998303"];
 
-
+    const formationColours = ["#00ff00","#00ffff","#ffff00","#000000","#ff00ff","#0f00f0","#aaaaaa","#ff0000",]
 
 
     let HexSize, HexInfo, DIRECTIONS;
@@ -685,15 +685,16 @@ const FFT = (() => {
     }
 
     class Formation {
-        constructor(mID,fID = stringGen()) {
+        constructor(name,breakpoint,mID,fID = stringGen()) {
             let refUnit = UnitArray[mID];
             this.nation = refUnit.nation;
-            this.player = refUnit.player;
-            this.bases = refUnit.bases;
-            this.type = refUnit.type;
+            this.player = refUnit.player || 0;
+            this.breakpoint = breakpoint;
+            this.name = name;
             this.id = fID;
-            this.tokenIDs = [];
-            this.symbol = "";
+            this.tokenIDs = [mID];
+            this.number = state.FFT.formNum[this.player];
+            state.FFT.formNum[this.player] += 1;
             FormationArray[fID] = this;
         }
 
@@ -993,7 +994,7 @@ const FFT = (() => {
         AddElevations();
         AddTerrain();    
         //AddEdges();
-        AddTokens();
+        //AddTokens();
         let elapsed = Date.now()-startTime;
         log("Hex Map Built in " + elapsed/1000 + " seconds");
     };
@@ -1365,16 +1366,12 @@ log(terrain)
             playerIDs: ["",""],
             players: {},
             nations: ["",""],
-            markers: [[],[]],
+            formNum: [0,0],
             lines: [],
             turn: 0,
-            deployLines: [],
         }
 
-        for (let i=0;i<UnitMarkers.length;i++) {
-            state.FFT.markers[0].push(i);
-            state.FFT.markers[1].push(i);
-        }
+
 
         sendChat("","Cleared State/Arrays");
     }
@@ -1411,51 +1408,64 @@ log(terrain)
     }
 
     const DefineFormation = (msg) => {
-//fix
         if (!msg.selected) {
             sendChat("","No Tokens Selected");
             return
         }
-        let tokenIDs = [];
-        let unit,formation,markerNumber;
+        let Tag = msg.content.split(";");
+        let formationName = Tag[1];
+        let breakpoint = Tag[2];
+
+        let unit;
+        let unitNames = {};
+        let unitNumbers = [""," 1st "," 2nd "," 3rd "," 4th "," 5th "];
+        let unit1 = new Unit(msg.selected[0]._id);
+        let formation = new Formation(formationName,breakpoint,unit1.id);
         for (let i=0;i<msg.selected.length;i++) {
             mID = msg.selected[i]._id;
             unit = new Unit(mID);
-            let name = unit.name;
-            if (msg.selected.length > 1) {
-                name = unit.name + " " + (i+1);
-            }
-            if (i===0) {
-                markerNumber = randomInteger(state.FFT.markers[unit.player].length - 1) || 1;
-                formation = new Formation(mID);
-                formation.symbol = UnitMarkers[markerNumber];
-            }
-
-
-            tokenIDs.push(mID);
+            formation.AddUnit(mID);
             unit.token.set({
                 tint_color: "transparent",
                 gmnotes: formation.id,
-                name: name,
                 tint_color: "transparent",
-                aura1_color: "transparent",
-                aura1_radius: 0,
-                showplayers_bar1: false,
-                showplayers_bar2: false,
-                showplayers_bar3: false,
+                aura1_color: formationColours[formation.number],
+                aura1_radius: 10,
+                disableTokenMenu: true,
                 showname: true,
                 showplayers_aura1: true,
                 statusmarkers: "",
-                tooltip: "",
+                tooltip: formation.name,
+                show_tooltip: true,
             })
-            unit.token.set("status_" + formation.symbol,true);
-
-
-
-
         }
-        formation.tokenIDs = tokenIDs;
-        sendChat("","Formation Added")
+
+        _.each(formation.tokenIDs, tID => {
+            let unit = UnitArray[tID];
+            let name = unit.charName;
+            let type = "Plt";
+            if (name.includes("Company")) {type = "Co"};
+            let sname = name.replace(/ Platoon| Company/,"");
+            if (unit.type === "Truck" || unit.type === "Halftrack") {
+                name = sname;
+            } else {
+                if (!unitNames[sname]) {
+                    name = sname + " 1st " + type;
+                    unitNames[sname] = 1;
+                } else {
+                    name = sname + unitNumbers[unitNames[sname]] + type;
+                    unitNames[sname] += 1;
+                }
+            }
+            unit.name = name;
+            unit.token.set("name",name);
+        })
+
+
+
+
+
+        sendChat("",formation.name + " Added")
     }
 
 
