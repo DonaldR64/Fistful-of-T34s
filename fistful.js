@@ -79,8 +79,8 @@ const FFT = (() => {
         }
     }
 
-    let ModelArray = {};
     let UnitArray = {};
+    let FormationArray = {};
 
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
@@ -118,8 +118,13 @@ const FFT = (() => {
 
 
     const SM = {
-       suppressed: "status_yellow",
-       qc: "status_red",
+        suppressed: "status_yellow",
+        qc: "status_red",
+        fired: "status_Shell::5553215",
+        move: "status_Advantage-or-Up::2006462",
+        double: "status_Fast::5865486",
+
+
     }
 
 
@@ -194,22 +199,22 @@ const FFT = (() => {
         }
     };
 
-    const FX = (fxname,model1,model2) => {
-        //model2 is target, model1 is shooter
-        //if its an area effect, model1 isnt used
+    const FX = (fxname,unit1,unit2) => {
+        //unit2 is target, unit1 is shooter
+        //if its an area effect, unit1 isnt used
         if (fxname.includes("System")) {
             //system fx
             fxname = fxname.replace("System-","");
             if (fxname.includes("Blast")) {
                 fxname = fxname.replace("Blast-","");
-                spawnFx(model2.token.get("left"),model2.token.get("top"), fxname);
+                spawnFx(unit2.token.get("left"),unit2.token.get("top"), fxname);
             } else {
-                spawnFxBetweenPoints(new Point(model1.token.get("left"),model1.token.get("top")), new Point(model2.token.get("left"),model2.token.get("top")), fxname);
+                spawnFxBetweenPoints(new Point(unit1.token.get("left"),unit1.token.get("top")), new Point(unit2.token.get("left"),unit2.token.get("top")), fxname);
             }
         } else {
             let fxType =  findObjs({type: "custfx", name: fxname})[0];
             if (fxType) {
-                spawnFxBetweenPoints(new Point(model1.token.get("left"),model1.token.get("top")), new Point(model2.token.get("left"),model2.token.get("top")), fxType.id);
+                spawnFxBetweenPoints(new Point(unit1.token.get("left"),unit1.token.get("top")), new Point(unit2.token.get("left"),unit2.token.get("top")), fxType.id);
             }
         }
     }
@@ -258,8 +263,8 @@ const FFT = (() => {
     }
 
 
-    const KeyNum = (model,keyword) => {
-        let key = model.keywords.split(",");
+    const KeyNum = (unit,keyword) => {
+        let key = unit.keywords.split(",");
         log(key)
         let num = 1;
         _.each(key,word => {
@@ -596,7 +601,7 @@ const FFT = (() => {
         }
     }
 
-    class Model {
+    class Unit {
         constructor(id) {
             let token = findObjs({_type:"graphic", id: id})[0];
             let label = (new Point(token.get("left"),token.get("top"))).label();
@@ -642,14 +647,13 @@ const FFT = (() => {
 
 
 
-            this.unitID = "";
+            this.formationID = "";
 
 
 
 
 
-
-            ModelArray[id] = this;
+            UnitArray[id] = this;
             HexMap[label].tokenIDs.push(id);
 
 
@@ -680,25 +684,22 @@ const FFT = (() => {
 
     }
 
-    class Unit {
-        constructor(mID,uID) {
-            let refModel = ModelArray[mID];
-            this.nation = refModel.nation;
-            this.player = refModel.player;
-            this.bases = refModel.bases;
-            this.type = refModel.type;
-            if (!uID) {
-                uID = stringGen();
-            }
-            this.id = uID;
+    class Formation {
+        constructor(mID,fID = stringGen()) {
+            let refUnit = UnitArray[mID];
+            this.nation = refUnit.nation;
+            this.player = refUnit.player;
+            this.bases = refUnit.bases;
+            this.type = refUnit.type;
+            this.id = fID;
             this.tokenIDs = [];
             this.symbol = "";
-            UnitArray[uID] = this;
+            FormationArray[fID] = this;
         }
 
-        AddModel(mID) {
+        AddUnit(mID) {
             this.tokenIDs.push(mID);
-            ModelArray[mID].unitID = this.id;
+            UnitArray[mID].formationID = this.id;
         }
 
 
@@ -1094,7 +1095,7 @@ log(terrain)
 
      
     const AddTokens = () => {
-        ModelArray = {};
+        FormationArray = {};
         UnitArray = {};
         //create an array of all tokens
         let start = Date.now();
@@ -1111,22 +1112,20 @@ log(terrain)
         tokens.forEach((token) => {
             let character = getObj("character", token.get("represents"));   
             if (character) {
-                let unitID = decodeURIComponent(token.get("gmnotes")).toString();       
-                let model = new Model(token.id);
-                if (unitID) {
-                    let unit = UnitArray[unitID];         
-                    if (!unit) {
-                        unit = new Unit(token.id,unitID);
-                    }
-                    unit.AddModel(token.id);
+                let unit = new Unit(token.get("id"));
+                let fID = decodeURIComponent(token.get("gmnotes")).toString();
+                let formation = FormationArray[fID];
+                if (!formation) {
+                    formation = new Formation(unit.id);
                 }
+                formation.AddUnit(unit.id);
             }  
 
 
 
         });
         let elapsed = Date.now()-start;
-        log(`${c} token${s} checked in ${elapsed/1000} seconds - ` + Object.keys(ModelArray).length + " placed in Model Array");
+        log(`${c} token${s} checked in ${elapsed/1000} seconds - ` + Object.keys(UnitArray).length + " placed in Unit Array");
 
     }
 
@@ -1214,12 +1213,12 @@ log(terrain)
     const TokenInfo = (msg) => {
         if (!msg.selected) {return};
         let id = msg.selected[0]._id;
-        let model = ModelArray[id];
-        if (!model) {return};
-        SetupCard(model.name,"",model.nation);
-        let hex = HexMap[model.hexLabel];
+        let unit = UnitArray[id];
+        if (!unit) {return};
+        SetupCard(unit.name,"",unit.nation);
+        let hex = HexMap[unit.hexLabel];
         let terInfo = TerrainInfo[hex.terrain];
-        outputCard.body.push("Hex: " + model.hexLabel);
+        outputCard.body.push("Hex: " + unit.hexLabel);
         outputCard.body.push("Terrain: " + hex.terrain);
         outputCard.body.push("Elevation: " + hex.elevation);
         let rate = ["Open","Difficult","Impassable"];
@@ -1289,7 +1288,7 @@ log(terrain)
         PlaySound("Dice");
         let roll = randomInteger(8);
         let playerID = msg.playerid;
-        let id,model,player;
+        let id,unit,player;
         if (msg.selected) {
             id = msg.selected[0]._id;
         }
@@ -1300,13 +1299,13 @@ log(terrain)
             return;
         }
         if (id) {
-            model = ModelArray[id];
-            if (model) {
-                nation = model.nation;
-                player = model.player;
+            unit = UnitArray[id];
+            if (unit) {
+                nation = unit.nation;
+                player = unit.player;
             }
         }
-        if ((!id || !model) && playerID) {
+        if ((!id || !unit) && playerID) {
             nation = state.FFT.players[playerID];
             player = (state.FFT.nations[0] === nation) ? 0:1;
         }
@@ -1333,8 +1332,8 @@ log(terrain)
         BuildMap();
 
         //clear arrays
-        ModelArray = {};
         UnitArray = {};
+        FormationArray = {};
         //clear token info
         let tokens = findObjs({
             _pageid: Campaign().get("playerpageid"),
@@ -1411,29 +1410,32 @@ log(terrain)
         });
     }
 
-    const UnitCreation = (msg) => {
+    const DefineFormation = (msg) => {
+//fix
         if (!msg.selected) {
             sendChat("","No Tokens Selected");
             return
         }
         let tokenIDs = [];
-        let model,unit,markerNumber;
+        let unit,formation,markerNumber;
         for (let i=0;i<msg.selected.length;i++) {
             mID = msg.selected[i]._id;
-            model = new Model(mID);
-            let name = model.name;
+            unit = new Unit(mID);
+            let name = unit.name;
             if (msg.selected.length > 1) {
-                name = model.name + " " + (i+1);
+                name = unit.name + " " + (i+1);
             }
             if (i===0) {
-                markerNumber = randomInteger(state.FFT.markers[model.player].length - 1) || 1;
-                unit = new Unit(mID);
-                unit.symbol = UnitMarkers[markerNumber];
+                markerNumber = randomInteger(state.FFT.markers[unit.player].length - 1) || 1;
+                formation = new Formation(mID);
+                formation.symbol = UnitMarkers[markerNumber];
             }
+
+
             tokenIDs.push(mID);
-            model.token.set({
+            unit.token.set({
                 tint_color: "transparent",
-                gmnotes: unit.id,
+                gmnotes: formation.id,
                 name: name,
                 tint_color: "transparent",
                 aura1_color: "transparent",
@@ -1446,22 +1448,14 @@ log(terrain)
                 statusmarkers: "",
                 tooltip: "",
             })
-            model.token.set("status_" + unit.symbol,true);
-            if (model.keywords.includes("Resilience")) {
-                let resilience = KeyNum(model,"Resilience") || 1;
-                model.token.set({
-                    showplayers_bar1: false,
-                    bar1_value: resilience,
-                    bar1_max: resilience,
-                })
-            } 
+            unit.token.set("status_" + formation.symbol,true);
 
 
 
 
         }
-        unit.tokenIDs = tokenIDs;
-        sendChat("","Unit of " + model.name + " Added")
+        formation.tokenIDs = tokenIDs;
+        sendChat("","Formation Added")
     }
 
 
@@ -1508,12 +1502,12 @@ log(terrain)
         let Tag = msg.content.split(";");
         let shooterID = Tag[1];
         let targetID = Tag[2];
-        let shooter = ModelArray[shooterID];
+        let shooter = UnitArray[shooterID];
         if (!shooter) {
             sendChat("","Not valid shooter");
             return;
         }
-        let target = ModelArray[targetID];
+        let target = UnitArray[targetID];
         if (!target) {
             sendChat("","Not valid target");
             return;
@@ -1611,28 +1605,28 @@ log(label)
             }
 */
 
-            //check for intervening models
+            //check for intervening units
             let mHeight = 0;
             for (let t=0;t<interHex.tokenIDs.length;t++) {
                 let tid = interHex.tokenIDs[t];
-                let tModel = ModelArray[tid];
+                let tUnit = UnitArray[tid];
                 if (shooterUnit.tokenIDs.includes(tid) || targetUnit.tokenIDs.includes(tid)) {
                     continue;
                 }
-                if (tModel.keywords.includes("Fly")) {
+                if (tUnit.keywords.includes("Fly")) {
                     continue;
                 }
-                mHeight = Math.max(tModel.height,mHeight);
+                mHeight = Math.max(tUnit.height,mHeight);
             }
 log("terrain height: " + teH)
 log("edge height: " + edH)
-log("model height: " + mHeight)
+log("unit height: " + mHeight)
 
 
             let iH = Math.max(teH,edH,mHeight);
-            let modelBlock = false;
+            let unitBlock = false;
             if (mHeight === iH && mHeight > 0) {
-                modelBlock = true;
+                unitBlock = true;
             }
             interHexHeight = iH + interHex.elevation;
 log("interHexHeight: " + interHexHeight)
@@ -1655,10 +1649,10 @@ log("deltaT: " + deltaT)
             }
 
             if (deltaS <= 0 && deltaT <= 0) {
-                if (modelBlock === true) {
+                if (unitBlock === true) {
                     los = false;
                     losBlock = label;
-                    losReason = "Blocked by Model at " + label;
+                    losReason = "Blocked by Unit at " + label;
                     break;
                 } else {
                     if (interHex.terrain === "Woods" && (shooterElevation >= interHex.elevation || targetElevation >= interHex.elevation)) { 
@@ -1747,18 +1741,18 @@ log("Target Hex offers Cover")
 
     const changeGraphic = (tok,prev) => {
         //RemoveLines();
-        let model = ModelArray[tok.id];
-        if (model) {
+        let unit = UnitArray[tok.id];
+        if (unit) {
             let label = (new Point(tok.get("left"),tok.get("top"))).label();
-            if (label !== model.hexLabel) {
-                log(model.name + ' is moving from ' + model.hexLabel + ' to ' + label)
-                let index = HexMap[model.hexLabel].tokenIDs.indexOf(model.id);
+            if (label !== unit.hexLabel) {
+                log(unit.name + ' is moving from ' + unit.hexLabel + ' to ' + label)
+                let index = HexMap[unit.hexLabel].tokenIDs.indexOf(unit.id);
                 if (index > -1) {
-                    HexMap[model.hexLabel].tokenIDs.splice(index,1);
+                    HexMap[unit.hexLabel].tokenIDs.splice(index,1);
                 }
-                HexMap[label].tokenIDs.push(model.id);
-                model.hexLabel = label;
-                model.token.set({
+                HexMap[label].tokenIDs.push(unit.id);
+                unit.hexLabel = label;
+                unit.token.set({
                     left: HexMap[label].centre.x,
                     top: HexMap[label].centre.y,
                 })
@@ -1810,10 +1804,10 @@ log("Target Hex offers Cover")
             case '!Dump':
                 log("State");
                 log(state.FFT);
-                log("Models");
-                log(ModelArray);
                 log("Units");
-                log(UnitArray)
+                log(UnitArray);
+                log("Formations");
+                log(FormationArray)
                 break;
             case '!ClearState':
                 ClearState(msg);
@@ -1833,8 +1827,8 @@ log("Target Hex offers Cover")
             case '!RemoveLines':
                 RemoveLines();
                 break;
-            case '!UnitCreation':
-                UnitCreation(msg);
+            case '!DefineFormation':
+                DefineFormation(msg);
                 break;
             case '!Roll':
                 RollDice(msg);
