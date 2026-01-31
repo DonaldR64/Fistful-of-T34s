@@ -636,15 +636,21 @@ const FFT = (() => {
             this.quality = aa.quality;
             this.armourF = parseInt(aa.armourF) || "NA"; 
             this.armourSR = parseInt(aa.armourSR) || "NA"; 
-            this.rof = parseInt(aa.rof);
-            this.range = aa.range.split("/");
-            _.each(this.range, band => {
-                band = parseInt(band);
-            })
-            this.antiInf = parseInt(aa.antiInf) || 0;
-            this.pen = aa.pen;
 
-
+            if (aa.artflag === "On") {
+                this.avail = parseInt(aa.avail.replace("+"));
+                this.artsize = parseInt((aa.artsize.replace("hexes"),"").trim());
+                this.arteffect = (aa.arteffect === "Normal") ? 0:parseInt(aa.arteffect);
+                this.artrange = parseInt(aa.artrange);
+            } else {
+                this.rof = parseInt(aa.rof);
+                this.range = aa.range.split("/") || [0,0,0];
+                _.each(this.range, band => {
+                    band = parseInt(band);
+                })
+                this.antiInf = parseInt(aa.antiInf) || 0;
+                this.pen = aa.pen;
+            }
 
 
             this.formationID = "";
