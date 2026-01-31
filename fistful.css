@@ -207,6 +207,26 @@ section {
 
 
 
+
+
+.attr4info{
+  grid-area: attr4info;
+  display: grid;
+  grid-gap: 2px;
+  grid-template-columns: 1fr 1fr 1fr; 
+  grid-template-rows: 1fr 1fr;
+  background-color: white;
+  text-align: center;
+  align-items: center;
+}
+
+.attr4info h4 {
+  text-align: center;
+  color: black;
+}
+
+
+
 .common {
   grid-area: common;
   position: relative;
@@ -227,4 +247,18 @@ section {
   position: absolute;
   top: 16px;
   right: 16px;
+}
+
+input[type="hidden"][value="Off"].art-status ~ .attr2info{
+    display: grid;
+}
+input[type="hidden"][value="On"].art-status ~ .attr2info{
+    display: none;
+}
+
+input[type="hidden"][value="Off"].art-status ~ .attr4info{
+    display: none;
+}
+input[type="hidden"][value="On"].art-status ~ .attr4info{
+    display: grid;
 }

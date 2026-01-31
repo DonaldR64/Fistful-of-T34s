@@ -16,6 +16,7 @@
                 <option value="Infantry">Infantry</option>
                 <option value="Horse">Horse</option>
                 <option value="Mortar">Mortar</option>
+                <option value="Artillery">Artillery</option>
                 <option value="AT Gun">AT Gun</option>
                 <option value="Truck">Truck</option>
                 <option value="Car">Car</option>
@@ -68,6 +69,21 @@
             <br>
         </div>
 
+        <div class="col">
+            <h3>Artillery</h3>
+            <label for="attr_artflag">Artillery Info:</label>
+            <select name="attr_artflag">
+                <option value = "Off">Off</option>
+                <option value = "On">On</option>
+            </select>
+            <br>
+            <label>Availability</label><input type="text" name="attr_avail">
+            <br>
+            <label>Size</label><input type="text" name="attr_artsize">
+            <br>
+            <label>Effectiveness</label><input type="text" name="attr_arteffect">
+        </div>
+
 
 
     </div>    
@@ -117,6 +133,10 @@
 
           <section class="attr2">
             <h2>Weapons</h2>
+
+
+
+            <input type="hidden" name="attr_artflag" class="art-status" value="On">
             <div class="attr2info">
                 <h3>ROF</h3>
                 <h3>Range</h3>
@@ -127,6 +147,23 @@
                 <h3 style="color: darkred;"><span name="attr_pen"></span></h3>
                 <h3 style="color: darkred;"><span name="attr_ai"></span></h3>
             </div>
+
+
+
+            <input type="hidden" name="attr_artflag" class="art-status" value="Off">
+            <div class="attr4info">
+                <h3>Availability</h3>
+                <h3>Size</h3>
+                <h3>Effectiveness</h3>
+                <h3 style="color: darkred;"><span name="attr_avail"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_artsize"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_arteffect"></span></h3>
+            </div>
+
+
+
+
+
           </section>
         </main>
       </div>
@@ -147,6 +184,10 @@
 
     on("sheet:opened", function() {
         setAttrs({sheetTab:"display"});
+
+
+
+
     });
 
 
