@@ -124,7 +124,7 @@ const FFT = (() => {
 
 
     //height is height of terrain element
-    //move: Open, Difficult, Impassable
+    //move: 0 = Open, 1 = Difficult, 2 = Impassable
     //cover for area fire: 0 = none, 1 = light, 2 = heavy
 
     const LinearTerrain = {
@@ -139,8 +139,9 @@ const FFT = (() => {
 
 
     const TerrainInfo = {
-        "Heavy Woods": {name: "Heavy Woods",height: 1, difficult: true, },
-        
+        "Heavy Woods": {name: "Heavy Woods",height: 1, move: 1, cover: true},
+        "Town": {name: "Town",height: 1, move: 1, cover: true},
+        "River": {name: "River",height: 0, move: 2, cover: false},
 
 
 
@@ -149,8 +150,8 @@ const FFT = (() => {
     const HillHeights = {
         "#000000": 1,
         "#666666": 2,
+        
     }
-
 
 
 
@@ -585,7 +586,8 @@ const FFT = (() => {
             this.label = offset.label();
             this.elevation = 0;
             this.terrain = "Open";
-            this.difficult = false;
+            this.move = 0;
+            this.cover = false;
             this.edges = {};
             _.each(DIRECTIONS,a => {
                 this.edges[a] = "Open";
@@ -1051,16 +1053,20 @@ const FFT = (() => {
             let name = token.get("name");
             let terrain = TerrainInfo[name];
             if (terrain) {
+log(terrain)
                 let centre = new Point(token.get("left"),token.get('top'));
                 let centreLabel = centre.toCube().label();
                 let hex = HexMap[centreLabel];
                 hex.terrain = name;
                 hex.height = terrain.height;
-                if (terrain.difficult === true) {
-                    hex.difficult = true;
-                }
+                hex.move = Math.max(hex.move,terrain.move);
+                if (terrain.cover === true) {hex.cover = true};
             }
         })
+
+
+
+
 
     }
 
@@ -1216,7 +1222,9 @@ const FFT = (() => {
         outputCard.body.push("Hex: " + model.hexLabel);
         outputCard.body.push("Terrain: " + hex.terrain);
         outputCard.body.push("Elevation: " + hex.elevation);
-        outputCard.body.push("Difficult Terrain: " + hex.difficult);
+        let rate = ["Open","Difficult","Impassable"];
+        outputCard.body.push("Movement: " + rate[hex.move]);
+        outputCard.body.push("Cover: " + hex.cover);
 
 
 
