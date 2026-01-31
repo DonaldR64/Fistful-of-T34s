@@ -695,7 +695,6 @@ const FFT = (() => {
             this.id = fID;
             this.tokenIDs = [mID];
             this.number = state.FFT.formNum[this.player];
-            state.FFT.formNum[this.player] += 1;
             FormationArray[fID] = this;
         }
 
@@ -1195,7 +1194,61 @@ log(terrain)
 
     }
 
+    const SetupGame = (msg) => {
+        let firstNation = msg.content.split(";")[1];
+        let firstPlayer = state.FFT.nations[0] === firstNation ? 0:1;
+        state.FFT.firstPlayer = firstPlayer;
+        state.FFT.turn = 0;
+        state.FFT.activePlayer = 2;
+        state.FFT.phase = "";
+    }
 
+
+    const AdvancePhase = () => {
+        let turn = state.FFT.turn;
+        let activePlayer = state.FFT.activePlayer;
+        let phase = state.FFT.phase;
+
+        let phases = ["Artillery","Movement","Firing","End"];
+        
+        let currentPhase = phases[phases.indexOf(phase) + 1] || "Artillery";
+
+        if (currentPhase === "Artillery") {
+            if (activePlayer !== state.FFT.firstPlayer || turn === 0) {
+                turn += 1;
+                activePlayer = state.FFT.firstPlayer;
+            } else {
+                activePlayer = (state.FFT.firstPlayer === 0) ? 1:0;
+            }
+        }
+
+        state.FFT.turn = turn;
+        state.FFT.phase = currentPhase;
+        state.FFT.activePlayer = activePlayer;
+
+        SetupCard(state.FFT.nations[activePlayer] + " " + currentPhase + " Phase","Turn " + turn,state.FFT.nations[activePlayer]);
+
+
+        if (phase === "End") {
+            //qchecks
+
+
+
+        }
+
+        PrintCard();
+
+
+
+
+
+
+
+
+
+
+
+    }
 
     const TokenInfo = (msg) => {
         if (!msg.selected) {return};
@@ -1356,6 +1409,9 @@ log(terrain)
             formationCasualties: [{},{}], //modified in game, referenced by player and formation ID
             lines: [],
             turn: 0,
+            phase: "",
+            activePlayer: 0,
+            firstPlayer: 0,
         }
 
 
@@ -1408,6 +1464,7 @@ log(terrain)
         let unitNumbers = [" 1st "," 2nd "," 3rd "," 4th "," 5th "," 6th "," 7th "," 8th "," 9th "," 10th "];
         let unit1 = new Unit(msg.selected[0]._id);
         let formation = new Formation(formationName,breakpoint,unit1.id);
+        state.FFT.formNum[formation.player]++;
         for (let i=0;i<msg.selected.length;i++) {
             mID = msg.selected[i]._id;
             unit = new Unit(mID);
@@ -1717,7 +1774,9 @@ log("Total Height: " + interHexHeight)
             case '!AdvancePhase':
                 AdvancePhase();
                 break;
-
+            case '!SetupGame':
+                SetupGame(msg);
+                break;
 
             case '!TokenInfo':
                 TokenInfo(msg);
