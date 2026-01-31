@@ -1196,25 +1196,6 @@ log(terrain)
     }
 
 
-    const AddMarker = (msg) => {
-        let id = msg.selected[0]._id;
-        let type = msg.content.split(";")[1];
-        let token = findObjs({_type:"graphic", id: id})[0];
-        let charID,img;
-        if (type === "Veteran") {
-            charID = "-OSevl13S7Q6iSaFbutR";
-        } else if (type === "Suppress") {
-            charID = "-OSew5Cn6ReQ0Arco_HQ";
-        }
-        let char = getObj("character", charID);
-        let tokenID = summonToken(char,token.get("left") - 15,token.get('top') - 15,0,40);
-        if (tokenID) {
-            token = findObjs({_type:"graphic", id: tokenID})[0];
-            toFront(token);
-        }
-    }
-
-
 
     const TokenInfo = (msg) => {
         if (!msg.selected) {return};
@@ -1529,7 +1510,6 @@ log(terrain)
             sendChat("","Not valid target");
             return;
         }
-        let distance;
 
         SetupCard(shooter.name,"LOS",shooter.nation);
         let losResult = LOS(shooter,target);
@@ -1543,17 +1523,16 @@ log(terrain)
                 outputCard.body.push("Target Has Cover");
             }
         }
+        outputCard.body.push("Target is in the " + losResult.shooterFacing + " Arc");
+        outputCard.body.push("Target is being hit on the " + losResult.targetFacing + " Arc");
+
+
+
         PrintCard();
     }
 
 
-    const LOS = (shooter,target,weapon) => {
-        let shooterUnit = UnitArray[shooter.unitID];
-        let targetUnit = UnitArray[target.unitID];
-
-        if (!weapon) {
-            weapon = {keywords: " "};
-        }
+    const LOS = (shooter,target) => {
         let los = true;
         let losReason = "";
         let losBlock = "";
@@ -1561,43 +1540,23 @@ log(terrain)
 
         let shooterHex = HexMap[shooter.hexLabel];
         let targetHex = HexMap[target.hexLabel];
-        let distance = shooterHex.cube.distance(targetHex.cube) - 1;
+        let distance = shooterHex.cube.distance(targetHex.cube);
         
-        //firing arc on weapon - used on fliers
+        //firing arc on weapon
         let angle = TargetAngle(shooter,target);
-        let facing = "Front";
-        if (shooter.keywords.includes("Fly") && shooter.token.get(SM.hover) === false) {
-            if (angle > 90 && angle < 270) {
-                facing = "Rear";
-            }
-        }
+        log(angle)
+        let angleT = TargetAngle(target,shooter);
+        log(angleT)
+        let shooterFacing = (angle <= 60 || angle >= 300) ? "Front":"Side/Rear";
+        let targetFacing = (angleT <= 60 || angleT >= 300) ? "Front":"Side/Rear";
 
-        let shooterElevation = shooterHex.elevation + shooter.height;
-        let targetElevation = targetHex.elevation + target.height;
+        let shooterElevation = shooterHex.elevation;
+        let targetElevation = targetHex.elevation;
 
-        //Fliers are above terrain 
-        if (shooter.keywords.includes("Fly")) {
-            if (shooter.token.get(SM.hover) === true) {
-                shooterElevation += 3;
-            } else {
-                shooterElevation += 5;
-            }
-            shooterElevation += TerrainInfo[shooterHex.terrain].height;
-        }
-        if (target.keywords.includes("Fly")) {
-            if (target.token.get(SM.hover) === true) {
-                targetElevation += 3;
-            } else {
-                targetElevation += 5;
-            }
-            targetElevation += TerrainInfo[shooterHex.terrain].height;
-        }
+
+/*
 
         let interCubes = shooterHex.cube.linedraw(targetHex.cube)
-        let woods = 0;
-        if (shooterHex.terrain === "Woods" && shooter.height <= 4 && shooter.keywords.includes("Fly") === false) {
-            woods = 1;
-        }
 
         for (let i=0;i<interCubes.length - 1;i++) {
             let label = interCubes[i].label();
@@ -1605,24 +1564,8 @@ log(label)
             let interHex = HexMap[label];
             let teH = TerrainInfo[interHex.terrain].height; //terrain in hex
             let edH = 0; //height of any terrain on edge crossed
-//edge
-/*
-            let delta = interCubes[i].add(interCubes[i+1]);
-            let dir;
-            for (let j=0;j<6;j++) {
-                let d = HexInfo.directions[DIRECTIONS[j]];
-                if (delta.q === d.q && delta.r === d.r) {
-                    dir = DIRECTIONS[j];
-                    break;
-                }
-            }            
-            let edge = interHex.edges[dir];
-            if (edge !== "Open") {
-                edH = LinearTerrain[edge].height;
-            }
-*/
 
-            //check for intervening units
+
             let mHeight = 0;
             for (let t=0;t<interHex.tokenIDs.length;t++) {
                 let tid = interHex.tokenIDs[t];
@@ -1709,7 +1652,7 @@ log("Target Hex offers Cover")
 
 
 
-
+*/
 
 
 
@@ -1720,12 +1663,13 @@ log("Target Hex offers Cover")
             losBlock: losBlock,
             distance: distance,
             cover: cover,
+            shooterFacing: shooterFacing,
+            targetFacing: targetFacing,
         }
 
 
         return result;
     }
-
 
 
 
@@ -1832,9 +1776,11 @@ log("Target Hex offers Cover")
             case '!AddAbilities':
                 AddAbilities(msg);
                 break;
-            case '!AddMarker':
-                AddMarker(msg);
+            case '!AdvancePhase':
+                AdvancePhase();
                 break;
+
+
             case '!TokenInfo':
                 TokenInfo(msg);
                 break;
