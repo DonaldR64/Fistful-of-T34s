@@ -1567,6 +1567,8 @@ log(terrain)
         //check lines
         let pt1 = new Point(0,shooterHex.elevation);
         let pt2 = new Point(distance,targetHex.elevation);
+log("Shooter E: " + shooterHex.elevation);
+log("Target E: " + targetHex.elevation);
 
         let interCubes = shooterHex.cube.linedraw(targetHex.cube)
         for (let i=0;i<interCubes.length - 1;i++) {
