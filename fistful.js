@@ -1515,16 +1515,30 @@ log(terrain)
         let losResult = LOS(shooter,target);
         outputCard.body.push("Distance: " + losResult.distance);
         if (losResult.los === false) {
-            outputCard.body.push("No LOS to Target");
+            outputCard.body.push("[#ff0000]No LOS to Target[/#]");
             outputCard.body.push(losResult.losReason);
         } else {
-            outputCard.body.push("LOS to Target");
+            outputCard.body.push("Shooter has LOS to Target");
             if (losResult.cover === true) {
                 outputCard.body.push("Target Has Cover");
             }
+
+            outputCard.body.push("Target is in the " + losResult.shooterFacing + " Arc");
+            outputCard.body.push("Target is being hit on the " + losResult.targetFacing + " Arc");
+
+            let bands = ["in Short","in Effective","in Long","Out of"];
+            let final = 3;
+            for (let band = 0;band < 3;band++) {
+                if (losResult.distance <= shooter.range[band]) {
+                    final = band;
+                    break;
+                }
+            }
+            outputCard.body.push("Target is " + bands[final] + " Range");
+
+
+
         }
-        outputCard.body.push("Target is in the " + losResult.shooterFacing + " Arc");
-        outputCard.body.push("Target is being hit on the " + losResult.targetFacing + " Arc");
 
 
 
@@ -1550,14 +1564,11 @@ log(terrain)
         let shooterFacing = (angle <= 60 || angle >= 300) ? "Front":"Side/Rear";
         let targetFacing = (angleT <= 60 || angleT >= 300) ? "Front":"Side/Rear";
 
-        let shooterElevation = shooterHex.elevation;
-        let targetElevation = targetHex.elevation;
-
-
-
+        //check lines
+        let pt1 = new Point(0,shooterHex.elevation);
+        let pt2 = new Point(distance,targetHex.elevation);
 
         let interCubes = shooterHex.cube.linedraw(targetHex.cube)
-
         for (let i=0;i<interCubes.length - 1;i++) {
             let label = interCubes[i].label();
 log(label)
@@ -1565,20 +1576,15 @@ log(label)
             if (interHex.cover === false) {continue};
             let teH = interHex.height; //terrain in hex
             let edH = 0; //height of any terrain on edge crossed
-
             let iH = Math.max(teH,edH);
-
             interHexHeight = iH + interHex.elevation;
-log("interHexHeight: " + interHexHeight)
-            let deltaS = shooterElevation - interHexHeight;
-            let deltaT = targetElevation - interHexHeight;
-log("deltaS: " + deltaS)
-log("deltaT: " + deltaT)
-
-            if (deltaS <= 0 && deltaT <= 0) {
+log("Total Height: " + interHexHeight)
+            let pt3 = new Point(i,0);
+            let pt4 = new Point(i,interHexHeight);
+            if (lineLine(pt1,pt2,pt3,pt4)) {
                 los = false;
                 losBlock = label;
-                losReason = "Blocked by Terrain at " + label;
+                losReason = "Blocked by " +  interHex.terrain +" at " + label;
                 break;
             }
         }
@@ -1586,16 +1592,7 @@ log("deltaT: " + deltaT)
         //target hex
         if (targetHex.cover === true) {
             cover = true;
-log("Target Hex offers Cover")
         }
-
-
-
-
-
-
-
-
 
         let result = {
             los: los,
