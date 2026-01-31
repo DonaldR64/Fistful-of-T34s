@@ -183,11 +183,13 @@
     });
 
     on("sheet:opened", function() {
-        setAttrs({sheetTab:"display"});
-
-
-
-
+        getAttrs(["artflag"], function(values) {
+            let art = values.artflag || "Off";
+            setAttrs({
+                sheetTab: "display",
+                artflag: art,
+            });
+        });
     });
 
 
