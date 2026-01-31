@@ -1554,7 +1554,7 @@ log(terrain)
         let targetElevation = targetHex.elevation;
 
 
-/*
+
 
         let interCubes = shooterHex.cube.linedraw(targetHex.cube)
 
@@ -1562,32 +1562,12 @@ log(terrain)
             let label = interCubes[i].label();
 log(label)
             let interHex = HexMap[label];
-            let teH = TerrainInfo[interHex.terrain].height; //terrain in hex
+            if (interHex.cover === false) {continue};
+            let teH = interHex.height; //terrain in hex
             let edH = 0; //height of any terrain on edge crossed
 
+            let iH = Math.max(teH,edH);
 
-            let mHeight = 0;
-            for (let t=0;t<interHex.tokenIDs.length;t++) {
-                let tid = interHex.tokenIDs[t];
-                let tUnit = UnitArray[tid];
-                if (shooterUnit.tokenIDs.includes(tid) || targetUnit.tokenIDs.includes(tid)) {
-                    continue;
-                }
-                if (tUnit.keywords.includes("Fly")) {
-                    continue;
-                }
-                mHeight = Math.max(tUnit.height,mHeight);
-            }
-log("terrain height: " + teH)
-log("edge height: " + edH)
-log("unit height: " + mHeight)
-
-
-            let iH = Math.max(teH,edH,mHeight);
-            let unitBlock = false;
-            if (mHeight === iH && mHeight > 0) {
-                unitBlock = true;
-            }
             interHexHeight = iH + interHex.elevation;
 log("interHexHeight: " + interHexHeight)
             let deltaS = shooterElevation - interHexHeight;
@@ -1595,64 +1575,24 @@ log("interHexHeight: " + interHexHeight)
 log("deltaS: " + deltaS)
 log("deltaT: " + deltaT)
 
-            if (deltaT > 3 || deltaS > 3) {continue};
-
-            if (deltaS > 0 && deltaT > 0 && iH > 0) {
-                //The line passes over a Base or terrain feature that is lower than both target and shooter (e.g. firing over an intervening wall or shorter Unit).
-                cover = true;
-    log("Cover at " + label);
-            }
-            if (iH > 0 && ((deltaS > 0 && deltaT === 0) || (deltaS === 0 && deltaT > 0))) {
-                //The line passes over a Base or terrain feature that is equal in height to either the target or shooter, and lower than the other.
-                cover = true;
-    log("Cover at " + label);
-            }
-
             if (deltaS <= 0 && deltaT <= 0) {
-                if (unitBlock === true) {
-                    los = false;
-                    losBlock = label;
-                    losReason = "Blocked by Unit at " + label;
-                    break;
-                } else {
-                    if (interHex.terrain === "Woods" && (shooterElevation >= interHex.elevation || targetElevation >= interHex.elevation)) { 
-                        cover = true;
-                        woods++;
-    log("Woods at " + label);
-                        if (woods > 2) {
-                            los = false;
-                            losBlock = label;
-                            losReason = "Blocked by > 2 Hexes of Woods at " + label;
-                            break;
-                        }                    
-                    } else {
-                        los = false;
-                        losBlock = label;
-                        losReason = "Blocked by Terrain at " + label;
-                        break;
-                    }
-                }
+                los = false;
+                losBlock = label;
+                losReason = "Blocked by Terrain at " + label;
+                break;
             }
         }
 
         //target hex
-        if (TerrainInfo[targetHex.terrain].cover[target.type] === true) {
+        if (targetHex.cover === true) {
             cover = true;
 log("Target Hex offers Cover")
         }
-        if (targetHex.terrain === "Woods" && los === true) {
-            woods++;
-            if (woods > 2) {
-                los = false;
-                losBlock = targetHex.label;
-                losReason = "Target is too deep in woods";
-            }     
-        }
 
 
 
 
-*/
+
 
 
 
@@ -1666,7 +1606,6 @@ log("Target Hex offers Cover")
             shooterFacing: shooterFacing,
             targetFacing: targetFacing,
         }
-
 
         return result;
     }
