@@ -690,6 +690,7 @@ const FFT = (() => {
             this.nation = refUnit.nation;
             this.player = refUnit.player || 0;
             this.breakpoint = breakpoint;
+            this.casualties = state.FFT.formationCasualties[this.player][fID] || 0;
             this.name = name;
             this.id = fID;
             this.tokenIDs = [mID];
@@ -699,7 +700,9 @@ const FFT = (() => {
         }
 
         AddUnit(mID) {
-            this.tokenIDs.push(mID);
+            if (this.tokenIDs.includes(mID) === false) {
+                this.tokenIDs.push(mID);
+            }
             UnitArray[mID].formationID = this.id;
         }
 
@@ -994,7 +997,7 @@ const FFT = (() => {
         AddElevations();
         AddTerrain();    
         //AddEdges();
-        //AddTokens();
+        AddTokens();
         let elapsed = Date.now()-startTime;
         log("Hex Map Built in " + elapsed/1000 + " seconds");
     };
@@ -1114,16 +1117,18 @@ log(terrain)
             let character = getObj("character", token.get("represents"));   
             if (character) {
                 let unit = new Unit(token.get("id"));
-                let fID = decodeURIComponent(token.get("gmnotes")).toString();
-                let formation = FormationArray[fID];
-                if (!formation) {
-                    formation = new Formation(unit.id);
+                let info = decodeURIComponent(token.get("gmnotes")).toString().split(";")
+                if (info) {
+                    let fID = info[0];
+                    let breakpoint = parseInt(info[1]);
+                    let formation = FormationArray[fID];
+                    let formName = unit.token.get("tooltip");
+                    if (!formation) {
+                        formation = new Formation(formName,breakpoint,unit.id,fID);
+                    }
+                    formation.AddUnit(unit.id);
                 }
-                formation.AddUnit(unit.id);
             }  
-
-
-
         });
         let elapsed = Date.now()-start;
         log(`${c} token${s} checked in ${elapsed/1000} seconds - ` + Object.keys(UnitArray).length + " placed in Unit Array");
@@ -1367,6 +1372,7 @@ log(terrain)
             players: {},
             nations: ["",""],
             formNum: [0,0],
+            formationCasualties: [{},{}], //modified in game, referenced by player and formation ID
             lines: [],
             turn: 0,
         }
@@ -1418,16 +1424,17 @@ log(terrain)
 
         let unit;
         let unitNames = {};
-        let unitNumbers = [""," 1st "," 2nd "," 3rd "," 4th "," 5th "];
+        let unitNumbers = [" 1st "," 2nd "," 3rd "," 4th "," 5th "," 6th "," 7th "," 8th "," 9th "," 10th "];
         let unit1 = new Unit(msg.selected[0]._id);
         let formation = new Formation(formationName,breakpoint,unit1.id);
         for (let i=0;i<msg.selected.length;i++) {
             mID = msg.selected[i]._id;
             unit = new Unit(mID);
             formation.AddUnit(mID);
+            let gmn = formation.id + ";" + breakpoint;
             unit.token.set({
                 tint_color: "transparent",
-                gmnotes: formation.id,
+                gmnotes: gmn,
                 tint_color: "transparent",
                 aura1_color: formationColours[formation.number],
                 aura1_radius: 10,
