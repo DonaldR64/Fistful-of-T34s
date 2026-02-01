@@ -704,32 +704,33 @@ const FFT = (() => {
             this.casualties = 0;
             this.name = name;
             this.id = fID;
-            this.tokenIDs = [mID];
+            this.tokenIDs = [uID];
             FormationArray[fID] = this;
             if (!state.FFT.formationInfo[fID]) {
                 let info = {
                     name: name,
-                    nation: nation,
-                    player: player,
+                    nation: this.nation,
+                    player: this.player,
                     casualties: 0,
                     tokenIDs: this.tokenIDs,
                 }
-                state.FFT.formationInfo[id] = info
+                state.FFT.formationInfo[fID] = info;
             } else {
-                let info = state.FFT.formationInfo[id]
+                let info = state.FFT.formationInfo[fID]
                 this.casualties = info.casualties;
                 this.breakpoint = info.breakpoint;
+                this.hq = info.hq;
             }
         }
 
 
 
 
-        AddUnit(mID) {
-            if (this.tokenIDs.includes(mID) === false) {
-                this.tokenIDs.push(mID);
+        AddUnit(uID) {
+            if (this.tokenIDs.includes(uID) === false) {
+                this.tokenIDs.push(uID);
             }
-            UnitArray[mID].formationID = this.id;
+            UnitArray[uID].formationID = this.id;
         }
 
 
@@ -1271,11 +1272,9 @@ log(terrain)
 
         if (phase === "End") {
             //qchecks
-            _.each(UnitArray,unit => {
-                if (unit.token.get(SM.qc) === true) {
-                    RunQC(unit);
-                }
-            })
+            //allowing players to do it
+
+
         }
 
         PrintCard();
@@ -1324,20 +1323,49 @@ log(terrain)
     const QualityCheck = (unit) => {
         //return true if fails
         //check for cohesion
-        let cohesion = true;
+        let unitHex = HexMap[unit.hexLabel];
         let formation = FormationArray[unit.formationID];
-        if (formation.cohesion === true) {
-
-
-
-
+        let cohesion = formation.hq;
+        let cohRange = (unit.quality === "Fair") ? 2:(unit.quality === "Good") ? 4:6;
+        if (cohesion === false) {
+            for (let i=0;i<formation.tokenIDs.length;i++) {
+                let unit2 = UnitArray[formation.tokenIDs[i]];
+                if (!unit2) {continue};
+                let dist = unitHex.cube.distance(HexMap[unit2.hexLabel].cube);
+                if (dist <= cohRange) {
+                    cohesion = true;
+                    break;
+                }
+            }
         }
+        let qualityRoll = randomInteger(6);
+        let target = (unit.quality === "Fair") ? 5:(unit.quality === "Good") ? 4:3;
 
+        let tip = "Rolls: " + qualityRoll;
+        if (cohesion === false) {
+            qualityRoll = Math.max(qualityRoll - 1, 1);
+            tip += "<br>Cohesion -1";
+        } 
 
+        let mods = 0;
+        if (ArmouredTypes.includes(unit.type) === false && unit.token.get(SM.qc) > 1) {
+            mods = unit.token.get(SM.qc) - 1;
+        }
+        if (mods > 0 && ArmouredTypes.includes(unit.type) === false) {
+            tip += "<br>Extra QC Markers -" + mods;
+            qualityRoll = Math.max(qualityRoll - mods,1);
+        } 
 
-
-
-
+        if (cohesion === false && mods === 0) {
+            tip += "<br>No Modifications";
+        }
+        tip = '[' + qualityRoll + '](#" class="showtip" title="' + tip + ')';
+        outputCard.body.push(tip + " vs. " + target + "+");
+        if (qualityRoll >= target) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
 
@@ -1587,12 +1615,13 @@ log(distance)
                                 outputCard.body.push(unit.name + ' is hit and Suppressed');
                                 unit.token.set(SM.suppressed,true);
                             } else {
+                                outputCard.body.push(unit.name + " is Hit and Suppressed");
                                 qc = QualityCheck(unit);
                                 if (qc === true) {
-                                    outputCard.body.push(unit.name + " is hit and fails its Quality Check,it is removed");
+                                    outputCard.body.push(unit.name + " fails its Quality Check and is removed");
     //unit.Kill();
                                 } else {
-                                    outputCard.body.push(unit.name + ' is hit and Suppressed, making its Quality Check');
+                                    outputCard.body.push(unit.name + ' makes its Quality Check');
                                     unit.token.set(SM.suppressed,true);
                                     unit.token.set(SM.green, true);
                                 }
@@ -1606,12 +1635,13 @@ log(distance)
                             outputCard.body.push(unit.name + ' is hit and Suppressed');
                             unit.token.set(SM.suppressed,true);
                         } else {
+                            outputCard.body.push(unit.name + " is Hit and Suppressed");
                             qc = QualityCheck(unit);
                             if (qc === true) {
-                                outputCard.body.push(unit.name + " is hit and fails its Quality Check, it is removed");
+                                outputCard.body.push(unit.name + " fails its Quality Check and is removed");
 //unit.Kill();
                             } else {
-                                outputCard.body.push(unit.name + ' is hit and Suppressed, making its Quality Check');
+                                outputCard.body.push(unit.name + ' make its Quality Check');
                                 unit.token.set(SM.suppressed,true);
                                 unit.token.set(SM.green, true);
                             }      
@@ -1634,7 +1664,14 @@ log(distance)
 
     }
 
+    const RunQC = (unit) => {
+        sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
+        SetupCard(unit.name,"Quality Check",unit.nation);
+        //create button to take QC
 
+
+
+    }
 
 
 
@@ -1737,18 +1774,18 @@ log(distance)
         let Tag = msg.content.split(";");
         let formationName = Tag[1];
         let breakpoint = Tag[2];
-        let cohesion = Tag[3]; // will be true unless is an HQ or Recon unit
+        let hq = (Tag[3] === "HQ/Recon") ? true:false;
 
         let unit;
         let unitNames = {};
         let unitNumbers = [" 1st "," 2nd "," 3rd "," 4th "," 5th "," 6th "," 7th "," 8th "," 9th "," 10th "];
         let unit1 = new Unit(msg.selected[0]._id);
         let formation = new Formation(formationName,unit1.id);
-        formation.cohesion = cohesion;
+        formation.hq = hq;
         formation.breakpoint = breakpoint;
-        state.FTT.formationInfo[formation.id].breakpoint = breakpoint;
-        state.FTT.formationInfo[formation.id].breakpoint = cohesion;
-
+        state.FFT.formationInfo[formation.id].breakpoint = breakpoint;
+        state.FFT.formationInfo[formation.id].hq = hq;
+        let number = state.FFT.formNum[formation.player];
         state.FFT.formNum[formation.player]++;
 
         for (let i=0;i<msg.selected.length;i++) {
@@ -1759,7 +1796,7 @@ log(distance)
                 tint_color: "transparent",
                 gmnotes: formation.id,
                 tint_color: "transparent",
-                aura1_color: formationColours[formation.number],
+                aura1_color: formationColours[number],
                 aura1_radius: 10,
                 disableTokenMenu: true,
                 showname: true,
