@@ -699,6 +699,7 @@ const FFT = (() => {
     class Formation {
         constructor(name,uID,fID = stringGen()) {
             let refUnit = UnitArray[uID];
+            refUnit.formationID = fID;
             this.nation = refUnit.nation;
             this.player = refUnit.player || 0;
             this.casualties = 0;
@@ -1156,6 +1157,8 @@ log(terrain)
                         } else {
                             sendChat("",unit.name + " - needs to redefine its Formation");
                         }
+                    } else {
+                        formation.AddUnit(unit.id);
                     }
                 }
             }  
@@ -1325,7 +1328,11 @@ log(terrain)
         //check for cohesion
         let unitHex = HexMap[unit.hexLabel];
         let formation = FormationArray[unit.formationID];
-        let cohesion = formation.hq;
+        if (!formation) {
+            sendChat("",unit.name + " - has no formation in data");
+            return false;
+        }
+        let cohesion = formation.hq || false;
         let cohRange = (unit.quality === "Fair") ? 2:(unit.quality === "Good") ? 4:6;
         if (cohesion === false) {
             for (let i=0;i<formation.tokenIDs.length;i++) {
@@ -1348,10 +1355,10 @@ log(terrain)
         } 
 
         let mods = 0;
-        if (ArmouredTypes.includes(unit.type) === false && unit.token.get(SM.qc) > 1) {
+        if (ArmourTypes.includes(unit.type) === false && unit.token.get(SM.qc) > 1) {
             mods = unit.token.get(SM.qc) - 1;
         }
-        if (mods > 0 && ArmouredTypes.includes(unit.type) === false) {
+        if (mods > 0 && ArmourTypes.includes(unit.type) === false) {
             tip += "<br>Extra QC Markers -" + mods;
             qualityRoll = Math.max(qualityRoll - mods,1);
         } 
@@ -1602,20 +1609,22 @@ log(distance)
                 } 
 
                 let result = artRoll + bonus;
-                let line = "Result: " + artRoll;
+                let tip = "Result: " + result + " vs. 4+";
+                tip += "<br>Roll: " + artRoll;
                 if (bonus !== 0) {
-                    line += " [" + artEffect + "]";
+                    tip += "<br>Bonus: " + artEffect;
                 }
-                line += " vs. 4+";
-                outputCard.body.push(line);
+                let res = "";
+
                 if (result > 3) {
+                    tip = '[hit](#" class="showtip" title="' + tip + ')';
                     if (result >= 6) {
                         if (hex2.cover === true || ArmourTypes.includes(unit.type)) {
                             if (unit.token.get(SM.green)) {
-                                outputCard.body.push(unit.name + ' is hit and Suppressed');
+                                outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
                                 unit.token.set(SM.suppressed,true);
                             } else {
-                                outputCard.body.push(unit.name + " is Hit and Suppressed");
+                                outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
                                 qc = QualityCheck(unit);
                                 if (qc === true) {
                                     outputCard.body.push(unit.name + " fails its Quality Check and is removed");
@@ -1627,7 +1636,7 @@ log(distance)
                                 }
                             }                
                         } else {
-                            outputCard.body.push(unit.name + ' is hit and Destroyed');
+                            outputCard.body.push(unit.name + ' is ' + tip + ' and Destroyed');
 //destroy unit
                         }
                     } else {
@@ -1648,7 +1657,8 @@ log(distance)
                         }
                     }
                 } else {
-                    outputCard.body.push(unit.name + " was missed");
+                    tip = '[missed](#" class="showtip" title="' + tip + ')';
+                    outputCard.body.push(unit.name + " is " + tip);
                 }
             }
         })
