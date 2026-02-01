@@ -697,18 +697,33 @@ const FFT = (() => {
     }
 
     class Formation {
-        constructor(name,breakpoint,mID,fID = stringGen()) {
-            let refUnit = UnitArray[mID];
+        constructor(name,uID,fID = stringGen()) {
+            let refUnit = UnitArray[uID];
             this.nation = refUnit.nation;
             this.player = refUnit.player || 0;
-            this.breakpoint = breakpoint;
-            this.casualties = state.FFT.formationCasualties[this.player][fID] || 0;
+            this.casualties = 0;
             this.name = name;
             this.id = fID;
             this.tokenIDs = [mID];
-            this.number = state.FFT.formNum[this.player];
             FormationArray[fID] = this;
+            if (!state.FFT.formationInfo[fID]) {
+                let info = {
+                    name: name,
+                    nation: nation,
+                    player: player,
+                    casualties: 0,
+                    tokenIDs: this.tokenIDs,
+                }
+                state.FFT.formationInfo[id] = info
+            } else {
+                let info = state.FFT.formationInfo[id]
+                this.casualties = info.casualties;
+                this.breakpoint = info.breakpoint;
+            }
         }
+
+
+
 
         AddUnit(mID) {
             if (this.tokenIDs.includes(mID) === false) {
@@ -1129,16 +1144,18 @@ log(terrain)
             let character = getObj("character", token.get("represents"));   
             if (character) {
                 let unit = new Unit(token.get("id"));
-                let info = decodeURIComponent(token.get("gmnotes")).toString().split(";")
-                if (info) {
-                    let fID = info[0];
-                    let breakpoint = parseInt(info[1]);
+                let fID = decodeURIComponent(token.get("gmnotes")).toString();
+                if (fID) {
                     let formation = FormationArray[fID];
-                    let formName = unit.token.get("tooltip");
+                    let formationInfo = state.FFT.formationInfo[fID];
                     if (!formation) {
-                        formation = new Formation(formName,breakpoint,unit.id,fID);
+                        if (formationInfo) {
+                            formation = new Formation(state.FFT.formationInfo[fID].name,unit.id,fID);
+                            formation.AddUnit(unit.id);
+                        } else {
+                            sendChat("",unit.name + " - needs to redefine its Formation");
+                        }
                     }
-                    formation.AddUnit(unit.id);
                 }
             }  
         });
@@ -1241,12 +1258,24 @@ log(terrain)
 
         SetupCard(state.FFT.nations[activePlayer] + " " + currentPhase + " Phase","Turn " + turn,state.FFT.nations[activePlayer]);
 
+        if (phase === "Artillery") {
+            //remove green markers for artillery QCs
+            //remove yellow suppression markers if appropr turn
+            _.each(UnitArray,unit => {
+                unit.token.set(SM.green,false);
+                if (unit.player !== activePlayer) {
+                    unit.token.set(SM.yellow,false);
+                }
+            })
+        }
 
         if (phase === "End") {
             //qchecks
-
-
-
+            _.each(UnitArray,unit => {
+                if (unit.token.get(SM.qc) === true) {
+                    RunQC(unit);
+                }
+            })
         }
 
         PrintCard();
@@ -1294,7 +1323,16 @@ log(terrain)
 
     const QualityCheck = (unit) => {
         //return true if fails
-        //check for coherence
+        //check for cohesion
+        let cohesion = true;
+        let formation = FormationArray[unit.formationID];
+        if (formation.cohesion === true) {
+
+
+
+
+        }
+
 
 
 
@@ -1647,7 +1685,7 @@ log(distance)
             players: {},
             nations: ["",""],
             formNum: [0,0],
-            formationCasualties: [{},{}], //modified in game, referenced by player and formation ID
+            formationInfo: {},
             lines: [],
             turn: 0,
             phase: "",
@@ -1699,21 +1737,27 @@ log(distance)
         let Tag = msg.content.split(";");
         let formationName = Tag[1];
         let breakpoint = Tag[2];
+        let cohesion = Tag[3]; // will be true unless is an HQ or Recon unit
 
         let unit;
         let unitNames = {};
         let unitNumbers = [" 1st "," 2nd "," 3rd "," 4th "," 5th "," 6th "," 7th "," 8th "," 9th "," 10th "];
         let unit1 = new Unit(msg.selected[0]._id);
-        let formation = new Formation(formationName,breakpoint,unit1.id);
+        let formation = new Formation(formationName,unit1.id);
+        formation.cohesion = cohesion;
+        formation.breakpoint = breakpoint;
+        state.FTT.formationInfo[formation.id].breakpoint = breakpoint;
+        state.FTT.formationInfo[formation.id].breakpoint = cohesion;
+
         state.FFT.formNum[formation.player]++;
+
         for (let i=0;i<msg.selected.length;i++) {
             mID = msg.selected[i]._id;
             unit = new Unit(mID);
             formation.AddUnit(mID);
-            let gmn = formation.id + ";" + breakpoint;
             unit.token.set({
                 tint_color: "transparent",
-                gmnotes: gmn,
+                gmnotes: formation.id,
                 tint_color: "transparent",
                 aura1_color: formationColours[formation.number],
                 aura1_radius: 10,
