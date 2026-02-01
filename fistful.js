@@ -26,6 +26,7 @@ const FFT = (() => {
         b3: 2/3,
     }
 
+    const ArmourTypes = ["Halftrack","Tank Destroyer","Tank"];
 
     const DefineHexInfo = () => {
         HexSize = (70 * pageInfo.scale)/M.f0;
@@ -638,24 +639,29 @@ const FFT = (() => {
             this.armourSR = parseInt(aa.armourSR) || "NA"; 
 
             if (aa.artflag === "On") {
-                this.avail = parseInt(aa.avail.replace("+"));
-                this.artsize = parseInt((aa.artsize.replace("hexes"),"").trim());
-                this.arteffect = (aa.arteffect === "Normal") ? 0:parseInt(aa.arteffect);
+                this.avail = (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+",""));
+                this.artsize = parseInt(aa.artsize.replace(/[^0-9]+/g, ''));
+                this.arteffect = aa.arteffect;
                 this.artrange = parseInt(aa.artrange);
             } else {
                 this.rof = parseInt(aa.rof);
-                this.range = aa.range.split("/") || [0,0,0];
+                if (aa.range) {
+                    this.range = aa.range.split("/")
+                } else {
+                    this.range = [0,0,0];
+                }
                 _.each(this.range, band => {
                     band = parseInt(band);
                 })
                 this.antiInf = parseInt(aa.antiInf) || 0;
-                this.pen = aa.pen;
+                this.pen = aa.pen || 0;
             }
 
 
             this.formationID = "";
 
-
+            //check if offmap
+            this.offBoard = false;
 
 
 
@@ -813,6 +819,7 @@ const FFT = (() => {
 
     const DisplayDice = (roll,tablename,size) => {
         roll = roll.toString();
+        tablename = tablename.replace(/\s+/g, '');
         let table = findObjs({type:'rollabletable', name: tablename})[0];
         if (!table) {
             table = findObjs({type:'rollabletable', name: "Neutral"})[0];
@@ -1369,6 +1376,199 @@ log(terrain)
     }
 
 
+    const ArtilleryOne = (msg) => {
+        //availability check
+        let artID = msg.selected[0]._id;
+        let artilleryUnit = UnitArray[artID];
+        let availability = artilleryUnit.avail;
+        let availText = (availability === 1) ? "Auto":availability + "+";
+        SetupCard(artilleryUnit.name,"Availability",artilleryUnit.nation);
+        if (artilleryUnit.token.get(SM.fired) === true) {
+            outputCard.body.push("Already Activated this Turn");
+        } else {
+            let availRoll = randomInteger(6);
+availRoll = 6;
+            outputCard.body.push("Availability Roll: " + DisplayDice(availRoll,artilleryUnit.nation,32) + " vs. " + availText);
+            outputCard.body.push("[hr]");
+            if (availRoll >= availability || availRoll === 6) {
+                outputCard.body.push("Asset Available");
+                outputCard.body.push("Place Target and Attack");
+                PlaceArtToken(artilleryUnit);                
+            } else {
+                outputCard.body.push("Asset not Available this turn");
+                artilleryUnit.token.set(SM.fired,true);
+            }
+        }
+        PrintCard();
+    }
+
+    const PlaceArtToken = (artilleryUnit) => {
+        let img = "https://files.d20.io/images/105823565/P035DS5yk74ij8TxLPU8BQ/thumb.png?1582679991";
+        let name = artilleryUnit.name + " Target";
+        if (artilleryUnit.type === "Aircraft") {
+            if (artilleryUnit.nation === "Wermacht") {
+                img = "https://files.d20.io/images/473990941/JHnlkpSJhDw6CrJ2LvGGKw/thumb.jpg?1769900011";
+                name = "JU-87D";
+            }
+            if (artilleryUnit.nation === "Red Army") {
+                img = "https://files.d20.io/images/474017740/m-a2yNToWrQG6xRYf2FCkw/thumb.jpg?1769909547";
+                name = "IL-2 Sturmovik";
+            }
+        }
+        img = getCleanImgSrc(img);
+        let charID = "-OkLrIEzBQrYJMzCEg5H";
+
+//clear old tokens
+        let newToken = createObj("graphic", {
+            left: artilleryUnit.token.get("left"),
+            top: artilleryUnit.token.get("top"),
+            width: 50,
+            height: 50, 
+            pageid: Campaign().get("playerpageid"),
+            imgsrc: img,
+            layer: "objects",
+            represents: charID,
+            tooltip: name,
+            show_tooltip: true,
+            name: name,
+            showname: true,
+            disableTokenMenu: true,
+            showplayers_aura1: false,
+        })
+        //redo ability
+        let abilArray = findObjs({_type: "ability", _characterid: charID});
+        //clear old abilities
+        for(let a=0;a<abilArray.length;a++) {
+            abilArray[a].remove();
+        } 
+        let abilityName = "Attack";
+        let action = "!ArtilleryTwo";
+        AddAbility(abilityName,action,charID);
+        targetUnit = new Unit(newToken.get("id"));
+        let artFormation = FormationArray[artilleryUnit.formationID];
+        artFormation.AddUnit(targetUnit.id);
+        targetUnit.artsize = artilleryUnit.artsize;
+        targetUnit.nation = artilleryUnit.nation;
+        targetUnit.player = artilleryUnit.player;
+        targetUnit.arteffect = artilleryUnit.arteffect;
+        targetUnit.artrange = artilleryUnit.artrange;
+        targetUnit.artsize = artilleryUnit.artsize;
+        targetUnit.type = artilleryUnit.type;
+        let gmn = artFormation.id + ";1";
+        targetUnit.token.set("gmnotes",gmn);
+
+
+log(targetUnit)
+
+
+    }
+
+    const ArtilleryTwo = (msg) => {
+        //check LOS and Range
+        let targetID = msg.selected[0]._id;
+        let target = UnitArray[targetID];
+        inLOS = false;
+        inRange = false;
+        let keys = Object.keys(UnitArray);
+        for (let i=0;i<keys.length;i++) {
+            if (keys[i] === targetID) {continue};
+            let spotter = UnitArray[keys[i]];
+
+            if (spotter.nation !== target.nation) {continue};
+            if (spotter.offBoard === true) {continue};
+            let losResult = LOS(spotter,target);
+            if (losResult.los === false) {continue};
+            inLOS = true;
+            if (losResult.distance > target.artrange) {continue};
+            inRange = true;
+            break;
+        }
+
+        let assetType = target.type;
+        SetupCard(target.name,assetType + " Attack",target.nation);
+        if (inLOS ===false) {
+            outputCard.body.push("No Spotter has LOS");
+        } else if (inRange === false) {
+            outputCard.body.push("Target is out of Range of " + assetType)
+        } else {
+            ArtilleryThree(target);
+        }
+        PrintCard();
+    }
+
+    const ArtilleryThree = (target) => {
+        //do the attacks
+        let targetHex = HexMap[target.hexLabel];
+        let radius = target.artsize - 1;
+log(radius)
+        _.each(UnitArray,unit => {
+            if (unit.id === target.id) {return};
+log(unit.name)
+            let hex2 = HexMap[unit.hexLabel];
+            let distance = hex2.cube.distance(targetHex.cube);
+log(distance)
+            if (distance <= radius) {
+                let artRoll = randomInteger(6);
+                let artEffect = target.arteffect;
+                let bonus = 0;
+                if (artEffect === "+1") {
+                    bonus = 1;
+                } else if (artEffect === "+1 vs Armour" && ArmourTypes.includes(unit.type)) {
+                    bonus = 1;
+                } 
+
+                let result = artRoll + bonus;
+                let line = "Result: " + artRoll;
+                if (bonus !== 0) {
+                    line += " [" + artEffect + "]";
+                }
+                line += " vs. 4+";
+                outputCard.body.push(line);
+                if (result > 3) {
+                    if (result >= 6) {
+                        if (hex2.cover === true || ArmourTypes.includes(unit.type)) {
+                            outputCard.body.push(unit.name + ' is hit and Suppressed');
+                            unit.token.set(SM.suppressed,true);
+                            outputCard.body.push("It must take an Immediate Quality Check");
+                        } else {
+                            outputCard.body.push(unit.name + ' is hit and Destroyed');
+//destroy unit
+                        }
+                    } else {
+                        if (hex2.cover === true || ArmourTypes.includes(unit.type)) {
+                            outputCard.body.push(unit.name + ' is hit and Suppressed');
+                            unit.token.set(SM.suppressed,true);
+                        } else {
+                            outputCard.body.push(unit.name + ' is hit and Suppressed');
+                            unit.token.set(SM.suppressed,true);
+                            outputCard.body.push("It must take an Immediate Quality Check");
+                        }
+                    }
+                } else {
+                    outputCard.body.push(unit.name + " was missed");
+                }
+            }
+        })
+//Sound and FX
+
+
+
+
+        target.token.remove();
+        delete UnitArray[target.id];
+
+
+
+    }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1621,29 +1821,27 @@ log(terrain)
         
         //firing arc on weapon
         let angle = TargetAngle(shooter,target);
-        log(angle)
         let angleT = TargetAngle(target,shooter);
-        log(angleT)
         let shooterFacing = (angle <= 60 || angle >= 300) ? "Front":"Side/Rear";
         let targetFacing = (angleT <= 60 || angleT >= 300) ? "Front":"Side/Rear";
 
         //check lines
         let pt1 = new Point(0,shooterHex.elevation);
         let pt2 = new Point(distance,targetHex.elevation);
-log("Shooter E: " + shooterHex.elevation);
-log("Target E: " + targetHex.elevation);
+//log("Shooter E: " + shooterHex.elevation);
+//log("Target E: " + targetHex.elevation);
 
         let interCubes = shooterHex.cube.linedraw(targetHex.cube)
         for (let i=0;i<interCubes.length - 1;i++) {
             let label = interCubes[i].label();
-log(label)
+//log(label)
             let interHex = HexMap[label];
             if (interHex.cover === false) {continue};
             let teH = interHex.height; //terrain in hex
             let edH = 0; //height of any terrain on edge crossed
             let iH = Math.max(teH,edH);
             interHexHeight = iH + interHex.elevation;
-log("Total Height: " + interHexHeight)
+//log("Total Height: " + interHexHeight)
             let pt3 = new Point(i,0);
             let pt4 = new Point(i,interHexHeight);
             if (lineLine(pt1,pt2,pt3,pt4)) {
@@ -1800,6 +1998,12 @@ log("Total Height: " + interHexHeight)
                 RollDice(msg);
                 break;
 
+            case '!ArtilleryOne':
+                ArtilleryOne(msg);
+                break;
+            case '!ArtilleryTwo':
+                ArtilleryTwo(msg);
+                break;
         }
     };
 
