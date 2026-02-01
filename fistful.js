@@ -124,7 +124,7 @@ const FFT = (() => {
         fired: "status_Shell::5553215",
         move: "status_Advantage-or-Up::2006462",
         double: "status_Fast::5865486",
-
+        green: "status_green", //to note has taken an art QC already
 
     }
 
@@ -1292,6 +1292,18 @@ log(terrain)
     }
 
 
+    const QualityCheck = (unit) => {
+        //return true if fails
+        //check for coherence
+
+
+
+
+
+    }
+
+
+
 
 
 
@@ -1387,8 +1399,14 @@ log(terrain)
             outputCard.body.push("Already Activated this Turn");
         } else {
             let availRoll = randomInteger(6);
+            let extra = "";
+            if (artilleryUnit.token.get(SM.suppressed) === true) {
+                availRoll = Math.max(availRoll - 1, 1);
+                extra = " [-1 for Suppression]";
+            }
+        
 availRoll = 6;
-            outputCard.body.push("Availability Roll: " + DisplayDice(availRoll,artilleryUnit.nation,32) + " vs. " + availText);
+            outputCard.body.push("Availability Roll: " + DisplayDice(availRoll,artilleryUnit.nation,32) + extra + " vs. " + availText);
             outputCard.body.push("[hr]");
             if (availRoll >= availability || availRoll === 6) {
                 outputCard.body.push("Asset Available");
@@ -1527,21 +1545,38 @@ log(distance)
                 if (result > 3) {
                     if (result >= 6) {
                         if (hex2.cover === true || ArmourTypes.includes(unit.type)) {
-                            outputCard.body.push(unit.name + ' is hit and Suppressed');
-                            unit.token.set(SM.suppressed,true);
-                            outputCard.body.push("It must take an Immediate Quality Check");
+                            if (unit.token.get(SM.green)) {
+                                outputCard.body.push(unit.name + ' is hit and Suppressed');
+                                unit.token.set(SM.suppressed,true);
+                            } else {
+                                qc = QualityCheck(unit);
+                                if (qc === true) {
+                                    outputCard.body.push(unit.name + " is hit and fails its Quality Check,it is removed");
+    //unit.Kill();
+                                } else {
+                                    outputCard.body.push(unit.name + ' is hit and Suppressed, making its Quality Check');
+                                    unit.token.set(SM.suppressed,true);
+                                    unit.token.set(SM.green, true);
+                                }
+                            }                
                         } else {
                             outputCard.body.push(unit.name + ' is hit and Destroyed');
 //destroy unit
                         }
                     } else {
-                        if (hex2.cover === true || ArmourTypes.includes(unit.type)) {
+                        if (hex2.cover === true || ArmourTypes.includes(unit.type) || unit.token.get(SM.green) === true) {
                             outputCard.body.push(unit.name + ' is hit and Suppressed');
                             unit.token.set(SM.suppressed,true);
                         } else {
-                            outputCard.body.push(unit.name + ' is hit and Suppressed');
-                            unit.token.set(SM.suppressed,true);
-                            outputCard.body.push("It must take an Immediate Quality Check");
+                            qc = QualityCheck(unit);
+                            if (qc === true) {
+                                outputCard.body.push(unit.name + " is hit and fails its Quality Check, it is removed");
+//unit.Kill();
+                            } else {
+                                outputCard.body.push(unit.name + ' is hit and Suppressed, making its Quality Check');
+                                unit.token.set(SM.suppressed,true);
+                                unit.token.set(SM.green, true);
+                            }      
                         }
                     }
                 } else {
