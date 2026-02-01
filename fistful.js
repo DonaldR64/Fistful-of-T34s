@@ -1265,7 +1265,7 @@ log(terrain)
             _.each(UnitArray,unit => {
                 unit.token.set(SM.green,false);
                 if (unit.player !== activePlayer) {
-                    unit.token.set(SM.yellow,false);
+                    unit.token.set(SM.suppressed,false);
                 }
             })
         }
