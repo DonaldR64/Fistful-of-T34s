@@ -132,7 +132,8 @@ const FFT = (() => {
 
     //height is height of terrain element
     //move: 0 = Open, 1 = Difficult, 2 = Impassable
-    //cover for area fire: 0 = none, 1 = light, 2 = heavy
+    //cover for direct fire - 0 = None, 1 = Light (5+), 2 = Heavy (4+)
+    //cover for spotting - true/false
 
     const LinearTerrain = {
 
@@ -146,9 +147,9 @@ const FFT = (() => {
 
 
     const TerrainInfo = {
-        "Heavy Woods": {name: "Heavy Woods",height: 1, move: 1, cover: true},
-        "Town": {name: "Town",height: 1, move: 1, cover: true},
-        "River": {name: "River",height: 0, move: 2, cover: false},
+        "Heavy Woods": {name: "Heavy Woods",height: 1, move: 1, cover: 1,spot: true},
+        "Town": {name: "Town",height: 1, move: 1, cover: 2,spot: true},
+        "River": {name: "River",height: 0, move: 2, cover: 1,spot: true},
 
 
 
@@ -1668,7 +1669,7 @@ log(distance)
                 if (result > 3) {
                     tip = '[hit](#" class="showtip" title="' + tip + ')';
                     if (result >= 6) {
-                        if (hex2.cover === true || ArmourTypes.includes(unit.type)) {
+                        if (hex2.cover > 0 || ArmourTypes.includes(unit.type)) {
                             outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
                             unit.token.set(SM.suppressed,true);
                             if (unit.token.get(SM.green) === false) {
@@ -1682,7 +1683,7 @@ log(distance)
                     } else {
                         unit.token.set(SM.suppressed,true);
                         outputCard.body.push(unit.name + " is Hit and Suppressed");
-                        if ((hex2.cover === false || ArmourTypes.includes(unit.type) === false) && unit.token.get(SM.green) === false) {
+                        if ((hex2.cover > 0 || ArmourTypes.includes(unit.type) === false) && unit.token.get(SM.green) === false) {
                             unit.token.set(SM.green,true);
                             QualityCheck(unit);
                         }
@@ -1942,6 +1943,8 @@ log(unit)
         let shooterID = Tag[1];
         let targetID = Tag[2];
         let shooter = UnitArray[shooterID];
+        let coverLevels = ["No","Light","Heavy"];
+
         if (!shooter) {
             sendChat("","Not valid shooter");
             return;
@@ -1960,10 +1963,7 @@ log(unit)
             outputCard.body.push(losResult.losReason);
         } else {
             outputCard.body.push("Shooter has LOS to Target");
-            if (losResult.cover === true) {
-                outputCard.body.push("Target Has Cover");
-            }
-
+            outputCard.body.push("Target has " + coverLevels[losResult.cover] + " Cover");
             outputCard.body.push("Target is in the " + losResult.shooterFacing + " Arc");
             outputCard.body.push("Target is being hit on the " + losResult.targetFacing + " Arc");
 
@@ -1991,7 +1991,7 @@ log(unit)
         let los = true;
         let losReason = "";
         let losBlock = "";
-        let cover = false;
+        let cover = 0;
         
         let shooterHex = HexMap[shooter.hexLabel];
         let targetHex = HexMap[target.hexLabel];
@@ -2014,7 +2014,7 @@ log(unit)
             let label = interCubes[i].label();
 //log(label)
             let interHex = HexMap[label];
-            if (interHex.cover === false) {continue};
+            if (interHex.cover === 0) {continue};
             let teH = interHex.height; //terrain in hex
             let edH = 0; //height of any terrain on edge crossed
             let iH = Math.max(teH,edH);
@@ -2031,9 +2031,7 @@ log(unit)
         }
 
         //target hex
-        if (targetHex.cover === true) {
-            cover = true;
-        }
+        cover = targetHex.cover;
 
         let result = {
             los: los,
