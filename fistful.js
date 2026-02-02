@@ -83,6 +83,7 @@ const FFT = (() => {
     let UnitArray = {};
     let FormationArray = {};
     let qcUnits = [];
+    let artUnits = [];
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
 
@@ -125,7 +126,7 @@ const FFT = (() => {
         move: "status_Advantage-or-Up::2006462",
         double: "status_Fast::5865486",
         green: "status_green", //to note has taken an art QC already
-
+        unavail: "status_oneshot::5503748",
     }
 
 
@@ -1144,22 +1145,20 @@ log(terrain)
         
         tokens.forEach((token) => {
             let character = getObj("character", token.get("represents"));   
-            if (character) {
+            let fID = decodeURIComponent(token.get("gmnotes")).toString();
+            if (character && fID && fID.includes("TargetIcon") === false) {
                 let unit = new Unit(token.get("id"));
-                let fID = decodeURIComponent(token.get("gmnotes")).toString();
-                if (fID) {
-                    let formation = FormationArray[fID];
-                    let formationInfo = state.FFT.formationInfo[fID];
-                    if (!formation) {
-                        if (formationInfo) {
-                            formation = new Formation(state.FFT.formationInfo[fID].name,unit.id,fID);
-                            formation.AddUnit(unit.id);
-                        } else {
-                            sendChat("",unit.name + " - needs to redefine its Formation");
-                        }
-                    } else {
+                let formation = FormationArray[fID];
+                let formationInfo = state.FFT.formationInfo[fID];
+                if (!formation) {
+                    if (formationInfo) {
+                        formation = new Formation(state.FFT.formationInfo[fID].name,unit.id,fID);
                         formation.AddUnit(unit.id);
+                    } else {
+                        sendChat("",unit.name + " - needs to redefine its Formation");
                     }
+                } else {
+                    formation.AddUnit(unit.id);
                 }
             }  
         });
@@ -1266,11 +1265,14 @@ log(terrain)
             //remove green markers for artillery QCs
             //remove yellow suppression markers if appropr turn
             _.each(UnitArray,unit => {
-                unit.token.set(SM.green,false);
+                unit.token.set(SM.green,false); //marker for artillery QCs
+                unit.token.set(SM.unavail,false); //marker for avail artillery
                 if (unit.player !== activePlayer) {
                     unit.token.set(SM.suppressed,false);
                 }
             })
+            //check for available artillery
+            ArtilleryAvailability(activePlayer);
         }
 
         if (currentPhase === "End") {
@@ -1391,6 +1393,70 @@ log(unit2.name + " is in cohesion")
     }
 
 
+    const ArtilleryAvailability = (player) => {
+        artUnits = [];
+        let avail = [];
+        let unavail = [];
+        _.each(UnitArray,unit => {
+            if (unit.player === player) {
+                if (unit.type === "Artillery" || unit.type === "Mortar" || unit.type === "Aircraft") {
+                    let availRoll = randomInteger(6);
+                    tip = "Roll: " + availRoll;
+                    if (unit.token.get(SM.suppressed) === true) {
+                        availRoll = Math.Max(availRoll - 1,1);
+                        tip += "<br>Suppressed -1";
+                    }                    
+                    tip = '[🎲 ](#" class="showtip" title="' + tip + ')';
+                    if (availRoll >= unit.avail) {
+                        artUnits.push(unit);
+                        avail.push(tip + unit.name + " is Available");
+                    } else {
+                        unavail.push(tip + unit.name + " is Not Available");
+                        unit.token.set(SM.unavail,true);
+                    }
+                }
+            }
+        })
+        if (avail.length > 0) {
+            outputCard.body.push("Available Artillery");
+            for (let i=0;i<avail.length;i++) {
+                outputCard.body.push(avail[i]);
+            }
+            if (unavail.length > 0) {
+                outputCard.body.push("[hr]");
+            }
+        }
+        if (avail.length === 0) {
+            outputCard.body.push("There is no Available Artillery");
+        }
+        if (unavail.length > 0) {
+            for (let i=0;i<unavail.length;i++) {
+                outputCard.body.push(unavail[i]);
+            }
+        }
+    }
+
+    const CallArtillery = (msg) => {
+        let spotterID = msg.selected[0]._id;
+        let spotter = UnitArray[spotterID];
+        SetupCard(spotter.name,"Call Artillery",spotter.nation);
+        if (state.FFT.phase !== "Artillery") {
+            outputCard.body.push("Not the Artillery Phase");
+        } else if (artUnits.length === 0) {
+            outputCard.body.push("There is no Available Artillery or Airstrikes");
+        } else {
+            for (let i=0;i<artUnits.length;i++) {
+                let artUnit = artUnits[i];
+                let pt2 = ";?{Type|HE|Smoke}";
+                if (artUnit.type === "Aircraft") {
+                    pt2 = ";HE";
+                }
+                ButtonInfo(artUnit.name,"!Artillery;" + spotterID + ";" + artUnit.id + pt2);
+            }
+        }
+        PrintCard();
+    }
+
 
 
 
@@ -1476,60 +1542,27 @@ log(unit2.name + " is in cohesion")
     }
 
 
-    const ArtilleryOne = (msg) => {
-        //availability check
-        let artID = msg.selected[0]._id;
-        let artilleryUnit = UnitArray[artID];
-        let availability = artilleryUnit.avail;
-        let availText = (availability === 1) ? "Auto":availability + "+";
-        SetupCard(artilleryUnit.name,"Availability",artilleryUnit.nation);
-        if (artilleryUnit.token.get(SM.fired) === true) {
-            outputCard.body.push("Already Activated this Turn");
-        } else {
-            let availRoll = randomInteger(6);
-            let extra = "";
-            if (artilleryUnit.token.get(SM.suppressed) === true) {
-                availRoll = Math.max(availRoll - 1, 1);
-                extra = " [-1 for Suppression]";
-            }
-        
-availRoll = 6;
-            outputCard.body.push("Availability Roll: " + DisplayDice(availRoll,artilleryUnit.nation,32) + extra + " vs. " + availText);
-            outputCard.body.push("[hr]");
-            if (availRoll >= availability || availRoll === 6) {
-                outputCard.body.push("Asset Available");
-                outputCard.body.push("Place Target and Attack");
-                PlaceArtToken(artilleryUnit);                
-            } else {
-                outputCard.body.push("Asset not Available this turn");
-                artilleryUnit.token.set(SM.fired,true);
-            }
-        }
-        PrintCard();
-    }
-
-    const PlaceArtToken = (artilleryUnit) => {
-        let img = "https://files.d20.io/images/105823565/P035DS5yk74ij8TxLPU8BQ/thumb.png?1582679991";
+    const PlaceArtToken = (spotterID, artilleryID,type) => {
+        let spotter = UnitArray[spotterID];
+        let artilleryUnit = UnitArray[artilleryID];
+        let radius = (artilleryUnit.artsize - 1) * 100;
+        let img = getCleanImgSrc("https://files.d20.io/images/105823565/P035DS5yk74ij8TxLPU8BQ/thumb.png?1582679991");
         let name = artilleryUnit.name + " Target";
-        if (artilleryUnit.type === "Aircraft") {
-            if (artilleryUnit.nation === "Wermacht") {
-                img = "https://files.d20.io/images/473990941/JHnlkpSJhDw6CrJ2LvGGKw/thumb.jpg?1769900011";
-                name = "JU-87D";
-            }
-            if (artilleryUnit.nation === "Red Army") {
-                img = "https://files.d20.io/images/474017740/m-a2yNToWrQG6xRYf2FCkw/thumb.jpg?1769909547";
-                name = "IL-2 Sturmovik";
-            }
-        }
-        img = getCleanImgSrc(img);
         let charID = "-OkLrIEzBQrYJMzCEg5H";
+        let existing = findObjs({_type:"graphic", represents: charID});
+        _.each(existing,tok => {
+            let exist = UnitArray[tok.get("id")];
+            if (exist) {
+                delete UnitArray[tok.get("id")];
+            }
+            tok.remove();
+        })
 
-//clear old tokens
         let newToken = createObj("graphic", {
-            left: artilleryUnit.token.get("left"),
-            top: artilleryUnit.token.get("top"),
-            width: 50,
-            height: 50, 
+            left: spotter.token.get("left"),
+            top: spotter.token.get("top"),
+            width: 80,
+            height: 80, 
             pageid: Campaign().get("playerpageid"),
             imgsrc: img,
             layer: "objects",
@@ -1539,7 +1572,10 @@ availRoll = 6;
             name: name,
             showname: true,
             disableTokenMenu: true,
-            showplayers_aura1: false,
+            showplayers_aura1: true,
+            aura1_color: "#ffff00",
+            aura1_radius: radius,
+            gmn: "TargetIcon",
         })
         //redo ability
         let abilArray = findObjs({_type: "ability", _characterid: charID});
@@ -1547,62 +1583,57 @@ availRoll = 6;
         for(let a=0;a<abilArray.length;a++) {
             abilArray[a].remove();
         } 
-        let abilityName = "Attack";
-        let action = "!ArtilleryTwo";
+        
+        let abilityName = (type === "HE") ? "Fire for Effect":"Drop Smoke";
+        let action = "!ArtilleryTwo;" + newToken.get("id") + ";" + spotterID + ";" + artilleryID + ";" + type
         AddAbility(abilityName,action,charID);
-        targetUnit = new Unit(newToken.get("id"));
-        let artFormation = FormationArray[artilleryUnit.formationID];
-        artFormation.AddUnit(targetUnit.id);
-        targetUnit.artsize = artilleryUnit.artsize;
-        targetUnit.nation = artilleryUnit.nation;
-        targetUnit.player = artilleryUnit.player;
-        targetUnit.arteffect = artilleryUnit.arteffect;
-        targetUnit.artrange = artilleryUnit.artrange;
-        targetUnit.artsize = artilleryUnit.artsize;
-        targetUnit.type = artilleryUnit.type;
-        let gmn = artFormation.id + ";1";
-        targetUnit.token.set("gmnotes",gmn);
+        toFront(newToken);
 
+        let target = new Unit(newToken.get("id"));
 
-log(targetUnit)
 
 
     }
 
+    const Artillery = (msg) => {
+        //places target icon on spotter, to be moved and activated
+        let Tag = msg.content.split(";");
+        let spotterID = Tag[1];
+        let artilleryID = Tag[2];
+        let type = Tag[3];
+        PlaceArtToken(spotterID,artilleryID,type);
+    }
+
+
+
+
+
     const ArtilleryTwo = (msg) => {
-        //check LOS and Range
-        let targetID = msg.selected[0]._id;
+        let Tag = msg.content.split(";");
+        let targetID = Tag[1];
         let target = UnitArray[targetID];
-        inLOS = false;
-        inRange = false;
-        let keys = Object.keys(UnitArray);
-        for (let i=0;i<keys.length;i++) {
-            if (keys[i] === targetID) {continue};
-            let spotter = UnitArray[keys[i]];
-
-            if (spotter.nation !== target.nation) {continue};
-            if (spotter.offBoard === true) {continue};
-            let losResult = LOS(spotter,target);
-            if (losResult.los === false) {continue};
-            inLOS = true;
-            if (losResult.distance > target.artrange) {continue};
-            inRange = true;
-            break;
-        }
-
-        let assetType = target.type;
-        SetupCard(target.name,assetType + " Attack",target.nation);
-        if (inLOS ===false) {
-            outputCard.body.push("No Spotter has LOS");
-        } else if (inRange === false) {
-            outputCard.body.push("Target is out of Range of " + assetType)
+        let spotterID = Tag[2];
+        let spotter = UnitArray[spotterID];
+        let artilleryID = Tag[3];
+        let artillery = UnitArray[artilleryID];
+        let type = Tag[4];
+        let subtitle = (type === "HE") ? "Fire for Effect":"Smoke";
+        SetupCard(artillery.name,subtitle,spotter.nation);
+        //check LOS and Range
+        let losResult = LOS(spotter,target);
+        let distance = HexMap[artillery.hexLabel].cube.distance(HexMap[target.hexLabel].cube);
+        if (distance > artillery.artrange) {
+            outputCard.body.push("Out of Range of Artillery Unit");
+        } else if (losResult.los === false) {
+            outputCard.body.push("No LOS to Target"); 
         } else {
-            ArtilleryThree(target);
+            ArtilleryThree(targetID,spotterID,artilleryID,type);
         }
         PrintCard();
     }
 
-    const ArtilleryThree = (target) => {
+    const ArtilleryThree = (targetID,spotterID,artilleryID,type) => {
+return
         //do the attacks
         let targetHex = HexMap[target.hexLabel];
         let radius = target.artsize - 1;
@@ -1958,7 +1989,7 @@ log(unit)
         let losReason = "";
         let losBlock = "";
         let cover = false;
-
+        
         let shooterHex = HexMap[shooter.hexLabel];
         let targetHex = HexMap[target.hexLabel];
         let distance = shooterHex.cube.distance(targetHex.cube);
@@ -2142,8 +2173,11 @@ log(unit)
                 RollDice(msg);
                 break;
 
-            case '!ArtilleryOne':
-                ArtilleryOne(msg);
+            case '!CallArtillery':
+                CallArtillery(msg);
+                break;
+            case '!Artillery':
+                Artillery(msg);
                 break;
             case '!ArtilleryTwo':
                 ArtilleryTwo(msg);
