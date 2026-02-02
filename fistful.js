@@ -1627,12 +1627,15 @@ log(unit2.name + " is in cohesion")
         } else if (losResult.los === false) {
             outputCard.body.push("No LOS to Target"); 
         } else {
-            ArtilleryThree(targetID,spotterID,artilleryID,type);
+            ArtilleryThree(targetID,artilleryID,type);
         }
         PrintCard();
     }
 
-    const ArtilleryThree = (targetID,spotterID,artilleryID,type) => {
+    const ArtilleryThree = (targetID,artilleryID,type) => {
+
+//adjust and add smoke also
+
 return
         //do the attacks
         let targetHex = HexMap[target.hexLabel];
