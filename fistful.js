@@ -1299,6 +1299,8 @@ log(terrain)
                     let smokeID = hex.smoke;
                     let smoke = findObjs({_type:"graphic", id: smokeID})[0];
                     smoke.remove();
+                    hex.smoke = "";
+                    hex.smokePlayer = "";
                 }
             })
 
