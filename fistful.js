@@ -1286,7 +1286,9 @@ log(terrain)
             //remove yellow suppression markers if appropr turn
             _.each(UnitArray,unit => {
                 unit.token.set(SM.green,false); //marker for artillery QCs
-                unit.token.set(SM.unavail,false); //marker for avail artillery
+                unit.token.set(SM.unavail,false); //marker for avail 
+                unit.token.set(SM.fired,false);
+                //artillery
                 if (unit.player !== activePlayer) {
                     unit.token.set(SM.suppressed,false);
                 }
@@ -1490,6 +1492,18 @@ log(unit2.name + " is in cohesion")
     }
 
 
+    const CheckArtillery = () => {
+        let player = state.FFT.activePlayer;
+        let nation = state.FFT.nations[player];
+        SetupCard("Available Artillery","",nation);
+        _.each(artUnits,unit => {
+            outputCard.body.push(unit.name);
+        })
+        if (artUnits.length === 0) {
+            outputCard.body.push("No Artillery/Air Available");
+        }
+        PrintCard();
+    }
 
 
 
@@ -1658,13 +1672,20 @@ log(unit2.name + " is in cohesion")
             outputCard.body.push("Out of Range of Artillery Unit");
         } else if (losResult.los === false) {
             outputCard.body.push("No LOS to Target"); 
-        } else if (type === "Smoke") {
-            PlaceSmoke(target,artillery);
-        } else if (type === "HE") {
-            HE(target,artillery);
+        } else {
+            if (type === "Smoke") {
+                PlaceSmoke(target,artillery);
+            } else if (type === "HE") {
+                HE(target,artillery);
+            }
+            artillery.token.set(SM.fired,true);
+            let index = artUnits.map(e => e.id).indexOf(artilleryID);
+            artUnits.splice(index,1);
         }
         PrintCard();
     }
+
+
 
 
     const PlaceSmoke = (target,artillery) => {
@@ -2259,6 +2280,9 @@ log(unit)
                 break;
             case '!TakeQC':
                 TakeQC(msg);
+                break;
+            case '!CheckArtillery':
+                CheckArtillery();
                 break;
         }
     };
