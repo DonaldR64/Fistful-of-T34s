@@ -82,7 +82,7 @@ const FFT = (() => {
 
     let UnitArray = {};
     let FormationArray = {};
-
+    let qcUnits = [];
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
 
@@ -1262,7 +1262,7 @@ log(terrain)
 
         SetupCard(state.FFT.nations[activePlayer] + " " + currentPhase + " Phase","Turn " + turn,state.FFT.nations[activePlayer]);
 
-        if (phase === "Artillery") {
+        if (currentPhase === "Artillery") {
             //remove green markers for artillery QCs
             //remove yellow suppression markers if appropr turn
             _.each(UnitArray,unit => {
@@ -1273,11 +1273,20 @@ log(terrain)
             })
         }
 
-        if (phase === "End") {
+        if (currentPhase === "End") {
             //qchecks
             //allowing players to do it
-
-
+            qcUnits = [];
+            _.each(UnitArray,unit => {
+                if (unit.token.get(SM.qc)) {
+                    qcUnits.push(unit);
+                }
+            })
+            if (qcUnits.length > 0) {
+                ButtonInfo("Start Quality Checks","!RunQC");
+            } else {
+                outputCard.body.push("No Quality Checks, can Advance to next Player");
+            }
         }
 
         PrintCard();
@@ -1324,8 +1333,7 @@ log(terrain)
 
 
     const QualityCheck = (unit) => {
-        //return true if fails
-        //check for cohesion
+log(unit.name)
         let unitHex = HexMap[unit.hexLabel];
         let formation = FormationArray[unit.formationID];
         if (!formation) {
@@ -1333,13 +1341,16 @@ log(terrain)
             return false;
         }
         let cohesion = formation.hq || false;
+log("Cohesion: " + cohesion)
         let cohRange = (unit.quality === "Fair") ? 2:(unit.quality === "Good") ? 4:6;
+log("Coh Range: " + cohRange)
         if (cohesion === false) {
             for (let i=0;i<formation.tokenIDs.length;i++) {
                 let unit2 = UnitArray[formation.tokenIDs[i]];
-                if (!unit2) {continue};
+                if (!unit2 || unit2.id === unit.id) {continue};
                 let dist = unitHex.cube.distance(HexMap[unit2.hexLabel].cube);
                 if (dist <= cohRange) {
+log(unit2.name + " is in cohesion")
                     cohesion = true;
                     break;
                 }
@@ -1348,12 +1359,11 @@ log(terrain)
         let qualityRoll = randomInteger(6);
         let target = (unit.quality === "Fair") ? 5:(unit.quality === "Good") ? 4:3;
 
-        let tip = "Rolls: " + qualityRoll;
+        let tip = "<br>Roll: " + qualityRoll;
         if (cohesion === false) {
             qualityRoll = Math.max(qualityRoll - 1, 1);
             tip += "<br>Cohesion -1";
         } 
-
         let mods = 0;
         if (ArmourTypes.includes(unit.type) === false && unit.token.get(SM.qc) > 1) {
             mods = unit.token.get(SM.qc) - 1;
@@ -1362,16 +1372,21 @@ log(terrain)
             tip += "<br>Extra QC Markers -" + mods;
             qualityRoll = Math.max(qualityRoll - mods,1);
         } 
-
-        if (cohesion === false && mods === 0) {
+        if (cohesion === true && mods === 0) {
             tip += "<br>No Modifications";
         }
-        tip = '[' + qualityRoll + '](#" class="showtip" title="' + tip + ')';
-        outputCard.body.push(tip + " vs. " + target + "+");
+        tip = "Result: " + qualityRoll + " vs. " + target + "+" + tip;
         if (qualityRoll >= target) {
-            return true;
+            tip = '[Passes](#" class="showtip" title="' + tip + ')';
+            outputCard.body.push(unit.name + " " + tip);
         } else {
-            return false;
+            tip = '[Fails](#" class="showtip" title="' + tip + ')';
+            outputCard.body.push(unit.name + " " + tip + " and withdraws or is destroyed");
+//remove unit
+        }
+
+        if (unit && unit.token) {
+            unit.token.set(SM.qc,false);
         }
     }
 
@@ -1620,40 +1635,22 @@ log(distance)
                     tip = '[hit](#" class="showtip" title="' + tip + ')';
                     if (result >= 6) {
                         if (hex2.cover === true || ArmourTypes.includes(unit.type)) {
-                            if (unit.token.get(SM.green)) {
-                                outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
-                                unit.token.set(SM.suppressed,true);
-                            } else {
-                                outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
-                                qc = QualityCheck(unit);
-                                if (qc === true) {
-                                    outputCard.body.push(unit.name + " fails its Quality Check and is removed");
-    //unit.Kill();
-                                } else {
-                                    outputCard.body.push(unit.name + ' makes its Quality Check');
-                                    unit.token.set(SM.suppressed,true);
-                                    unit.token.set(SM.green, true);
-                                }
+                            outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
+                            unit.token.set(SM.suppressed,true);
+                            if (unit.token.get(SM.green) === false) {
+                                unit.token.set(SM.green, true);
+                                QualityCheck(unit);
                             }                
                         } else {
                             outputCard.body.push(unit.name + ' is ' + tip + ' and Destroyed');
 //destroy unit
                         }
                     } else {
-                        if (hex2.cover === true || ArmourTypes.includes(unit.type) || unit.token.get(SM.green) === true) {
-                            outputCard.body.push(unit.name + ' is hit and Suppressed');
-                            unit.token.set(SM.suppressed,true);
-                        } else {
-                            outputCard.body.push(unit.name + " is Hit and Suppressed");
-                            qc = QualityCheck(unit);
-                            if (qc === true) {
-                                outputCard.body.push(unit.name + " fails its Quality Check and is removed");
-//unit.Kill();
-                            } else {
-                                outputCard.body.push(unit.name + ' make its Quality Check');
-                                unit.token.set(SM.suppressed,true);
-                                unit.token.set(SM.green, true);
-                            }      
+                        unit.token.set(SM.suppressed,true);
+                        outputCard.body.push(unit.name + " is Hit and Suppressed");
+                        if ((hex2.cover === false || ArmourTypes.includes(unit.type) === false) && unit.token.get(SM.green) === false) {
+                            unit.token.set(SM.green,true);
+                            QualityCheck(unit);
                         }
                     }
                 } else {
@@ -1674,14 +1671,35 @@ log(distance)
 
     }
 
-    const RunQC = (unit) => {
-        sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
-        SetupCard(unit.name,"Quality Check",unit.nation);
-        //create button to take QC
 
 
-
+    const RunQC = () => {
+log(qcUnits)
+        let unit = qcUnits.shift();
+log(unit)
+        if (unit) {
+            sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
+            SetupCard(unit.name,"Quality Check",unit.nation);
+            ButtonInfo("Make Quality Check","!TakeQC;" + unit.id);
+            PrintCard();
+        } else {
+            AdvancePhase();
+        }
     }
+
+    const TakeQC = (msg) => {
+        let id = msg.content.split(";")[1];
+        let unit = UnitArray[id];
+        SetupCard(unit.name,"Quality Check",unit.nation);
+        QualityCheck(unit);
+        let phrase = "Next Unit";
+        if (qcUnits.length === 0) {
+            phrase = "Next Player's Turn";
+        }
+        ButtonInfo(phrase,"!RunQC")
+        PrintCard();
+    }
+
 
 
 
@@ -2129,6 +2147,12 @@ log(distance)
                 break;
             case '!ArtilleryTwo':
                 ArtilleryTwo(msg);
+                break;
+            case '!RunQC':
+                RunQC();
+                break;
+            case '!TakeQC':
+                TakeQC(msg);
                 break;
         }
     };
