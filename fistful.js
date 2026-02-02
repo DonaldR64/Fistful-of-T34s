@@ -596,6 +596,8 @@ const FFT = (() => {
             this.terrain = "Open";
             this.move = 0;
             this.cover = false;
+            this.smoke = "";
+            this.smokePlayer = "";
             this.edges = {};
             _.each(DIRECTIONS,a => {
                 this.edges[a] = "Open";
@@ -1096,10 +1098,21 @@ log(terrain)
                 hex.terrain = name;
                 hex.height = terrain.height;
                 hex.move = Math.max(hex.move,terrain.move);
-                if (terrain.cover === true) {hex.cover = true};
+                hex.cover = Math.max(hex.cover,terrain.cover);
             }
         })
-
+        //add smoke
+        tokens = findObjs({_pageid: Campaign().get("playerpageid"),_type: "graphic",_subtype: "token",layer: "foreground",});
+        _.each(tokens,token => {
+            let name = token.get("name");
+            if (name.includes("Smoke")) {
+                let centre = new Point(token.get("left"),token.get('top'));
+                let centreLabel = centre.toCube().label();
+                let hex = HexMap[centreLabel];
+                hex.smoke = token.id;
+                hex.smokePlayer = parseInt(name.replace("Smoke",""));
+            }
+        })
 
 
 
@@ -1235,6 +1248,12 @@ log(terrain)
         state.FFT.turn = 0;
         state.FFT.activePlayer = 2;
         state.FFT.phase = "";
+
+        state.FFT.visibility = 70; //can later alter this
+
+
+
+
     }
 
 
@@ -1274,6 +1293,16 @@ log(terrain)
             })
             //check for available artillery
             ArtilleryAvailability(activePlayer);
+            //remove smoke
+            _.each(HexMap,hex => {
+                if (hex.smokePlayer === activePlayer) {
+                    let smokeID = hex.smoke;
+                    let smoke = findObjs({_type:"graphic", id: smokeID})[0];
+                    smoke.remove();
+                }
+            })
+
+
         }
 
         if (currentPhase === "End") {
@@ -1627,17 +1656,51 @@ log(unit2.name + " is in cohesion")
             outputCard.body.push("Out of Range of Artillery Unit");
         } else if (losResult.los === false) {
             outputCard.body.push("No LOS to Target"); 
-        } else {
-            ArtilleryThree(targetID,artilleryID,type);
+        } else if (type === "Smoke") {
+            PlaceSmoke(target,artillery);
+        } else if (type === "HE") {
+            HE(target,artillery);
         }
         PrintCard();
     }
 
-    const ArtilleryThree = (targetID,artilleryID,type) => {
 
-//adjust and add smoke also
+    const PlaceSmoke = (target,artillery) => {
+        let radius = artillery.artsize - 1;
+        let hexLabels = [target.hexLabel];
+        if (radius > 0) {
+            let cubes = HexMap[target.hexLabel].cube.radius(radius);       
+            _.each(cubes,cube => {
+                hexLabels.push(cube.label());
+            })
+        }
+        hexLabels = [...new Set(hexLabels)];
+        let img = getCleanImgSrc("https://files.d20.io/images/196609276/u8gp3vcjYAunqphuw6tgWw/thumb.png?1611938031");
+        _.each(hexLabels,hexLabel => {
+            let left = HexMap[hexLabel].centre.x;
+            let top = HexMap[hexLabel].centre.y;
+            let newToken = createObj("graphic", {
+                left: left,
+                top: top,
+                width: 80,
+                height: 80, 
+                pageid: Campaign().get("playerpageid"),
+                imgsrc: img,
+                layer: "foreground",
+                name: artillery.player + "Smoke",
+            });
+            HexMap[hexLabel].smoke = newToken.id;
+            HexMap[hexLabel].smokePlayer = artillery.player;
+        })
+        target.token.remove();
+        delete UnitArray[target.id];
+    }
 
-return
+
+
+
+
+/*
         //do the attacks
         let targetHex = HexMap[target.hexLabel];
         let radius = target.artsize - 1;
@@ -1706,7 +1769,7 @@ log(distance)
 
     }
 
-
+*/
 
     const RunQC = () => {
 log(qcUnits)
@@ -2014,6 +2077,12 @@ log(unit)
             let label = interCubes[i].label();
 //log(label)
             let interHex = HexMap[label];
+            if (interHex.smoke !== "") {
+                los = false;
+                losBlock = label;
+                losReason = "Blocked by Smoke at " + label;
+                break;
+            }
             if (interHex.cover === 0) {continue};
             let teH = interHex.height; //terrain in hex
             let edH = 0; //height of any terrain on edge crossed
