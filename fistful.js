@@ -1673,10 +1673,21 @@ log(unit2.name + " is in cohesion")
         } else if (losResult.los === false) {
             outputCard.body.push("No LOS to Target"); 
         } else {
+            let radius = artillery.artsize - 1;
+            let hexLabels = [target.hexLabel];
+            if (radius > 0) {
+                let cubes = HexMap[target.hexLabel].cube.radius(radius);       
+                _.each(cubes,cube => {
+                    hexLabels.push(cube.label());
+                })
+            }
+            hexLabels = [...new Set(hexLabels)];
+            target.token.remove();
+            delete UnitArray[target.id];
             if (type === "Smoke") {
-                PlaceSmoke(target,artillery);
+                PlaceSmoke(artillery,hexLabels);
             } else if (type === "HE") {
-                HE(target,artillery);
+                HE(artillery,hexLabels);
             }
             artillery.token.set(SM.fired,true);
             let index = artUnits.map(e => e.id).indexOf(artilleryID);
@@ -1685,19 +1696,7 @@ log(unit2.name + " is in cohesion")
         PrintCard();
     }
 
-
-
-
-    const PlaceSmoke = (target,artillery) => {
-        let radius = artillery.artsize - 1;
-        let hexLabels = [target.hexLabel];
-        if (radius > 0) {
-            let cubes = HexMap[target.hexLabel].cube.radius(radius);       
-            _.each(cubes,cube => {
-                hexLabels.push(cube.label());
-            })
-        }
-        hexLabels = [...new Set(hexLabels)];
+    const PlaceSmoke = (artillery,hexLabels) => {
         let img = getCleanImgSrc("https://files.d20.io/images/196609276/u8gp3vcjYAunqphuw6tgWw/thumb.png?1611938031");
         _.each(hexLabels,hexLabel => {
             let left = HexMap[hexLabel].centre.x;
@@ -1715,11 +1714,59 @@ log(unit2.name + " is in cohesion")
             HexMap[hexLabel].smoke = newToken.id;
             HexMap[hexLabel].smokePlayer = artillery.player;
         })
-        target.token.remove();
-        delete UnitArray[target.id];
     }
 
+    const HE = (artillery,hexLabels) => {
+        _.each(UnitArray,unit => {{
+            if (hexLabels.includes(unit.hexLabel)) {
+                let hex = HexMap[hexLabel];
+                let artRoll = randomInteger(6);
+                let artEffect = artillery.arteffect;
+                let bonus = 0;
+                if (artEffect === "+1") {
+                    bonus = 1;
+                } else if (artEffect === "+1 vs Armour" && ArmourTypes.includes(unit.type)) {
+                    bonus = 1;
+                } 
+                let result = artRoll + bonus;
+                let tip = "Result: " + result + " vs. 4+";
+                tip += "<br>Roll: " + artRoll;
+                if (bonus !== 0) {
+                    tip += "<br>Bonus: " + artEffect;
+                }
+                if (result > 3) {
+                    tip = '[hit](#" class="showtip" title="' + tip + ')';
+                    if (result >= 6) {
+                        if (hex.cover > 0 || ArmourTypes.includes(unit.type)) {
+                            outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
+                            unit.token.set(SM.suppressed,true);
+                            if (unit.token.get(SM.green) === false) {
+                                unit.token.set(SM.green, true);
+                                QualityCheck(unit);
+                            }                
+                        } else {
+                            outputCard.body.push(unit.name + ' is ' + tip + ' and Destroyed');
+//destroy unit
+                        }
+                    } else {
+                        unit.token.set(SM.suppressed,true);
+                        outputCard.body.push(unit.name + " is Hit and Suppressed");
+                        if ((hex.cover > 0 || ArmourTypes.includes(unit.type) === false) && unit.token.get(SM.green) === false) {
+                            unit.token.set(SM.green,true);
+                            QualityCheck(unit);
+                        }
+                    }
+                } else {
+                    tip = '[missed](#" class="showtip" title="' + tip + ')';
+                    outputCard.body.push(unit.name + " is " + tip);
+                }
+            }
+        }})
 
+
+
+
+    }
 
 
 
