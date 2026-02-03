@@ -1322,6 +1322,7 @@ const FFT = (() => {
         if (currentPhase === "Movement") {
             _.each(UnitArray,unit => {
                 if (unit.token.get(SM.fired) === false && unit.token.get(SM.unavail) === false) {
+                    //if fired in art phase cant move
                     unit.token.set("aura1_color","#00ff00");
                 }
                 unit.token.set(SM.green,false); //art QC checks
@@ -1482,19 +1483,23 @@ log(unit2.name + " is in cohesion")
             if (unit.player === player) {
                 if (unit.type === "Artillery" || unit.type === "Mortar" || unit.type === "Aircraft") {
                     let availRoll = randomInteger(6);
-                    tip = "Roll: " + availRoll;
+                    let target = unit.avail;
+                    let tipmods = "";
                     let offboard = HexMap[unit.hexLabel].offboard;
-                    if (offboard === false && unit.avail > 1) {
-                        availRoll = Math.min(availRoll + 1, 6);
-                        tip += "<br>On Board Artillery +1";
+                    if (offboard === false && target > 1) {
+                        target--;
+                        tipmods += "<br>On Board Artillery +1";
                     }
                     if (unit.token.get(SM.suppressed) === true) {
-                        availRoll = Math.Max(availRoll - 1,1);
-                        tip += "<br>Suppressed -1";
-                    }                    
-                    tip += " vs. " + unit.avail + "+";
+                        target++
+                        tipmods += "<br>Suppressed -1";
+                    }            
+                    
+                    tip = "Roll: " + availRoll + " vs. " + target + "+" + tipmods;
+
+
                     tip = '[🎲 ](#" class="showtip" title="' + tip + ')';
-                    if (availRoll >= unit.avail) {
+                    if (availRoll >= target) {
                         artUnits.push(unit);
                         avail.push(tip + unit.name + " is Available");
                     } else {
@@ -1513,6 +1518,7 @@ log(unit2.name + " is in cohesion")
                             unavail.push(tip + unit.name + " is Reloading and Unavailable");
                         }
                         unit.token.set(SM.unavail,true);
+                        unit.token.set("aura1_color","#000000");
                     }
                 }
             }
@@ -2253,7 +2259,7 @@ log(unit)
         let unit = UnitArray[tok.id];
         if (unit) {
             let label = (new Point(tok.get("left"),tok.get("top"))).label();
-            if (label !== unit.hexLabel) {
+            if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
                 if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
                     let bounceBack = false
                     if ((state.FFT.phase === "Movement" && tok.get("aura1_color") === "#000000") || state.FFT.phase !== "Movement") {
