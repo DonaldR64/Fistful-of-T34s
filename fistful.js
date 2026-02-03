@@ -1688,7 +1688,7 @@ log(unit2.name + " is in cohesion")
             }
             hexLabels = [...new Set(hexLabels)];
             _.each(hexLabels, hexLabel => {
-                spawnFX(HexMap[hexLabel].centre.x,HexMap[hexLabel].centre.y,"bomb-smoke");
+                spawnFx(HexMap[hexLabel].centre.x,HexMap[hexLabel].centre.y,"bomb-smoke");
             })
             //Sound
 
