@@ -1324,6 +1324,7 @@ const FFT = (() => {
                 if (unit.token.get(SM.fired) === false && unit.token.get(SM.unavail) === false) {
                     unit.token.set("aura1_color","#00ff00");
                 }
+                unit.token.set(SM.green,false); //art QC checks
             })
         }
 
@@ -1435,7 +1436,7 @@ log(unit2.name + " is in cohesion")
             }
         }
         let qualityRoll = randomInteger(6);
-        let target = (unit.quality === "Fair") ? 5:(unit.quality === "Good") ? 4:3;
+        let target = unit.quality.replace(/[^\d]/g,"");
 
         let tip = "<br>Roll: " + qualityRoll;
         if (cohesion === false) {
