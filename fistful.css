@@ -15,7 +15,7 @@
 
 .mysheet {
     width: 830px;
-    height: 580px;
+    height: 530px;
 }
 .bits {
     padding: 15px 0px 0px 15px;
@@ -40,7 +40,7 @@ input[type="hidden"][name="attr_nation"][value="Red Army"] ~ .mysheet {
 main {
   display: grid;
   width: 800px;
-  height: 550px;
+  height: 500px;
   grid-gap: 4px;
   grid-template-columns: 1fr 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
@@ -95,25 +95,32 @@ section {
     font-family: "serif;";
   }
   
+
+
   .charsheet h1{
+    font-size: 80%;
     text-align: center;
     color: black;
   }
   .charsheet h2{
+    font-size: 80%;
     text-align: center;
     color:  black;
   }
   .charsheet h3{
+    font-size: 80%;
     text-align: center;
     color: black;
   }
   
   .charsheet h4{
+    font-size: 80%;
     text-align: center;
     color: darkred;
   }
   
   .charsheet h5{
+    font-size: 80%;
     text-align: center;
     color: darkred;
   }
