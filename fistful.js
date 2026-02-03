@@ -9,7 +9,6 @@ const FFT = (() => {
 
     const TurnMarkers = ["","https://s3.amazonaws.com/files.d20.io/images/361055772/zDURNn_0bbTWmOVrwJc6YQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055766/UZPeb6ZiiUImrZoAS58gvQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055764/yXwGQcriDAP8FpzxvjqzTg/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055768/7GFjIsnNuIBLrW_p65bjNQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055770/2WlTnUslDk0hpwr8zpZIOg/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055771/P9DmGozXmdPuv4SWq6uDvw/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055765/V5oPsriRTHJQ7w3hHRBA3A/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055767/EOXU3ujXJz-NleWX33rcgA/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055769/925-C7XAEcQCOUVN1m1uvQ/thumb.png?1695998303"];
 
-    const formationColours = ["#00ff00","#00ffff","#ffff00","#000000","#ff00ff","#0f00f0","#aaaaaa","#ff0000",]
 
 
     let HexSize, HexInfo, DIRECTIONS;
@@ -1283,6 +1282,9 @@ const FFT = (() => {
             }
         }
 
+
+
+
         state.FFT.turn = turn;
         state.FFT.phase = currentPhase;
         state.FFT.activePlayer = activePlayer;
@@ -1317,13 +1319,40 @@ const FFT = (() => {
 
         }
 
+        if (currentPhase === "Movement") {
+            _.each(UnitArray,unit => {
+                if (unit.token.get(SM.fired) === false && unit.token.get(SM.unavail) === false) {
+                    unit.token.set("aura1_color","#00ff00");
+                }
+            })
+        }
+
+
+
+        if (currentPhase === "Firing") {
+            _.each(UnitArray,unit => {
+                if (unit.token.get("aura1_color") === "#000000") {
+                    unit.token.set("aura1_color","#00ff00");
+                }
+            })
+        }
+
+
+
+
+
         if (currentPhase === "End") {
+
             //qchecks
             //allowing players to do it
             qcUnits = [];
             _.each(UnitArray,unit => {
                 if (unit.token.get(SM.qc)) {
                     qcUnits.push(unit);
+                }
+                if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false) {
+                    //sets overwatch
+                    unit.token.set("aura1_color","#ff00ff");
                 }
             })
             if (qcUnits.length > 0) {
@@ -1462,6 +1491,7 @@ log(unit2.name + " is in cohesion")
                         availRoll = Math.Max(availRoll - 1,1);
                         tip += "<br>Suppressed -1";
                     }                    
+                    tip += " vs. " + unit.avail + "+";
                     tip = '[🎲 ](#" class="showtip" title="' + tip + ')';
                     if (availRoll >= unit.avail) {
                         artUnits.push(unit);
@@ -1473,7 +1503,7 @@ log(unit2.name + " is in cohesion")
                         if (unit.type === "Artillery" && offboard === true) {
                             let roll = randomInteger(6);
                             if (roll < 4) {
-                                unavail.push(tip + unit.name + " is tasked elsewhere and Unavailable");
+                                unavail.push(tip + unit.name + " is Unavailable");
                             } else {
                                 unavail.push(tip + unit.name + " is Reloading");
                             }
@@ -1749,6 +1779,7 @@ log(unit2.name + " is in cohesion")
                 HE(artillery,hexLabels);
             }
             artillery.token.set(SM.fired,true);
+            artillery.token.set("aura1_color","#000000");
             let index = artUnits.map(e => e.id).indexOf(artilleryID);
             artUnits.splice(index,1);
         }
@@ -1806,7 +1837,7 @@ log(result)
                                 unit.token.set(SM.suppressed,true);
                                 let qc = QualityCheck(unit);
                                 let noun = (qc.pass === true) ? "Suppressed":"Destroyed";
-                                outputCard.body.push(unit.name + ' is ' + tip + ', ' + qc.tip + ' its QC and is ' + noun);
+                                outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
                             } else {
                                 unit.token.set(SM.suppressed,true);
                                 outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
@@ -1820,7 +1851,7 @@ log(result)
                             unit.token.set(SM.green,true);
                             let qc = QualityCheck(unit);
                             let noun = (qc.pass === true) ? "Suppressed":"Destroyed";
-                            outputCard.body.push(unit.name + ' is ' + tip + ' ' + qc.tip + ' its QC and is ' + noun);
+                            outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
                         } else {
                             outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
                             unit.token.set(SM.suppressed,true);
@@ -1994,7 +2025,7 @@ log(unit)
                 tint_color: "transparent",
                 gmnotes: formation.id,
                 tint_color: "transparent",
-                aura1_color: formationColours[number],
+                aura1_color: "#00ff00",
                 aura1_radius: 10,
                 disableTokenMenu: true,
                 showname: true,
@@ -2222,6 +2253,21 @@ log(unit)
         if (unit) {
             let label = (new Point(tok.get("left"),tok.get("top"))).label();
             if (label !== unit.hexLabel) {
+                if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
+                    let bounceBack = false
+                    if ((state.FFT.phase === "Movement" && tok.get("aura1_color") === "#000000") || state.FFT.phase !== "Movement") {
+                        bounceBack = true;
+                    }
+                    if (bounceBack === true) {
+                        tok.set("left",prev.left);
+                        tok.set("top",prev.top);
+                        tok.set("rotation",prev.rotation);
+                        sendChat("","Not Able to Move");
+                        return;
+                    }
+                }
+
+
                 log(unit.name + ' is moving from ' + unit.hexLabel + ' to ' + label)
                 let index = HexMap[unit.hexLabel].tokenIDs.indexOf(unit.id);
                 if (index > -1) {
