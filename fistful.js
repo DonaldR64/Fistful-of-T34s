@@ -131,7 +131,7 @@ const FFT = (() => {
 
 
     //height is height of terrain element
-    //move: 0 = Open, 1 = Difficult, 2 = Impassable
+    //movecosts
     //cover for direct fire - 0 = None, 1 = Light (5+), 2 = Heavy (4+)
     //cover for spotting - true/false
 
@@ -142,14 +142,16 @@ const FFT = (() => {
 
     }
 
-
+    const Capitalize = (val) => {
+        return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+    }
 
 
 
     const TerrainInfo = {
-        "Heavy Woods": {name: "Heavy Woods",height: 1, move: 1, cover: 1,spot: true},
-        "Town": {name: "Town",height: 1, move: 1, cover: 2,spot: true},
-        "River": {name: "River",height: 0, move: 2, cover: 1,spot: true},
+        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, cover: 1,spot: true},
+        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, cover: 2,spot: true},
+        "River": {name: "River",height: 0, moveCosts: {leg: 1000, tracked:1000, horse: 1000, wheeled: 1000, halftrack: 1000}, cover: 1,spot: true},
 
 
 
@@ -599,7 +601,8 @@ const FFT = (() => {
             this.label = offset.label();
             this.elevation = 0;
             this.terrain = "Open";
-            this.move = 0;
+            this.offboard = false;
+            this.moveCosts = {leg: 1, tracked: 1, horse: 1, wheeled: 1, halftrack: 1}
             this.cover = 0;
             this.smoke = "";
             this.smokePlayer = "";
@@ -669,8 +672,6 @@ const FFT = (() => {
 
             this.formationID = "";
 
-            //check if offmap
-            this.offBoard = false;
 
 
 
@@ -1096,14 +1097,17 @@ const FFT = (() => {
             let name = token.get("name");
             let terrain = TerrainInfo[name];
             if (terrain) {
-log(terrain)
+//log(terrain)
                 let centre = new Point(token.get("left"),token.get('top'));
                 let centreLabel = centre.toCube().label();
                 let hex = HexMap[centreLabel];
                 hex.terrain = name;
                 hex.height = terrain.height;
-                hex.move = Math.max(hex.move,terrain.move);
-                hex.cover = Math.max(hex.cover,terrain.cover);
+                hex.moveCosts = terrain.moveCosts;
+                hex.cover = terrain.cover;
+            }
+            if (name === "Map") {
+                DefineOffboard(token);
             }
         })
         //add smoke
@@ -1118,7 +1122,6 @@ log(terrain)
                 hex.smokePlayer = parseInt(name.replace("Smoke",""));
             }
         })
-
 
 
 
@@ -1355,11 +1358,15 @@ log(terrain)
         outputCard.body.push("Hex: " + unit.hexLabel);
         outputCard.body.push("Terrain: " + hex.terrain);
         outputCard.body.push("Elevation: " + hex.elevation);
-        let rate = ["Open","Difficult","Impassable"];
-        outputCard.body.push("Movement: " + rate[hex.move]);
+        let keys = Object.keys(hex.moveCosts);
+        let line = "Move Costs: ";
+        let arr = []
+        _.each(keys,key => {
+            arr.push(Capitalize(key) + ": " + hex.moveCosts[key]);
+        })
+        line += arr.toString();
+        outputCard.body.push(line);
         outputCard.body.push("Cover: " + hex.cover);
-
-
 
         for (let i=0;i<6;i++) {
             let edge = hex.edges[DIRECTIONS[i]];
@@ -1446,6 +1453,11 @@ log(unit2.name + " is in cohesion")
                 if (unit.type === "Artillery" || unit.type === "Mortar" || unit.type === "Aircraft") {
                     let availRoll = randomInteger(6);
                     tip = "Roll: " + availRoll;
+                    let offboard = HexMap[unit.hexLabel].offboard;
+                    if (offboard === false && unit.avail > 1) {
+                        availRoll = Math.min(availRoll + 1, 6);
+                        tip += "<br>On Board Artillery +1";
+                    }
                     if (unit.token.get(SM.suppressed) === true) {
                         availRoll = Math.Max(availRoll - 1,1);
                         tip += "<br>Suppressed -1";
@@ -1455,7 +1467,20 @@ log(unit2.name + " is in cohesion")
                         artUnits.push(unit);
                         avail.push(tip + unit.name + " is Available");
                     } else {
-                        unavail.push(tip + unit.name + " is Not Available");
+                        if (unit.type === "Aircraft") {
+                            unavail.push(tip + unit.name + " is Refuelling/Reloading");
+                        }
+                        if (unit.type === "Artillery" && offboard === true) {
+                            let roll = randomInteger(6);
+                            if (roll < 4) {
+                                unavail.push(tip + unit.name + " is tasked elsewhere and Unavailable");
+                            } else {
+                                unavail.push(tip + unit.name + " is Reloading");
+                            }
+                        }
+                        if (offboard === false) {
+                            unavail.push(tip + unit.name + " is Reloading and Unavailable");
+                        }
                         unit.token.set(SM.unavail,true);
                     }
                 }
