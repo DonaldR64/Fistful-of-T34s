@@ -600,7 +600,7 @@ const FFT = (() => {
             this.elevation = 0;
             this.terrain = "Open";
             this.move = 0;
-            this.cover = false;
+            this.cover = 0;
             this.smoke = "";
             this.smokePlayer = "";
             this.edges = {};
@@ -1375,6 +1375,7 @@ log(terrain)
 
     const QualityCheck = (unit) => {
 log(unit.name)
+        let passed = true;
         let unitHex = HexMap[unit.hexLabel];
         let formation = FormationArray[unit.formationID];
         if (!formation) {
@@ -1419,16 +1420,20 @@ log(unit2.name + " is in cohesion")
         tip = "Result: " + qualityRoll + " vs. " + target + "+" + tip;
         if (qualityRoll >= target) {
             tip = '[Passes](#" class="showtip" title="' + tip + ')';
-            outputCard.body.push(unit.name + " " + tip);
         } else {
             tip = '[Fails](#" class="showtip" title="' + tip + ')';
-            outputCard.body.push(unit.name + " " + tip + " its QC and withdraws or is destroyed");
+            passed = false;
 //remove unit
         }
 
         if (unit && unit.token) {
             unit.token.set(SM.qc,false);
         }
+        let result = {
+            pass: passed,
+            tip: tip,
+        }
+        return result;
     }
 
 
@@ -1687,11 +1692,29 @@ log(unit2.name + " is in cohesion")
                 })
             }
             hexLabels = [...new Set(hexLabels)];
-            _.each(hexLabels, hexLabel => {
-                spawnFx(HexMap[hexLabel].centre.x,HexMap[hexLabel].centre.y,"bomb-smoke");
-            })
-            //Sound
 
+            //Sound
+            let sound = "Howitzer";
+            if (artillery.type === "Mortar") {sound = "Mortar"};
+            if (artillery.name.includes("Katyusha")) {sound = "Katyusha"};
+            if (artillery.type === "Aircraft") {sound = "Bomb"};
+            PlaySound(sound);
+
+            const CreateExplosion = (x,y)=>{
+                spawnFx(x,y,"bomb-smoke");
+            };
+
+            let numExplosions = 3 * hexLabels.length;
+
+            const ChainExplosions = () => {
+                if(numExplosions--){
+                    let hexLabel = hexLabels[randomInteger(hexLabels.length) - 1];
+                    CreateExplosion(HexMap[hexLabel].centre.x,HexMap[hexLabel].centre.y);
+                    setTimeout(ChainExplosions,250);
+                }
+            };
+
+            ChainExplosions();
 
             target.token.remove();
             delete UnitArray[target.id];
@@ -1750,24 +1773,32 @@ log(hex)
 log(result)
                 if (result > 3) {
                     tip = '[Hit](#" class="showtip" title="' + tip + ')';
+                    
                     if (result >= 6) {
                         if (hex.cover > 0 || ArmourTypes.includes(unit.type)) {
-                            outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
-                            unit.token.set(SM.suppressed,true);
                             if (unit.token.get(SM.green) === false) {
                                 unit.token.set(SM.green, true);
-                                QualityCheck(unit);
-                            }                
+                                unit.token.set(SM.suppressed,true);
+                                let qc = QualityCheck(unit);
+                                let noun = (qc.pass === true) ? "Suppressed":"Destroyed";
+                                outputCard.body.push(unit.name + ' is ' + tip + ', ' + qc.tip + ' its QC and is ' + noun);
+                            } else {
+                                unit.token.set(SM.suppressed,true);
+                                outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
+                            }         
                         } else {
                             outputCard.body.push(unit.name + ' is ' + tip + ' and Destroyed');
 //destroy unit
                         }
                     } else {
-                        unit.token.set(SM.suppressed,true);
-                        outputCard.body.push(unit.name + " is " + tip + " and Suppressed");
                         if (hex.cover === 0 && ArmourTypes.includes(unit.type) === false && unit.token.get(SM.green) === false) {
                             unit.token.set(SM.green,true);
-                            QualityCheck(unit);
+                            let qc = QualityCheck(unit);
+                            let noun = (qc.pass === true) ? "Suppressed":"Destroyed";
+                            outputCard.body.push(unit.name + ' is ' + tip + ' ' + qc.tip + ' its QC and is ' + noun);
+                        } else {
+                            outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
+                            unit.token.set(SM.suppressed,true);
                         }
                     }
                 } else {
@@ -1803,10 +1834,12 @@ log(unit)
         let id = msg.content.split(";")[1];
         let unit = UnitArray[id];
         SetupCard(unit.name,"Quality Check",unit.nation);
-        QualityCheck(unit);
+        qc = QualityCheck(unit);
+        let noun = (qc.pass === true) ? "Suppressed":"Destroyed";
+        outputCard.body.push(unit.name + " " + qc.tip + ' its QC and is ' + noun);
         let phrase = "Next Unit";
         if (qcUnits.length === 0) {
-            phrase = "Next Player's Turn";
+            phrase = "Next Phase";
         }
         ButtonInfo(phrase,"!RunQC")
         PrintCard();
