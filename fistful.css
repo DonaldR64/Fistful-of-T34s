@@ -42,12 +42,13 @@ main {
   width: 800px;
   height: 450px;
   grid-gap: 4px;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr 1fr;
-  grid-template-areas:"common common common"
-                      "common common common"
-                      "attr   attr   attr3"
-                      "attr2  attr2  attr2";
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
+  grid-template-areas:"common common common common"
+                      "common common common common"
+                      "quality   attr attr   attr3"
+                      "attr2    attr2 attr2  attr2"
+                      "attr2    attr2 attr2  attr2";
 }
 
 
@@ -205,6 +206,17 @@ section {
   color: black;
 }
 
+.quality{
+  grid-area: quality;
+  display: grid;
+  grid-gap: 2px;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+  background-color: white;
+  text-align: center;
+  align-items: center;
+}
+
 
 
 
@@ -249,10 +261,10 @@ section {
   right: 16px;
 }
 
-input[type="hidden"][value="Off"].art-status ~ .attr2info{
+input[type="hidden"][value="On"].weapon-status ~ .attr2info{
     display: grid;
 }
-input[type="hidden"][value="On"].art-status ~ .attr2info{
+input[type="hidden"][value="Off"].weapon-status ~ .attr2info{
     display: none;
 }
 
