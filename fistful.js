@@ -222,6 +222,11 @@ const FFT = (() => {
         }
     }
 
+
+
+
+
+
     const pointInPolygon = (point,vertices) => {
         //evaluate if point is in the polygon
         px = point.x
@@ -1682,6 +1687,12 @@ log(unit2.name + " is in cohesion")
                 })
             }
             hexLabels = [...new Set(hexLabels)];
+            _.each(hexLabels, hexLabel => {
+                spawnFX(HexMap[hexLabel].centre.x,HexMap[hexLabel].centre.y,"bomb-smoke");
+            })
+            //Sound
+
+
             target.token.remove();
             delete UnitArray[target.id];
             if (type === "Smoke") {
