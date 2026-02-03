@@ -1417,7 +1417,7 @@ log(unit2.name + " is in cohesion")
             outputCard.body.push(unit.name + " " + tip);
         } else {
             tip = '[Fails](#" class="showtip" title="' + tip + ')';
-            outputCard.body.push(unit.name + " " + tip + " and withdraws or is destroyed");
+            outputCard.body.push(unit.name + " " + tip + " its QC and withdraws or is destroyed");
 //remove unit
         }
 
@@ -1719,7 +1719,9 @@ log(unit2.name + " is in cohesion")
     const HE = (artillery,hexLabels) => {
         _.each(UnitArray,unit => {{
             if (hexLabels.includes(unit.hexLabel)) {
-                let hex = HexMap[hexLabel];
+                let hex = HexMap[unit.hexLabel];
+log(unit.name)
+log(hex)
                 let artRoll = randomInteger(6);
                 let artEffect = artillery.arteffect;
                 let bonus = 0;
@@ -1734,8 +1736,9 @@ log(unit2.name + " is in cohesion")
                 if (bonus !== 0) {
                     tip += "<br>Bonus: " + artEffect;
                 }
+log(result)
                 if (result > 3) {
-                    tip = '[hit](#" class="showtip" title="' + tip + ')';
+                    tip = '[Hit](#" class="showtip" title="' + tip + ')';
                     if (result >= 6) {
                         if (hex.cover > 0 || ArmourTypes.includes(unit.type)) {
                             outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
@@ -1750,14 +1753,14 @@ log(unit2.name + " is in cohesion")
                         }
                     } else {
                         unit.token.set(SM.suppressed,true);
-                        outputCard.body.push(unit.name + " is Hit and Suppressed");
-                        if ((hex.cover > 0 || ArmourTypes.includes(unit.type) === false) && unit.token.get(SM.green) === false) {
+                        outputCard.body.push(unit.name + " is " + tip + " and Suppressed");
+                        if (hex.cover === 0 && ArmourTypes.includes(unit.type) === false && unit.token.get(SM.green) === false) {
                             unit.token.set(SM.green,true);
                             QualityCheck(unit);
                         }
                     }
                 } else {
-                    tip = '[missed](#" class="showtip" title="' + tip + ')';
+                    tip = '[Missed](#" class="showtip" title="' + tip + ')';
                     outputCard.body.push(unit.name + " is " + tip);
                 }
             }
