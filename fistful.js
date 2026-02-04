@@ -2387,7 +2387,7 @@ log(unit)
                 CheckArtillery();
                 break;
             case '!DirectFire':
-                DirectFire(msg);
+                DirectFire(msg)
                 break;
         }
     };
