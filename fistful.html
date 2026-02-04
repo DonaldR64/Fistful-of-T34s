@@ -206,11 +206,13 @@
     });
 
     on("sheet:opened", function() {
-        getAttrs(["artflag"], function(values) {
+        getAttrs(["artflag","weaponflag"], function(values) {
             let art = values.artflag || "Off";
+            let wpn = values.weaponflag || "On";
             setAttrs({
                 sheetTab: "display",
                 artflag: art,
+                weaponflag: wpn,
             });
         });
     });

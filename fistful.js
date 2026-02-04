@@ -649,59 +649,59 @@ const FFT = (() => {
             this.armourF = parseInt(aa.armourF) || "NA"; 
             this.armourSR = parseInt(aa.armourSR) || "NA"; 
 
-            if (aa.artflag === "On") {
-                this.avail = (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+",""));
-                this.artsize = parseInt(aa.artsize.replace(/[^0-9]+/g, ''));
-                this.arteffect = aa.arteffect;
-                this.artrange = parseInt(aa.artrange);
+            this.avail = (aa.avail) ? (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+","")):"NA";
+            this.artsize = aa.artsize ? parseInt(aa.artsize.replace(/[^0-9]+/g, '')):0;
+
+            this.arteffect = aa.arteffect;
+            this.artrange = aa.artrange ? parseInt(aa.artrange):0;
+
+            this.rof = aa.rof ? parseInt(aa.rof):0;
+            if (aa.range) {
+                this.range = aa.range.split("/")
             } else {
-                this.rof = parseInt(aa.rof);
-                if (aa.range) {
-                    this.range = aa.range.split("/")
-                } else {
-                    this.range = [0,0,0];
-                }
-                _.each(this.range, band => {
-                    band = parseInt(band);
-                })
-
-                let ai = aa.ai;
-log(this.name)
-log("Oriignal AI: " + ai)
-                if (ai === "-" || ai === "NA" || !ai) {
-                    ai = "NA";
-                } else {
-                    if (ai.includes("(")) {
-                        ai = ai.split("(");
-                        let ai1;
-                        let ai0 = parseInt(ai[0].replace(/\D/g, ''));
-                        if (ai[1].includes("Close")) {
-                            ai1 = this.range[0];
-                        } else {
-                            ai1 = parseInt(ai[1].replace(/\D/g, ''));
-                        }
-                        ai = [ai0,ai1];
-                    } else {
-                        ai = [parseInt(ai.replace(/\D/g, '')),this.range[2]];
-                    }
-                }
-                this.antiInf = ai;
-
-                let pen = aa.pen;
-                if (pen === "-" || pen === "NA" || !pen) {
-                    ai = "NA"
-                } else {
-                    if (pen.includes("(")) {
-                        //format 4(1") for pen of 4 at 1" or similar
-                        pen = pen.split("(");
-                        pen = [parseInt(pen[0]), parseInt(pen[1].replace(/\D/g, ''))];
-                    } else {    
-                        //eg pen is 7, and effective to max range, although modified in direct fire based on range band
-                        pen = [parseInt(pen),this.range[2]];
-                    }
-                }
-                this.pen = pen;
+                this.range = [0,0,0];
             }
+            _.each(this.range, band => {
+                band = parseInt(band);
+            })
+
+            let ai = aa.ai;
+log(this.name)
+log("Original AI: " + ai)
+            if (ai === "-" || ai === "NA" || !ai) {
+                ai = "NA";
+            } else {
+                if (ai.includes("(")) {
+                    ai = ai.split("(");
+                    let ai1;
+                    let ai0 = parseInt(ai[0].replace(/\D/g, ''));
+                    if (ai[1].includes("Close")) {
+                        ai1 = this.range[0];
+                    } else {
+                        ai1 = parseInt(ai[1].replace(/\D/g, ''));
+                    }
+                    ai = [ai0,ai1];
+                } else {
+                    ai = [parseInt(ai),this.range[2]];
+                }
+            }
+            this.antiInf = ai;
+
+            let pen = aa.pen;
+            if (pen === "-" || pen === "NA" || !pen) {
+                ai = "NA"
+            } else {
+                if (pen.includes("(")) {
+                    //format 4(1") for pen of 4 at 1" or similar
+                    pen = pen.split("(");
+                    pen = [parseInt(pen[0]), parseInt(pen[1].replace(/\D/g, ''))];
+                } else {    
+                    //eg pen is 7, and effective to max range, although modified in direct fire based on range band
+                    pen = [parseInt(pen),this.range[2]];
+                }
+            }
+            this.pen = pen;
+        
 
 
             this.formationID = "";
@@ -1307,7 +1307,7 @@ log("AI: " + this.antiInf)
 
         let phases = ["Deployment","Artillery","Movement","Firing","End"];
         
-        let currentPhase = phases[phases.indexOf(phase) + 1] || "Artillery";
+        let currentPhase = phases[phases.indexOf(phase) + 1] || "Deployment";
 
 
 
@@ -2134,9 +2134,10 @@ log(unit)
                     }
                 }
                 rolls = rolls.sort().reverse();
-                tip += "Results: " + rolls.toString();
+                tip += "Results: " + rolls.toString() + " vs. 4+";
                 tip = '['+ qc + '](#" class="showtip" title="' + tip + ')';
-                outputCard.body.push('It takes ' + tip + " Quality Checks");
+                s = (qc === 1) ? "":"s";
+                outputCard.body.push('It takes ' + tip + " Quality Check" + s);
                 let oldQC = (target.token.get(SM.qc) === false) ? 0:(target.token.get(SM.qc) === true) ? 1:parseInt(target.token.get(SM.qc));
                 qc += oldQC;
                 if (qc > 0) {
