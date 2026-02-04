@@ -2073,75 +2073,90 @@ log(unit)
         rolls = rolls.sort().reverse();
 
         let tip = "Rolls: " + rolls.toString() + " vs. " + toHit + "+" + toHitTip;
+
         if (cover > 0) {
             coverRolls = coverRolls.sort().reverse();
-            tip += "<br>___________________";
-            tip += "<br>Cover Saves: " + coverRolls.toString() + coverTip
+            coverTip = "Rolls: " + coverRolls.toString() + " vs. " + coverTip;
         }
 
-        if (finalHits === 0) {
+
+
+
+        if (hits === 0) {
             tip = '[Missed](#" class="showtip" title="' + tip + ')';
             outputCard.body.push(target.name + " is " + tip);
         } else {
-            let s = (finalHits === 1) ? "":"s"
-            let info = "Hit " + finalHits + " time" + s;
+            let s = (hits === 1) ? "":"s"
+            let info = "Hit " + hits + " time" + s;
             tip = '[' + info + '](#" class="showtip" title="' + tip + ')';
             outputCard.body.push(target.name + " is " + tip);
-
-            tip = wpnTip; //new tip
-            tip += "<br>___________________<br>";
-
-            if (type === "Armour") {
-                //wpn is pen, wpnTip is pen info, armour is targets armour on that facing
-                let penDice = (wpn > armour) ? (wpn - armour):1;
-                let penMod = (wpn <= armour) ? (wpn - armour):0; //will always be 0 or a negative #
-                let penTips = "", deflect = 0, qc = false, destroyed = false;
-                for (let i=0;i<finalHits;i++) {
-                    let penRolls = [];
-                    for (let j=0;j<penDice;j++) {
-                        let penRoll = randomInteger(6);
-                        penRoll += penMod;
-                        penRolls.push(penRoll);
-                        if (penRoll < 4) {deflect++};
-                        if (penRoll === 4 || penRoll === 5) {qc = true};
-                        if (penRoll === 6) {destroyed = true};
-                    }
-                    penRolls = penRolls.sort().reverse();
-                    if (i > 0) {penTips += "<br>"}; 
-                    penTips += "Hit " + (i+1) + ": " + penRolls.toString();
+            if (coverSaves > 0) {
+                let cs = (coverSaves !== 1 || finalHits === 0) ? "s":"";
+                if (finalHits === 0) {
+                    coverSaves = "All";
                 }
-                tip += penTips;
+                coverTip = '[' + coverSaves +'](#" class="showtip" title="' + coverTip + ')';
+                outputCard.body.push("Cover Stopped " + coverTip + " Hit" + cs); 
+            }
 
-                if (destroyed === true) {
-                    tip = '[Destroyed](#" class="showtip" title="' + tip + ')';
-    //remove target
-                } else if (qc === true) {
-                    tip = '[Takes Damage](#" class="showtip" title="' + tip + ')' + " and will make a QC";
-                    target.token.set(SM.qc,true);
+            if (finalHits > 0) {
+                outputCard.body.push("[hr]");
+
+                tip = wpnTip; //new tip
+                tip += "<br>___________________<br>";
+
+                if (type === "Armour") {
+                    //wpn is pen, wpnTip is pen info, armour is targets armour on that facing
+                    let penDice = (wpn > armour) ? (wpn - armour):1;
+                    let penMod = (wpn <= armour) ? (wpn - armour):0; //will always be 0 or a negative #
+                    let penTips = "", deflect = 0, qc = false, destroyed = false;
+                    for (let i=0;i<finalHits;i++) {
+                        let penRolls = [];
+                        for (let j=0;j<penDice;j++) {
+                            let penRoll = randomInteger(6);
+                            penRoll += penMod;
+                            penRolls.push(penRoll);
+                            if (penRoll < 4) {deflect++};
+                            if (penRoll === 4 || penRoll === 5) {qc = true};
+                            if (penRoll === 6) {destroyed = true};
+                        }
+                        penRolls = penRolls.sort().reverse();
+                        if (i > 0) {penTips += "<br>"}; 
+                        penTips += "Hit " + (i+1) + ": " + penRolls.toString();
+                    }
+                    tip += penTips;
+
+                    if (destroyed === true) {
+                        tip = '[Destroyed](#" class="showtip" title="' + tip + ')';
+        //remove target
+                    } else if (qc === true) {
+                        tip = '[Takes Damage](#" class="showtip" title="' + tip + ')' + " and will make a QC";
+                        target.token.set(SM.qc,true);
+                    } else {
+                        tip = '[Deflects all Shots](#" class="showtip" title="' + tip + ')';
+                    }
+                    outputCard.body.push(target.name + ' is ' + tip);
                 } else {
-                    tip = '[Deflects all Shots](#" class="showtip" title="' + tip + ')';
-                }
-                outputCard.body.push(target.name + ' is ' + tip);
-            } else {
-                //wpn is ai, wpnTip is ai info
-                let rolls = [], qc = 0;
-                for (let i=0;i<finalHits;i++) {
-                    let roll = randomInteger(6);
-                    roll += wpn;
-                    rolls.push(roll);
-                    if (roll > 3) {
-                        qc++
+                    //wpn is ai, wpnTip is ai info
+                    let rolls = [], qc = 0;
+                    for (let i=0;i<finalHits;i++) {
+                        let roll = randomInteger(6);
+                        roll += wpn;
+                        rolls.push(roll);
+                        if (roll > 3) {
+                            qc++
+                        }
                     }
-                }
-                rolls = rolls.sort().reverse();
-                tip += "Results: " + rolls.toString() + " vs. 4+";
-                tip = '['+ qc + '](#" class="showtip" title="' + tip + ')';
-                s = (qc === 1) ? "":"s";
-                outputCard.body.push('It takes ' + tip + " Quality Check" + s);
-                let oldQC = (target.token.get(SM.qc) === false) ? 0:(target.token.get(SM.qc) === true) ? 1:parseInt(target.token.get(SM.qc));
-                qc += oldQC;
-                if (qc > 0) {
-                    target.token.set(SM.qc,qc);
+                    rolls = rolls.sort().reverse();
+                    tip += "Results: " + rolls.toString() + " vs. 4+";
+                    tip = '['+ qc + '](#" class="showtip" title="' + tip + ')';
+                    s = (qc === 1) ? "":"s";
+                    outputCard.body.push('It will take ' + tip + " Quality Check" + s);
+                    let oldQC = (target.token.get(SM.qc) === false) ? 0:(target.token.get(SM.qc) === true) ? 1:parseInt(target.token.get(SM.qc));
+                    qc += oldQC;
+                    if (qc > 0) {
+                        target.token.set(SM.qc,qc);
+                    }
                 }
             }
 
