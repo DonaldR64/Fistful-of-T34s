@@ -2020,7 +2020,7 @@ log(unit)
 
         //so will have ai or pen as 'wpn' and wpnTip has base info
         let toHit = 4;
-        let toHitTip = "Base 4+";
+        let toHitTip = "<br>Base 4+";
         if (shooter.quality.includes("Good") || shooter.quality.includes("Excellent")) {
             toHitTip += "<br>+1 Quality";
             toHit--;
@@ -2069,9 +2069,11 @@ log(unit)
             }
         }
         finalHits = hits - coverSaves;
+        rolls = rolls.sort().reverse();
 
         let tip = "Rolls: " + rolls.toString() + " vs. " + toHit + "+" + toHitTip;
         if (cover > 0) {
+            coverRolls = coverRolls.sort().reverse();
             tip += "<br>Cover Rolls: " + coverRolls.toString() + coverTip
         }
 
@@ -2079,7 +2081,7 @@ log(unit)
             tip = '[Missed](#" class="showtip" title="' + tip + ')';
             outputCard.body.push(target.name + " is " + tip);
         } else {
-            tip = '[Hit](#" class="showtip" title="' + tip + ')';
+            tip = '[Hit ](#" class="showtip" title="' + tip + ')';
             let s = (finalHits === 1) ? "":"s"
             outputCard.body.push(target.name + " is " + tip + finalHits + " time" + s);
 
@@ -2101,6 +2103,7 @@ log(unit)
                         if (penRoll === 4 || penRoll === 5) {qc = true};
                         if (penRoll === 6) {destroyed = true};
                     }
+                    penRolls = penRolls.sort().reverse();
                     if (i > 0) {penTips += "<br>"}; 
                     penTips += "Hit " + (i+1) + ": " + penRolls.toString();
                 }
@@ -2127,9 +2130,10 @@ log(unit)
                         qc++
                     }
                 }
-                tip += "<br>Rolls: " + roll.toString();
+                rolls = rolls.sort().reverse();
+                tip += "Rolls: " + rolls.toString();
                 tip = '['+ qc + '](#" class="showtip" title="' + tip + ')';
-                outputCard.body.push(target.name + ' takes ' + tip + " Quality Checks");
+                outputCard.body.push('It takes ' + tip + " Quality Checks");
                 target.token.set(SM.qc,qc);
             }
 
