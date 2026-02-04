@@ -135,6 +135,17 @@ const DirectFire = (msg) => {
 
 
     } else {
+        //anti-armour - compare
+/*
+After rolling for hits, vehicles must then roll for effect to determine damage. Is it a brew up or just a deflection? Let’s find out! For each hit against a vehicle, compare the Armor of the target to the Penetration rating of the firer. Roll a number of d6 equal to the Penetration less the Armor. If the two are equal, roll 1 die. If Penetration is less than Armor, roll 1 die and apply the difference between the Penetration and Armor as a negative modifier.
+Attacks at Short range (does not apply to infantry) add +2 Penetration and attacks at Long range suffer -2 Penetration.
+Each result of 6 automatically destroys the vehicle. A result of 4-5 forces a Quality Check, and any result of 3 or less has no effect on the target.
+*/
+
+        //anti-infantry 
+/*
+Unlike vehicle attacks, infantry do not have an Armor rating. Each hit against infantry is marked for a future Quality Check. A result of “6” against infantry is only a Quality Check, not an instant kill. There are no instant kills against infantry!
+*/
 
 
 
@@ -148,7 +159,7 @@ const DirectFire = (msg) => {
 
 
 
-
+//rotate certain units eg tank destroyers, infantry --> basically those without turrets
 
 
 
