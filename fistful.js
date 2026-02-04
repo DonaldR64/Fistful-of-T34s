@@ -1302,6 +1302,10 @@ const FFT = (() => {
                 if (unit.player !== activePlayer) {
                     unit.token.set(SM.suppressed,false);
                 }
+                //reset units on overwatch to green status
+                if (unit.player === activePlayer && unit.token.set("aura1_color") === "#ff00ff") {
+                    unit.token.set("aura1_color","#00ff00");
+                }
             })
             //check for available artillery
             ArtilleryAvailability(activePlayer);
