@@ -75,17 +75,28 @@ const DirectFire = (msg) => {
     }
 
     //so will have ai or pen as 'wpn' and wpnTip has base info
-
-    TO HIT = 4+
-+1 Good/Ex. Quality
-+1 Short range
--1 Long range
--1 Firer Suppressed
--1 Firer on Overwatch
-
-
-    
-
+    let toHit = 4;
+    let toHitTip = "Base 4+";
+    if (shooter.quality.includes("Good") || shooter.quality.includes("Excellent")) {
+        toHitTip += "<br>+1 Quality";
+        toHit--;
+    }
+    if (losResult.distance <= shooter.range[0]) {
+        toHit--;
+        toHitTip += "<br>+1 Short Range";
+    }
+    if (losResult.distance > shooter.range[1]) {
+        toHit++;
+        toHitTip += "<br>-1 Long Range";
+    }
+    if (shooter.token.get(SM.suppressed)) {
+        toHit++;
+        toHitTip += "<br>-1 Suppressed";
+    }
+    if (shooter.token.get("aura1_color") === "#ff00ff") {
+        toHit++;
+        toHitTip += "<br>-1 Overwatch";
+    }
 
 
 
