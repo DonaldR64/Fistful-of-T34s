@@ -1,0 +1,100 @@
+const DirectFire = (msg) => {
+    let Tag = msg.content.split(";");
+    let shooter = UnitArray[Tag[1]];
+    let target = UnitArray[Tag[2]];
+
+    let losResult = LOS(shooter,target);
+    let errorMsg = [];
+    if (losResult.los === false) {
+        errorMsg.push("[#ff0000]No LOS to Target[/#]");
+        errorMsg.body.push(losResult.losReason);
+    }
+    if (losResult.distance > shooter.range[2]) {
+        errorMsg.push("[#ff0000]Target is Out of Range");
+    }
+    let targetFacing = losResult.targetFacing;
+    let shooterFacing = losResult.shooterFacing;
+
+    let armour = (targetFacing === "Front") ? target.armourF:target.armourSR;
+    let wpn = 0; //either pen or ai
+    let wpnTip = "";
+    if (armour !== "NA") {
+        wpn = shooter.pen;
+        let note = "";
+        if (wpn.includes("(")) {
+            let ip = wpn.split("(");
+            wpn = parseInt(ip[0]);
+            let penRange = parseInt(ip[1].replace(/[^0-9]+/g, ''));
+            if (losResult.distance > penRange) {
+                wpn = 0;
+            }
+            note = " with this range"
+        } else {
+            wpn = parseInt(wpn);
+        }
+        wpnTip = "Base Pen: " + wpn;
+        if (wpn === 0) {
+            errorMsg.push("No Anti-Tanks Weapons" + note);
+        } else {
+            //pen for tanks up or down
+            if (shooter.type !== "Infantry" && shooter.type !== "Horse") {
+                if (losResult.distance > shooter.range[1]) {
+                    wpn -= 2;
+                    wpnTip += "<br>-2 Pen for Long Range";
+                }
+                if (losResult.distance <= shooter.range[0]) {
+                    wpn += 2;
+                    wpnTip += "<br>+2 Pen for Short Range";
+                }
+            }
+        }
+    } else {
+        wpn = shooter.antiInf;
+        if (wpn.includes("(")) {
+            let ip = wpn.split("(");
+            wpn = parseInt(ip[0]);
+            ip = ip[1].replace(/(|)/g,"");
+            if (ip === "Close Only" || ip === "Close") {
+                if (losResult.distance > shooter.range[0]) {
+                    wpn = 0;
+                }
+            }
+        }
+        wpnTip = "Base AI: " + wpn;
+        if (wpn === "NA") {
+            errorMsg.push("No Anti-Infantry Weapons");
+        }
+    }
+
+    if (errorMsg.length > 0) {
+        _.each(errorMsg,msg => {
+            outputCard.body.push(msg);
+        })
+        PrintCard();
+        return;
+    }
+
+    //so will have ai or pen as 'wpn' and wpnTip has base info
+
+    TO HIT = 4+
++1 Good/Ex. Quality
++1 Short range
+-1 Long range
+-1 Firer Suppressed
+-1 Firer on Overwatch
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+}
