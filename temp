@@ -18,6 +18,7 @@ const DirectFire = (msg) => {
     let armour = (targetFacing === "Front") ? target.armourF:target.armourSR;
     let wpn = 0; //either pen or ai
     let wpnTip = "";
+    let type = "Armour";
     if (armour !== "NA") {
         wpn = shooter.pen;
         let note = "";
@@ -49,6 +50,7 @@ const DirectFire = (msg) => {
             }
         }
     } else {
+        type = "AntiInfantry";
         wpn = shooter.antiInf;
         if (wpn.includes("(")) {
             let ip = wpn.split("(");
@@ -97,6 +99,48 @@ const DirectFire = (msg) => {
         toHit++;
         toHitTip += "<br>-1 Overwatch";
     }
+    
+    let ROF = parseInt(shooter.rof);
+
+    let rolls = [];
+    let hits = 0;coverSaves = 0;finalHits = 0;
+    for (let i=0;i<ROF;i++) {
+        let roll = randomInteger(6);
+        rolls.push(roll);
+        if (roll >= toHit) {
+            hits++;
+        }
+    }
+    //cover saves
+    let cover = HexMap[target.hexLabel].cover;
+    let coverRolls = [];
+    let coverTip = "";
+    if (cover > 0) {
+        coverTip = (cover === 1) ? "Soft Cover 5+ Save":"Hard Cover 4+ Save";
+        let coverSave = (cover === 1) ? 5:4;
+        for (let i=0;i<hits;i++) {
+            let coverRoll = randomInteger(6);
+            coverRolls.push(coverRoll);
+            if (coverRoll >= coverSave) {
+                coverSaves++;
+            }
+        }
+    }
+    finalHits = hits - coverSaves;
+
+    if (finalHits === 0) {
+        
+
+
+
+
+    } else {
+
+
+
+
+    }
+
 
 
 
