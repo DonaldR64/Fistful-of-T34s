@@ -2157,6 +2157,27 @@ log(unit)
 
     //rotate certain units eg tank destroyers, infantry --> basically those without turrets
     //Sound and FX (?)
+        let sound;
+        if (shooter.type === "Infantry" || shooter.type === "Horse") {
+            sound = "Rifles";
+            if (shooter.name.includes("HMG")) {
+                sound = "MG";
+            }
+        } else {
+            sound = "Shotgun";
+            if (target.movetype === "Leg" || target.movetype === "Horse" || target.movetype === "Towed") {
+                sound = "MG";
+            }
+        }
+        PlaySound(sound);
+        let turrets = ["Car","Halftrack","Tank"];
+        let angle = Angle(HexMap[shooter.hexLabel].cube.angle(HexMap[target.hexLabel].cube));
+log(angle)
+        if (turrets.includes(shooter.type) === false) {
+            shooter.token.set("rotation",angle);
+        }
+
+
 
 
     }
