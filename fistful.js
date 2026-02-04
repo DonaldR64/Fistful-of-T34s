@@ -1269,11 +1269,13 @@ const FFT = (() => {
         let activePlayer = state.FFT.activePlayer;
         let phase = state.FFT.phase;
 
-        let phases = ["Artillery","Movement","Firing","End"];
+        let phases = ["Deployment","Artillery","Movement","Firing","End"];
         
         let currentPhase = phases[phases.indexOf(phase) + 1] || "Artillery";
 
-        if (currentPhase === "Artillery") {
+
+
+        if (currentPhase === "Deployment") {
             if (activePlayer !== state.FFT.firstPlayer || turn === 0) {
                 turn += 1;
                 activePlayer = state.FFT.firstPlayer;
@@ -2266,7 +2268,7 @@ log(unit)
             if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
                 if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
                     let bounceBack = false
-                    if ((state.FFT.phase === "Movement" && tok.get("aura1_color") === "#000000") || state.FFT.phase !== "Movement") {
+                    if ((state.FFT.phase === "Movement" && tok.get("aura1_color") === "#000000") || (state.FFT.phase !== "Movement" && state.FFT.phase !== "Deployment")) {
                         bounceBack = true;
                     }
                     if (bounceBack === true) {
@@ -2278,6 +2280,7 @@ log(unit)
                     }
                 }
 
+                //aStar here
 
                 log(unit.name + ' is moving from ' + unit.hexLabel + ' to ' + label)
                 let index = HexMap[unit.hexLabel].tokenIDs.indexOf(unit.id);
