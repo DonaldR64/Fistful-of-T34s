@@ -668,7 +668,7 @@ const FFT = (() => {
                 let ai = aa.ai;
 log(this.name)
 log("Oriignal AI: " + ai)
-                if (ai === "-" || ai === "NA") {
+                if (ai === "-" || ai === "NA" || !ai) {
                     ai = "NA";
                 } else {
                     if (ai.includes("(")) {
@@ -688,7 +688,7 @@ log("Oriignal AI: " + ai)
                 this.antiInf = ai;
 
                 let pen = aa.pen;
-                if (pen === "-" || pen === "NA") {
+                if (pen === "-" || pen === "NA" || !pen) {
                     ai = "NA"
                 } else {
                     if (pen.includes("(")) {
@@ -2006,7 +2006,8 @@ log(unit)
                 if (losResult.distance > shooter.antiInf[1]) {
                     wpn = 0;
                 }
-                wpnTip = "Anti-Infantry: " + wpn;
+                wpnTip = (wpn >= 0) ? "+" + wpn:wpn;
+                wpnTip = "Anti-Infantry: " + wpnTip;
             }
         }
 
@@ -2074,18 +2075,20 @@ log(unit)
         let tip = "Rolls: " + rolls.toString() + " vs. " + toHit + "+" + toHitTip;
         if (cover > 0) {
             coverRolls = coverRolls.sort().reverse();
-            tip += "<br>Cover Rolls: " + coverRolls.toString() + coverTip
+            tip += "<br>___________________";
+            tip += "<br>Cover Saves: " + coverRolls.toString() + coverTip
         }
 
         if (finalHits === 0) {
             tip = '[Missed](#" class="showtip" title="' + tip + ')';
             outputCard.body.push(target.name + " is " + tip);
         } else {
-            tip = '[Hit ](#" class="showtip" title="' + tip + ')';
             let s = (finalHits === 1) ? "":"s"
-            outputCard.body.push(target.name + " is " + tip + finalHits + " time" + s);
+            let info = "Hit " + finalHits + " time" + s;
+            tip = '[' + info + '](#" class="showtip" title="' + tip + ')';
+            outputCard.body.push(target.name + " is " + tip);
 
-            tip = wpnTip;
+            tip = wpnTip; //new tip
             tip += "<br>___________________<br>";
 
             if (type === "Armour") {
@@ -2131,10 +2134,14 @@ log(unit)
                     }
                 }
                 rolls = rolls.sort().reverse();
-                tip += "Rolls: " + rolls.toString();
+                tip += "Results: " + rolls.toString();
                 tip = '['+ qc + '](#" class="showtip" title="' + tip + ')';
                 outputCard.body.push('It takes ' + tip + " Quality Checks");
-                target.token.set(SM.qc,qc);
+                let oldQC = (target.token.get(SM.qc) === false) ? 0:(target.token.get(SM.qc) === true) ? 1:parseInt(target.token.get(SM.qc));
+                qc += oldQC;
+                if (qc > 0) {
+                    target.token.set(SM.qc,qc);
+                }
             }
 
             PrintCard();
