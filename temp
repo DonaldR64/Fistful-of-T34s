@@ -160,7 +160,7 @@ Unlike vehicle attacks, infantry do not have an Armor rating. Each hit against i
 
 
 //rotate certain units eg tank destroyers, infantry --> basically those without turrets
-
+//Sound and FX (?)
 
 
 }
