@@ -664,7 +664,7 @@ const FFT = (() => {
                 _.each(this.range, band => {
                     band = parseInt(band);
                 })
-                this.antiInf = parseInt(aa.antiInf) || "NA";
+                this.antiInf = parseInt(aa.antiInf) || 0;
                 this.pen = aa.pen || 0;
             }
 
