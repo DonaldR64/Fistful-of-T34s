@@ -3,6 +3,8 @@ const DirectFire = (msg) => {
     let shooter = UnitArray[Tag[1]];
     let target = UnitArray[Tag[2]];
 
+    SetupCard(shooter.name,target.name,shooter.nation);
+
     let losResult = LOS(shooter,target);
     let errorMsg = [];
     if (losResult.los === false) {
@@ -107,7 +109,7 @@ const DirectFire = (msg) => {
     for (let i=0;i<ROF;i++) {
         let roll = randomInteger(6);
         rolls.push(roll);
-        if (roll >= toHit) {
+        if ((roll >= toHit || roll === 6) && roll !== 1) {
             hits++;
         }
     }
@@ -116,7 +118,7 @@ const DirectFire = (msg) => {
     let coverRolls = [];
     let coverTip = "";
     if (cover > 0) {
-        coverTip = (cover === 1) ? "Soft Cover 5+ Save":"Hard Cover 4+ Save";
+        coverTip = (cover === 1) ? "<br>Soft Cover 5+ Save":"<br>Hard Cover 4+ Save";
         let coverSave = (cover === 1) ? 5:4;
         for (let i=0;i<hits;i++) {
             let coverRoll = randomInteger(6);
@@ -128,28 +130,70 @@ const DirectFire = (msg) => {
     }
     finalHits = hits - coverSaves;
 
+    let tip = "Rolls: " + rolls.toString() + " vs. " + toHit + "+" + toHitTip;
+    if (cover > 0) {
+        tip += "<br>Cover Rolls: " + coverRolls.toString() + coverTip
+    }
+
     if (finalHits === 0) {
-        
-
-
-
-
+        tip = '[Missed](#" class="showtip" title="' + tip + ')';
+        outputCard.body.push(target.name + " is " + tip);
     } else {
-        //anti-armour - compare
-/*
-After rolling for hits, vehicles must then roll for effect to determine damage. Is it a brew up or just a deflection? Let’s find out! For each hit against a vehicle, compare the Armor of the target to the Penetration rating of the firer. Roll a number of d6 equal to the Penetration less the Armor. If the two are equal, roll 1 die. If Penetration is less than Armor, roll 1 die and apply the difference between the Penetration and Armor as a negative modifier.
-Attacks at Short range (does not apply to infantry) add +2 Penetration and attacks at Long range suffer -2 Penetration.
-Each result of 6 automatically destroys the vehicle. A result of 4-5 forces a Quality Check, and any result of 3 or less has no effect on the target.
-*/
+        tip = '[Hit](#" class="showtip" title="' + tip + ')';
+        let s = (finalHits === 1) ? "":"s"
+        outputCard.body.push(target.name + " is " + tip + finalHits + " time" + s);
 
-        //anti-infantry 
-/*
-Unlike vehicle attacks, infantry do not have an Armor rating. Each hit against infantry is marked for a future Quality Check. A result of “6” against infantry is only a Quality Check, not an instant kill. There are no instant kills against infantry!
-*/
+        tip = wpnTip;
+        tip += "<br>___________________<br>";
 
+        if (type === "Armour") {
+            //wpn is pen, wpnTip is pen info, armour is targets armour on that facing
+            let penDice = (wpn > armour) ? (wpn - armour):1;
+            let penMod = (wpn <= armour) ? (wpn - armour):0; //will always be 0 or a negative #
+            let penTips = "", deflect = 0, qc = false, destroyed = false;
+            for (let i=0;i<finalHits;i++) {
+                let penRolls = [];
+                for (let j=0;j<penDice;j++) {
+                    let penRoll = randomInteger(6);
+                    penRoll += penMod;
+                    penRolls.push(penRoll);
+                    if (penRoll < 4) {deflect++};
+                    if (penRoll === 4 || penRoll === 5) {qc = true};
+                    if (penRoll === 6) {destroyed = true};
+                }
+                if (i > 0) {penTips += "<br>"}; 
+                penTips += "Hit " + (i+1) + ": " + penRolls.toString();
+            }
+            tip += penTips;
 
+            if (destroyed === true) {
+                tip = '[Destroyed](#" class="showtip" title="' + tip + ')';
+//remove target
+            } else if (qc === true) {
+                tip = '[Takes Damage](#" class="showtip" title="' + tip + ')' + " and will make a QC";
+                target.token.set(SM.qc,true);
+            } else {
+                tip = '[Deflects all Shots](#" class="showtip" title="' + tip + ')';
+            }
+            outputCard.body.push(target.name + ' is ' + tip);
+        } else {
+            //wpn is ai, wpnTip is ai info
+            let rolls = [], qc = 0;
+            for (let i=0;i<finalHits;i++) {
+                let roll = randomInteger(6);
+                roll += wpn;
+                rolls.push(roll);
+                if (roll > 3) {
+                    qc++
+                }
+            }
+            tip += "<br>Rolls: " + roll.toString();
+            tip = '['+ qc + '](#" class="showtip" title="' + tip + ')';
+            outputCard.body.push(target.name + ' takes ' + tip + " Quality Checks");
+            target.token.set(SM.qc,qc);
+        }
 
-
+        PrintCard();
     }
 
 

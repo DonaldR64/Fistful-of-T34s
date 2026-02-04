@@ -1916,7 +1916,216 @@ log(unit)
 
 
 
+    const DirectFire = (msg) => {
+        let Tag = msg.content.split(";");
+        let shooter = UnitArray[Tag[1]];
+        let target = UnitArray[Tag[2]];
 
+        SetupCard(shooter.name,target.name,shooter.nation);
+
+        let losResult = LOS(shooter,target);
+        let errorMsg = [];
+        if (losResult.los === false) {
+            errorMsg.push("[#ff0000]No LOS to Target[/#]");
+            errorMsg.body.push(losResult.losReason);
+        }
+        if (losResult.distance > shooter.range[2]) {
+            errorMsg.push("[#ff0000]Target is Out of Range");
+        }
+        let targetFacing = losResult.targetFacing;
+        let shooterFacing = losResult.shooterFacing;
+
+        let armour = (targetFacing === "Front") ? target.armourF:target.armourSR;
+        let wpn = 0; //either pen or ai
+        let wpnTip = "";
+        let type = "Armour";
+        if (armour !== "NA") {
+            wpn = shooter.pen;
+            let note = "";
+            if (wpn.includes("(")) {
+                let ip = wpn.split("(");
+                wpn = parseInt(ip[0]);
+                let penRange = parseInt(ip[1].replace(/[^0-9]+/g, ''));
+                if (losResult.distance > penRange) {
+                    wpn = 0;
+                }
+                note = " with this range"
+            } else {
+                wpn = parseInt(wpn);
+            }
+            wpnTip = "Base Pen: " + wpn;
+            if (wpn === 0) {
+                errorMsg.push("No Anti-Tanks Weapons" + note);
+            } else {
+                //pen for tanks up or down
+                if (shooter.type !== "Infantry" && shooter.type !== "Horse") {
+                    if (losResult.distance > shooter.range[1]) {
+                        wpn -= 2;
+                        wpnTip += "<br>-2 Pen for Long Range";
+                    }
+                    if (losResult.distance <= shooter.range[0]) {
+                        wpn += 2;
+                        wpnTip += "<br>+2 Pen for Short Range";
+                    }
+                }
+            }
+        } else {
+            type = "AntiInfantry";
+            wpn = shooter.antiInf;
+            if (wpn.includes("(")) {
+                let ip = wpn.split("(");
+                wpn = parseInt(ip[0]);
+                ip = ip[1].replace(/(|)/g,"");
+                if (ip === "Close Only" || ip === "Close") {
+                    if (losResult.distance > shooter.range[0]) {
+                        wpn = 0;
+                    }
+                }
+            }
+            wpnTip = "Base AI: " + wpn;
+            if (wpn === "NA") {
+                errorMsg.push("No Anti-Infantry Weapons");
+            }
+        }
+
+        if (errorMsg.length > 0) {
+            _.each(errorMsg,msg => {
+                outputCard.body.push(msg);
+            })
+            PrintCard();
+            return;
+        }
+
+        //so will have ai or pen as 'wpn' and wpnTip has base info
+        let toHit = 4;
+        let toHitTip = "Base 4+";
+        if (shooter.quality.includes("Good") || shooter.quality.includes("Excellent")) {
+            toHitTip += "<br>+1 Quality";
+            toHit--;
+        }
+        if (losResult.distance <= shooter.range[0]) {
+            toHit--;
+            toHitTip += "<br>+1 Short Range";
+        }
+        if (losResult.distance > shooter.range[1]) {
+            toHit++;
+            toHitTip += "<br>-1 Long Range";
+        }
+        if (shooter.token.get(SM.suppressed)) {
+            toHit++;
+            toHitTip += "<br>-1 Suppressed";
+        }
+        if (shooter.token.get("aura1_color") === "#ff00ff") {
+            toHit++;
+            toHitTip += "<br>-1 Overwatch";
+        }
+        
+        let ROF = parseInt(shooter.rof);
+
+        let rolls = [];
+        let hits = 0;coverSaves = 0;finalHits = 0;
+        for (let i=0;i<ROF;i++) {
+            let roll = randomInteger(6);
+            rolls.push(roll);
+            if ((roll >= toHit || roll === 6) && roll !== 1) {
+                hits++;
+            }
+        }
+        //cover saves
+        let cover = HexMap[target.hexLabel].cover;
+        let coverRolls = [];
+        let coverTip = "";
+        if (cover > 0) {
+            coverTip = (cover === 1) ? "<br>Soft Cover 5+ Save":"<br>Hard Cover 4+ Save";
+            let coverSave = (cover === 1) ? 5:4;
+            for (let i=0;i<hits;i++) {
+                let coverRoll = randomInteger(6);
+                coverRolls.push(coverRoll);
+                if (coverRoll >= coverSave) {
+                    coverSaves++;
+                }
+            }
+        }
+        finalHits = hits - coverSaves;
+
+        let tip = "Rolls: " + rolls.toString() + " vs. " + toHit + "+" + toHitTip;
+        if (cover > 0) {
+            tip += "<br>Cover Rolls: " + coverRolls.toString() + coverTip
+        }
+
+        if (finalHits === 0) {
+            tip = '[Missed](#" class="showtip" title="' + tip + ')';
+            outputCard.body.push(target.name + " is " + tip);
+        } else {
+            tip = '[Hit](#" class="showtip" title="' + tip + ')';
+            let s = (finalHits === 1) ? "":"s"
+            outputCard.body.push(target.name + " is " + tip + finalHits + " time" + s);
+
+            tip = wpnTip;
+            tip += "<br>___________________<br>";
+
+            if (type === "Armour") {
+                //wpn is pen, wpnTip is pen info, armour is targets armour on that facing
+                let penDice = (wpn > armour) ? (wpn - armour):1;
+                let penMod = (wpn <= armour) ? (wpn - armour):0; //will always be 0 or a negative #
+                let penTips = "", deflect = 0, qc = false, destroyed = false;
+                for (let i=0;i<finalHits;i++) {
+                    let penRolls = [];
+                    for (let j=0;j<penDice;j++) {
+                        let penRoll = randomInteger(6);
+                        penRoll += penMod;
+                        penRolls.push(penRoll);
+                        if (penRoll < 4) {deflect++};
+                        if (penRoll === 4 || penRoll === 5) {qc = true};
+                        if (penRoll === 6) {destroyed = true};
+                    }
+                    if (i > 0) {penTips += "<br>"}; 
+                    penTips += "Hit " + (i+1) + ": " + penRolls.toString();
+                }
+                tip += penTips;
+
+                if (destroyed === true) {
+                    tip = '[Destroyed](#" class="showtip" title="' + tip + ')';
+    //remove target
+                } else if (qc === true) {
+                    tip = '[Takes Damage](#" class="showtip" title="' + tip + ')' + " and will make a QC";
+                    target.token.set(SM.qc,true);
+                } else {
+                    tip = '[Deflects all Shots](#" class="showtip" title="' + tip + ')';
+                }
+                outputCard.body.push(target.name + ' is ' + tip);
+            } else {
+                //wpn is ai, wpnTip is ai info
+                let rolls = [], qc = 0;
+                for (let i=0;i<finalHits;i++) {
+                    let roll = randomInteger(6);
+                    roll += wpn;
+                    rolls.push(roll);
+                    if (roll > 3) {
+                        qc++
+                    }
+                }
+                tip += "<br>Rolls: " + roll.toString();
+                tip = '['+ qc + '](#" class="showtip" title="' + tip + ')';
+                outputCard.body.push(target.name + ' takes ' + tip + " Quality Checks");
+                target.token.set(SM.qc,qc);
+            }
+
+            PrintCard();
+        }
+
+
+
+
+
+
+
+
+    //rotate certain units eg tank destroyers, infantry --> basically those without turrets
+    //Sound and FX (?)
+
+
+    }
 
 
 
