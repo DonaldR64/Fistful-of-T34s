@@ -664,15 +664,51 @@ const FFT = (() => {
                 _.each(this.range, band => {
                     band = parseInt(band);
                 })
-                this.antiInf = parseInt(aa.antiInf) || "NA";
-                this.pen = aa.pen || 0;
+
+                let ai = aa.ai;
+log(this.name)
+log("Oriignal AI: " + ai)
+                if (ai === "-" || ai === "NA") {
+                    ai = "NA";
+                } else {
+                    if (ai.includes("(")) {
+                        ai = ai.split("(");
+                        let ai1;
+                        let ai0 = parseInt(ai[0].replace(/\D/g, ''));
+                        if (ai[1].includes("Close")) {
+                            ai1 = this.range[0];
+                        } else {
+                            ai1 = parseInt(ai[1].replace(/\D/g, ''));
+                        }
+                        ai = [ai0,ai1];
+                    } else {
+                        ai = [parseInt(ai.replace(/\D/g, '')),this.range[2]];
+                    }
+                }
+                this.antiInf = ai;
+
+                let pen = aa.pen;
+                if (pen === "-" || pen === "NA") {
+                    ai = "NA"
+                } else {
+                    if (pen.includes("(")) {
+                        //format 4(1") for pen of 4 at 1" or similar
+                        pen = pen.split("(");
+                        pen = [parseInt(pen[0]), parseInt(pen[1].replace(/\D/g, ''))];
+                    } else {    
+                        //eg pen is 7, and effective to max range, although modified in direct fire based on range band
+                        pen = [parseInt(pen),this.range[2]];
+                    }
+                }
+                this.pen = pen;
             }
 
 
             this.formationID = "";
 
 
-
+log("Pen: " + this.pen)
+log("AI: " + this.antiInf)
 
             UnitArray[id] = this;
             HexMap[label].tokenIDs.push(id);
@@ -1305,7 +1341,7 @@ const FFT = (() => {
                     unit.token.set(SM.suppressed,false);
                 }
                 //reset units on overwatch to green status
-                if (unit.player === activePlayer && unit.token.set("aura1_color") === "#ff00ff") {
+                if (unit.player === activePlayer && unit.token.get("aura1_color") === "#ff00ff") {
                     unit.token.set("aura1_color","#00ff00");
                 }
             })
@@ -1930,7 +1966,7 @@ log(unit)
             errorMsg.body.push(losResult.losReason);
         }
         if (losResult.distance > shooter.range[2]) {
-            errorMsg.push("[#ff0000]Target is Out of Range");
+            errorMsg.push("[#ff0000]Target is Out of Range[/#]");
         }
         let targetFacing = losResult.targetFacing;
         let shooterFacing = losResult.shooterFacing;
@@ -1940,51 +1976,37 @@ log(unit)
         let wpnTip = "";
         let type = "Armour";
         if (armour !== "NA") {
-            wpn = shooter.pen;
-            let note = "";
-            if (wpn.includes("(")) {
-                let ip = wpn.split("(");
-                wpn = parseInt(ip[0]);
-                let penRange = parseInt(ip[1].replace(/[^0-9]+/g, ''));
-                if (losResult.distance > penRange) {
-                    wpn = 0;
-                }
-                note = " with this range"
+            if (shooter.pen === "NA") {
+                errorMsg.push("No Anti-Tank Weapons");
             } else {
-                wpn = parseInt(wpn);
-            }
-            wpnTip = "Base Pen: " + wpn;
-            if (wpn === 0) {
-                errorMsg.push("No Anti-Tanks Weapons" + note);
-            } else {
-                //pen for tanks up or down
-                if (shooter.type !== "Infantry" && shooter.type !== "Horse") {
-                    if (losResult.distance > shooter.range[1]) {
-                        wpn -= 2;
-                        wpnTip += "<br>-2 Pen for Long Range";
-                    }
-                    if (losResult.distance <= shooter.range[0]) {
-                        wpn += 2;
-                        wpnTip += "<br>+2 Pen for Short Range";
+                if (losResult.distance > shooter.pen[1]) {
+                    errorMsg.push("No AT Weapons with Range");
+                } else {
+                    wpn = pen[0];
+                    wpnTip = "Base Pen: " + wpn;
+                    //pen for tanks up or down
+                    if (shooter.type !== "Infantry" && shooter.type !== "Horse") {
+                        if (losResult.distance > shooter.range[1]) {
+                            wpn -= 2;
+                            wpnTip += "<br>-2 Pen for Long Range";
+                        }
+                        if (losResult.distance <= shooter.range[0]) {
+                            wpn += 2;
+                            wpnTip += "<br>+2 Pen for Short Range";
+                        }
                     }
                 }
             }
         } else {
             type = "AntiInfantry";
-            wpn = shooter.antiInf;
-            if (wpn.includes("(")) {
-                let ip = wpn.split("(");
-                wpn = parseInt(ip[0]);
-                ip = ip[1].replace(/(|)/g,"");
-                if (ip === "Close Only" || ip === "Close") {
-                    if (losResult.distance > shooter.range[0]) {
-                        wpn = 0;
-                    }
-                }
-            }
-            wpnTip = "Base AI: " + wpn;
-            if (wpn === "NA") {
+            if (shooter.antiInf === "NA") {
                 errorMsg.push("No Anti-Infantry Weapons");
+            } else {
+                wpn = shooter.antiInf[0];
+                if (losResult.distance > shooter.antiInf[1]) {
+                    wpn = 0;
+                }
+                wpnTip = "Anti-Infantry: " + wpn;
             }
         }
 
