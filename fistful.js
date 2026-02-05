@@ -95,7 +95,7 @@ const FFT = (() => {
             "fontColour": "#000000",
             "borderColour": "#ff0000",
             "borderStyle": "5px groove",
-
+            "hq": "soviet",
         },
         "Wermacht": {
             "image": "",
@@ -104,6 +104,7 @@ const FFT = (() => {
             "fontColour": "#000000",
             "borderColour": "#000000",
             "borderStyle": "5px double",
+            "hq": "german",
         },
 
         "Neutral": {
@@ -126,13 +127,16 @@ const FFT = (() => {
         double: "status_Fast::5865486",
         green: "status_green", //to note has taken an art QC already
         unavail: "status_oneshot::5503748",
+        soviet: "status_Soviet::6433738",
+        german: "status_Iron-Cross::7650254",
     }
 
 
     //height is height of terrain element
     //movecosts
+    //coverDirect, coverArea, coverSpot is now using coverDirect
     //cover for direct fire - 0 = None, 1 = Light (5+), 2 = Heavy (4+)
-    //cover for spotting - true/false
+    //cover for area fire is true, false
 
     const LinearTerrain = {
 
@@ -148,12 +152,11 @@ const FFT = (() => {
 
 
     const TerrainInfo = {
-        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, cover: 1,spot: true},
-        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, cover: 2,spot: true},
-        "River": {name: "River",height: 0, moveCosts: {leg: 1000, tracked:1000, horse: 1000, wheeled: 1000, halftrack: 1000}, cover: 1,spot: true},
-
-
-
+        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
+        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 2,coverArea: true},
+        "River": {name: "River",height: 0, moveCosts: {leg: 1000, tracked:1000, horse: 1000, wheeled: 1000, halftrack: 1000}, coverDirect: 0,coverArea: false,},
+        "Craters": {name: "Cratered Ground",height: 0, moveCosts: {leg: 1, tracked:2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
+        "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
     }
 
     const HillHeights = {
@@ -602,7 +605,8 @@ const FFT = (() => {
             this.terrain = "Open";
             this.offboard = false;
             this.moveCosts = {leg: 1, tracked: 1, horse: 1, wheeled: 1, halftrack: 1}
-            this.cover = 0;
+            this.coverDirect = 0;
+            this.coverArea = false;
             this.smoke = "";
             this.smokePlayer = "";
             this.edges = {};
@@ -1138,8 +1142,12 @@ log("AI: " + this.antiInf)
                 let hex = HexMap[centreLabel];
                 hex.terrain = name;
                 hex.height = terrain.height;
-                hex.moveCosts = terrain.moveCosts;
-                hex.cover = terrain.cover;
+                let costKeys = Object.keys(terrain.moveCosts);
+                _.each(costKeys,key => {
+                    hex.moveCosts[key] = Math.max(hex.moveCosts[key],terrain.moveCosts[key]);
+                })
+                hex.coverDirect = Math.max(hex.coverDirect,terrain.coverDirect);
+                hex.coverArea = (terrain.coverArea === true) ? true:hex.coverArea;
             }
             if (name === "Map") {
                 DefineOffboard(token);
@@ -1439,7 +1447,10 @@ log("AI: " + this.antiInf)
         })
         line += arr.toString();
         outputCard.body.push(line);
-        outputCard.body.push("Cover: " + hex.cover);
+        let areaCover = (hex.coverArea === true) ? "Cover":"No Cover";
+        let directCover = (hex.coverDirect === 0) ? "No Cover":(hex.coverDirect === 1) ? "Cover Save 5+":"Cover Save 4+";
+        outputCard.body.push("Indirect Fire: " + areaCover);
+        outputCard.body.push("Direct Fire: " + directCover);
 
         for (let i=0;i<6;i++) {
             let edge = hex.edges[DIRECTIONS[i]];
@@ -1463,6 +1474,12 @@ log(unit.name)
             return false;
         }
         let cohesion = (unit.special.includes("Recon")) ? true:false;
+        let hqSymbol = SM[Nations[unit.nation].hq];
+        if (unit.token.get(hqSymbol) === true) {
+            cohesion = true;
+        }
+
+
 log("Cohesion: " + cohesion)
         let cohRange = (unit.quality === "Fair") ? 2:(unit.quality === "Good") ? 4:6;
 log("Coh Range: " + cohRange)
@@ -1619,7 +1636,44 @@ log(unit2.name + " is in cohesion")
         PrintCard();
     }
 
+    const BlastCheck = (target,unit,radius) => {
+        let targetCentre = HexMap[target.hexLabel].centre;
+        let unitCentre = HexMap[unit.hexLabel].centre;
+        let theta = Angle(unit.token.get("rotation")) * Math.PI/180;
+        let w = unit.token.get("width");
+        let h = unit.token.get("height");
+        let squareTokens = ["Infantry","Horse","Mortar","Artillery","AT Gun"]
+        if (squareTokens.includes(unit.type) === false) {
+            h -= 10;
+        }
+        dXmin = unitCentre.x - (w/2);
+        dXmax = unitCentre.x + (w/2);
+        dYmin = unitCentre.y - (h/2);
+        dYmax = unitCentre.y + (h/2);
+        page = getObj('page',target.get('pageid'));
+        scale = page.get('scale_number') // map scale
+        //rotated circles centre
+        cX = (Math.cos(theta) * (targetCentre.x - unitCentre.x)) - (Math.sin(theta)*(targetCentre.y - unitCentre.y)) + unitCentre.x
+        cY = (Math.sin(theta) * (targetCentre.x - unitCentre.x)) + (Math.cos(theta)*(targetCentre.y - unitCentre.y)) + unitCentre.y
+        //closest point
+        eX = CLAMP(cX,dXmin,dXmax)
+        eY = CLAMP(cY,dYmin,dYmax)
 
+        A = (eX - cX)
+        B = (eY - cY)
+
+        C = Math.sqrt(A*A + B*B)
+        C = Math.round(C/70)*scale
+        if (C<=radius) {
+            caught = true
+        }
+        if (C>radius) {caught = false}
+        return caught
+    }
+
+    const Clamp = (val,min,max) => {
+        return (val>max) ? max:(val <min) ? min: val;
+    }
 
 
     const DrawLine = (hex1,hex2) => {
@@ -1882,7 +1936,7 @@ log(result)
                     tip = '[Hit](#" class="showtip" title="' + tip + ')';
                     
                     if (result >= 6) {
-                        if (hex.cover > 0 || ArmourTypes.includes(unit.type)) {
+                        if (hex.coverArea === true || ArmourTypes.includes(unit.type)) {
                             if (unit.token.get(SM.green) === false) {
                                 unit.token.set(SM.green, true);
                                 unit.token.set(SM.suppressed,true);
@@ -1898,7 +1952,7 @@ log(result)
 //destroy unit
                         }
                     } else {
-                        if (hex.cover === 0 && ArmourTypes.includes(unit.type) === false && unit.token.get(SM.green) === false) {
+                        if (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.token.get(SM.green) === false) {
                             unit.token.set(SM.green,true);
                             let qc = QualityCheck(unit);
                             let noun = (qc.pass === true) ? "Suppressed":"Routs";
@@ -2064,7 +2118,7 @@ log(unit)
             }
         }
         //cover saves
-        let cover = HexMap[target.hexLabel].cover;
+        let cover = HexMap[target.hexLabel].coverDirect;
         let coverRolls = [];
         let coverTip = "";
         if (cover > 0) {
@@ -2430,7 +2484,9 @@ log(finalHits)
             outputCard.body.push(losResult.losReason);
         } else {
             outputCard.body.push("Shooter has LOS to Target");
-            outputCard.body.push("Target has " + coverLevels[losResult.cover] + " Cover");
+            outputCard.body.push("Target has " + coverLevels[losResult.coverDirect] + " Cover vs. Direct Fire");
+            let areaCover = (losResult.coverArea === true) ? "Cover":"No Cover";
+            outputCard.body.push("Target has " + areaCover + " vs. Indirect Fire");
             outputCard.body.push("Target is in the " + losResult.shooterFacing + " Arc");
             outputCard.body.push("Target is being hit on the " + losResult.targetFacing + " Arc");
 
@@ -2458,7 +2514,6 @@ log(finalHits)
         let los = true;
         let losReason = "";
         let losBlock = "";
-        let cover = 0;
         
         let shooterHex = HexMap[shooter.hexLabel];
         let targetHex = HexMap[target.hexLabel];
@@ -2487,7 +2542,7 @@ log(finalHits)
                 losReason = "Blocked by Smoke at " + label;
                 break;
             }
-            if (interHex.cover === 0) {continue};
+            if (interHex.coverDirect === 0) {continue};
             let teH = interHex.height; //terrain in hex
             let edH = 0; //height of any terrain on edge crossed
             let iH = Math.max(teH,edH);
@@ -2503,15 +2558,13 @@ log(finalHits)
             }
         }
 
-        //target hex
-        cover = targetHex.cover;
-
         let result = {
             los: los,
             losReason: losReason,
             losBlock: losBlock,
             distance: distance,
-            cover: cover,
+            coverDirect: targetHex.coverDirect,
+            coverArea: targetHex.coverArea,
             shooterFacing: shooterFacing,
             targetFacing: targetFacing,
         }

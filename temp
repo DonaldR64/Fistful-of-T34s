@@ -1,21 +1,38 @@
-if (shooter.pen === "NA") {
-    errorMsg.push("No Anti-Tank Weapons");
-} else {
-    if (losResult.distance > shooter.pen[1]) {
-        errorMsg.push("No AT Weapons with Range");
-    } else {
-        wpn = pen[0];
-        wpnTip = "Base Pen: " + wpn;
-        //pen for tanks up or down
-        if (shooter.type !== "Infantry" && shooter.type !== "Horse") {
-            if (losResult.distance > shooter.range[1]) {
-                wpn -= 2;
-                wpnTip += "<br>-2 Pen for Long Range";
-            }
-            if (losResult.distance <= shooter.range[0]) {
-                wpn += 2;
-                wpnTip += "<br>+2 Pen for Short Range";
-            }
-        }
+const BlastCheck = (target,unit,radius) => {
+    let targetCentre = HexMap[target.hexLabel].centre;
+    let unitCentre = HexMap[unit.hexLabel].centre;
+    let theta = Angle(unit.token.get("rotation")) * Math.PI/180;
+    let w = unit.token.get("width");
+    let h = unit.token.get("height");
+    let squareTokens = ["Infantry","Horse","Mortar","Artillery","AT Gun"]
+    if (squareTokens.includes(unit.type) === false) {
+        h -= 10;
     }
+    dXmin = unitCentre.x - (w/2);
+    dXmax = unitCentre.x + (w/2);
+    dYmin = unitCentre.y - (h/2);
+    dYmax = unitCentre.y + (h/2);
+	page = getObj('page',target.get('pageid'));
+	scale = page.get('scale_number') // map scale
+	//rotated circles centre
+	cX = (Math.cos(theta) * (targetCentre.x - unitCentre.x)) - (Math.sin(theta)*(targetCentre.y - unitCentre.y)) + unitCentre.x
+	cY = (Math.sin(theta) * (targetCentre.x - unitCentre.x)) + (Math.cos(theta)*(targetCentre.y - unitCentre.y)) + unitCentre.y
+	//closest point
+	eX = CLAMP(cX,dXmin,dXmax)
+	eY = CLAMP(cY,dYmin,dYmax)
+
+	A = (eX - cX)
+	B = (eY - cY)
+
+	C = Math.sqrt(A*A + B*B)
+	C = Math.round(C/70)*scale
+	if (C<=radius) {
+		caught = true
+	}
+	if (C>radius) {caught = false}
+    return caught
+}
+
+const Clamp = (val,min,max) => {
+    return (val>max) ? max:(val <min) ? min: val;
 }
