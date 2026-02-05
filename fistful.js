@@ -1637,6 +1637,7 @@ log(unit2.name + " is in cohesion")
     }
 
     const BlastCheck = (target,unit,radius) => {
+        radius = radius * HexInfo.size * 2;
         let targetCentre = HexMap[target.hexLabel].centre;
         let unitCentre = HexMap[unit.hexLabel].centre;
         let theta = Angle(unit.token.get("rotation")) * Math.PI/180;
@@ -1650,14 +1651,12 @@ log(unit2.name + " is in cohesion")
         dXmax = unitCentre.x + (w/2);
         dYmin = unitCentre.y - (h/2);
         dYmax = unitCentre.y + (h/2);
-        page = getObj('page',target.get('pageid'));
-        scale = page.get('scale_number') // map scale
-        //rotated circles centre
+        scale = pageInfo.scale;
         cX = (Math.cos(theta) * (targetCentre.x - unitCentre.x)) - (Math.sin(theta)*(targetCentre.y - unitCentre.y)) + unitCentre.x
         cY = (Math.sin(theta) * (targetCentre.x - unitCentre.x)) + (Math.cos(theta)*(targetCentre.y - unitCentre.y)) + unitCentre.y
         //closest point
-        eX = CLAMP(cX,dXmin,dXmax)
-        eY = CLAMP(cY,dYmin,dYmax)
+        eX = Clamp(cX,dXmin,dXmax)
+        eY = Clamp(cY,dYmin,dYmax)
 
         A = (eX - cX)
         B = (eY - cY)
@@ -1675,6 +1674,33 @@ log(unit2.name + " is in cohesion")
         return (val>max) ? max:(val <min) ? min: val;
     }
 
+    const TA = (radius,target,areaHexLabels) => {
+        let targetArray = [];
+        _.each(UnitArray,unit => {
+            if (unit.id === target.id) {return};
+            if (areaHexLabels.includes(unit.hexLabel)) {
+                let info = {
+                    unitID: unit.id,
+                    coverage: "Full",
+                }
+                targetArray.push(info);
+            } else {
+                let d = HexMap[target.hexLabel].cube.distance(HexMap[unit.hexLabel].cube);
+                if (d <= (radius +1)) {
+                    //to capture those just outside hexes
+                    let check = BlastCheck(target,unit,radius)
+                    if (check === true) {
+                        let info = {
+                            unitID: unit.id,
+                            coverage: "Partial",
+                        }
+                        targetArray.push(info);
+                    }
+                }
+            }
+        })
+        return targetArray;
+    }
 
     const DrawLine = (hex1,hex2) => {
         let x1 = hex1.centre.x;
@@ -1874,13 +1900,16 @@ log(unit2.name + " is in cohesion")
 
             ChainExplosions();
 
-            target.token.remove();
-            delete UnitArray[target.id];
             if (type === "Smoke") {
                 PlaceSmoke(artillery,hexLabels);
             } else if (type === "HE") {
-                HE(artillery,hexLabels);
+                let targetArray = TA(radius,target,hexLabels);
+                HE(artillery,targetArray);
             }
+
+            target.token.remove();
+            delete UnitArray[target.id];
+
             artillery.token.set(SM.fired,true);
             artillery.token.set("aura1_color","#000000");
             let index = artUnits.map(e => e.id).indexOf(artilleryID);
@@ -1909,65 +1938,77 @@ log(unit2.name + " is in cohesion")
         })
     }
 
-    const HE = (artillery,hexLabels) => {
-        _.each(UnitArray,unit => {{
-            if (hexLabels.includes(unit.hexLabel)) {
-                let hex = HexMap[unit.hexLabel];
+    const HE = (artillery,targetArray) => {
+        _.each(targetArray,info => {
+            let unit = UnitArray[info.unitID];
+            let hex = HexMap[unit.hexLabel];
 log(unit.name)
 log(hex)
-                let artRoll = randomInteger(6);
-                let artEffect = artillery.arteffect;
-                let bonus = 0;
-                if (artEffect === "+1") {
-                    bonus = 1;
-                } else if (artEffect === "+1 vs. Armour" && ArmourTypes.includes(unit.type)) {
-                    bonus = 1;
-                } else if (artEffect === "-1 vs. Armour" && ArmourTypes.includes(unit.type)) {
-                    bonus = -1;
-                }
-                let result = artRoll + bonus;
-                let tip = "Result: " + result + " vs. 4+";
-                tip += "<br>Roll: " + artRoll;
-                if (bonus !== 0) {
-                    tip += "<br>Bonus: " + artEffect;
-                }
+            let artRoll = randomInteger(6);
+            let artEffect = artillery.arteffect;
+            let bonus = 0, bonusText = "";
+            if (artEffect === "+1") {
+                bonus = 1;
+                bonusText = artEffect;
+            } else if (artEffect === "+1 vs. Armour" && ArmourTypes.includes(unit.type)) {
+                bonus = 1;
+                bonusText = artEffect;
+            } else if (artEffect === "-1 vs. Armour" && ArmourTypes.includes(unit.type)) {
+                bonus = -1;
+                bonusText = artEffect;
+            } 
+            if (info.coverage === "Partial") {
+                bonus = -1;
+            }
+
+
+            let result = artRoll + bonus;
+            let tip = "Result: " + result + " vs. 4+";
+            tip += "<br>Roll: " + artRoll;
+            if (bonusText !== "") {
+                tip += "<br>" + bonusText;
+            }
+            if (info.coverage === "Partial") {
+                tip += "<br>-1 Partially Under";
+            }
+
+
 log(result)
-                if (result > 3) {
-                    tip = '[Hit](#" class="showtip" title="' + tip + ')';
-                    
-                    if (result >= 6) {
-                        if (hex.coverArea === true || ArmourTypes.includes(unit.type)) {
-                            if (unit.token.get(SM.green) === false) {
-                                unit.token.set(SM.green, true);
-                                unit.token.set(SM.suppressed,true);
-                                let qc = QualityCheck(unit);
-                                let noun = (qc.pass === true) ? "Suppressed":"Routs";
-                                outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
-                            } else {
-                                unit.token.set(SM.suppressed,true);
-                                outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
-                            }         
-                        } else {
-                            outputCard.body.push(unit.name + ' is ' + tip + ' and Destroyed');
-//destroy unit
-                        }
-                    } else {
-                        if (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.token.get(SM.green) === false) {
-                            unit.token.set(SM.green,true);
+            if (result > 3) {
+                tip = '[Hit](#" class="showtip" title="' + tip + ')';
+                
+                if (result >= 6) {
+                    if (hex.coverArea === true || ArmourTypes.includes(unit.type)) {
+                        if (unit.token.get(SM.green) === false) {
+                            unit.token.set(SM.green, true);
+                            unit.token.set(SM.suppressed,true);
                             let qc = QualityCheck(unit);
                             let noun = (qc.pass === true) ? "Suppressed":"Routs";
                             outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
                         } else {
-                            outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
                             unit.token.set(SM.suppressed,true);
-                        }
+                            outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
+                        }         
+                    } else {
+                        outputCard.body.push(unit.name + ' is ' + tip + ' and Destroyed');
+//destroy unit
                     }
                 } else {
-                    tip = '[Missed](#" class="showtip" title="' + tip + ')';
-                    outputCard.body.push(unit.name + " is " + tip);
+                    if (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.token.get(SM.green) === false) {
+                        unit.token.set(SM.green,true);
+                        let qc = QualityCheck(unit);
+                        let noun = (qc.pass === true) ? "Suppressed":"Routs";
+                        outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
+                    } else {
+                        outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
+                        unit.token.set(SM.suppressed,true);
+                    }
                 }
+            } else {
+                tip = '[Missed](#" class="showtip" title="' + tip + ')';
+                outputCard.body.push(unit.name + " is " + tip);
             }
-        }})
+        })
 
 
 
@@ -2680,6 +2721,7 @@ log(finalHits)
     
         switch(args[0]) {
             case '!Dump':
+                log(HexInfo)
                 log("State");
                 log(state.FFT);
                 log("Units");

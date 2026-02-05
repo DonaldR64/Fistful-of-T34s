@@ -1,38 +1,19 @@
-const BlastCheck = (target,unit,radius) => {
-    let targetCentre = HexMap[target.hexLabel].centre;
-    let unitCentre = HexMap[unit.hexLabel].centre;
-    let theta = Angle(unit.token.get("rotation")) * Math.PI/180;
-    let w = unit.token.get("width");
-    let h = unit.token.get("height");
-    let squareTokens = ["Infantry","Horse","Mortar","Artillery","AT Gun"]
-    if (squareTokens.includes(unit.type) === false) {
-        h -= 10;
-    }
-    dXmin = unitCentre.x - (w/2);
-    dXmax = unitCentre.x + (w/2);
-    dYmin = unitCentre.y - (h/2);
-    dYmax = unitCentre.y + (h/2);
-	page = getObj('page',target.get('pageid'));
-	scale = page.get('scale_number') // map scale
-	//rotated circles centre
-	cX = (Math.cos(theta) * (targetCentre.x - unitCentre.x)) - (Math.sin(theta)*(targetCentre.y - unitCentre.y)) + unitCentre.x
-	cY = (Math.sin(theta) * (targetCentre.x - unitCentre.x)) + (Math.cos(theta)*(targetCentre.y - unitCentre.y)) + unitCentre.y
-	//closest point
-	eX = CLAMP(cX,dXmin,dXmax)
-	eY = CLAMP(cY,dYmin,dYmax)
-
-	A = (eX - cX)
-	B = (eY - cY)
-
-	C = Math.sqrt(A*A + B*B)
-	C = Math.round(C/70)*scale
-	if (C<=radius) {
-		caught = true
-	}
-	if (C>radius) {caught = false}
-    return caught
-}
-
-const Clamp = (val,min,max) => {
-    return (val>max) ? max:(val <min) ? min: val;
+const TA = (radius,target,areaHexLabels) => {
+    let targetArray = [];
+    _.each(UnitArray,unit => {
+        if (unit.id === target.id) {return};
+        if (areaHexLabels.includes(unit.hexLabel)) {
+            targetArray.push(unit);
+        } else {
+            let d = HexMap[target.hexLabel].cube.distance(HexMap[unit.hexLabel].cube);
+            if (d <= (radius +1)) {
+                //to capture those just outside hexes
+                let check = BlastCheck(target,unit,radius)
+                if (check === true) {
+                    targetArray.push(unit);
+                }
+            }
+        }
+    })
+    return targetArray;
 }
