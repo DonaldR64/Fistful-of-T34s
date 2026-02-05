@@ -1866,9 +1866,9 @@ log(hex)
                 let bonus = 0;
                 if (artEffect === "+1") {
                     bonus = 1;
-                } else if (artEffect === "+1 vs Armour" && ArmourTypes.includes(unit.type)) {
+                } else if (artEffect === "+1 vs. Armour" && ArmourTypes.includes(unit.type)) {
                     bonus = 1;
-                } else if (artEffect === "-1 vs Armour" && ArmourTypes.includes(unit.type)) {
+                } else if (artEffect === "-1 vs. Armour" && ArmourTypes.includes(unit.type)) {
                     bonus = -1;
                 }
                 let result = artRoll + bonus;
@@ -2148,7 +2148,7 @@ log(finalHits)
                     }
                     outputCard.body.push(target.name + tip);
                 } else {
-                    
+
 
 
 
