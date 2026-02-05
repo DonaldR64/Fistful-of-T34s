@@ -1498,7 +1498,7 @@ log(unit2.name + " is in cohesion")
             tip += "<br>No Modifications";
         }
         tip = "Result: " + qualityRoll + " vs. " + target + "+" + tip;
-        if (qualityRoll >= target) {
+        if (qualityRoll >= target || qualityRoll === 6) {
             tip = '[Passes](#" class="showtip" title="' + tip + ')';
         } else {
             tip = '[Fails](#" class="showtip" title="' + tip + ')';
