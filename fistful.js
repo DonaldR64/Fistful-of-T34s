@@ -1394,7 +1394,7 @@ log("AI: " + this.antiInf)
                 if (unit.token.get(SM.qc)) {
                     qcUnits.push(unit);
                 }
-                if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false) {
+                if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false && unit.player === activePlayer) {
                     //sets overwatch
                     unit.token.set("aura1_color","#ff00ff");
                 }
@@ -1885,7 +1885,7 @@ log(result)
                                 unit.token.set(SM.green, true);
                                 unit.token.set(SM.suppressed,true);
                                 let qc = QualityCheck(unit);
-                                let noun = (qc.pass === true) ? "Suppressed":"Destroyed";
+                                let noun = (qc.pass === true) ? "Suppressed":"Routs";
                                 outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
                             } else {
                                 unit.token.set(SM.suppressed,true);
@@ -1899,7 +1899,7 @@ log(result)
                         if (hex.cover === 0 && ArmourTypes.includes(unit.type) === false && unit.token.get(SM.green) === false) {
                             unit.token.set(SM.green,true);
                             let qc = QualityCheck(unit);
-                            let noun = (qc.pass === true) ? "Suppressed":"Destroyed";
+                            let noun = (qc.pass === true) ? "Suppressed":"Routs";
                             outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
                         } else {
                             outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
@@ -1940,7 +1940,8 @@ log(unit)
         let unit = UnitArray[id];
         SetupCard(unit.name,"Quality Check",unit.nation);
         qc = QualityCheck(unit);
-        let noun = (qc.pass === true) ? "Suppressed":"Destroyed";
+        let i = randomInteger(6);
+        let noun = (qc.pass === true) ? "Suppressed":(i>3) ? "Destroyed":"Routed";
         outputCard.body.push(unit.name + " " + qc.tip + ' its QC and is ' + noun);
         let phrase = "Next Unit";
         if (qcUnits.length === 0) {
@@ -1963,13 +1964,19 @@ log(unit)
         let errorMsg = [];
         if (losResult.los === false) {
             errorMsg.push("[#ff0000]No LOS to Target[/#]");
-            errorMsg.body.push(losResult.losReason);
+            errorMsg.push(losResult.losReason);
         }
         if (losResult.distance > shooter.range[2]) {
             errorMsg.push("[#ff0000]Target is Out of Range[/#]");
         }
+        if (shooter.token.get(SM.fired) === true) {
+            errorMsg.push("[#ff0000]Unit has already Fired[/#]");
+        }
+        if (shooter.token.get(SM.unavail) === true) {
+            errorMsg.push("[#ff0000]Unit is unable to Fire[/#]");
+        }
+
         let targetFacing = losResult.targetFacing;
-        let shooterFacing = losResult.shooterFacing;
 
         let armour = (targetFacing === "Front") ? target.armourF:target.armourSR;
         let wpn = 0; //either pen or ai
@@ -2078,8 +2085,10 @@ log(unit)
             coverRolls = coverRolls.sort().reverse();
             coverTip = "Rolls: " + coverRolls.toString() + " vs. " + coverTip;
         }
-
-
+log("In Direct Fire")
+log(hits)
+log(coverSaves)
+log(finalHits)
 
 
         if (hits === 0) {
@@ -2185,7 +2194,8 @@ log(unit)
             shooter.token.set("rotation",angle);
         }
 
-
+        shooter.token.set(SM.fired,true);
+        shooter.token.set("aura1_color","#000000");
 
 
     }
