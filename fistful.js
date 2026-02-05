@@ -702,7 +702,7 @@ log("Original AI: " + ai)
             }
             this.pen = pen;
         
-            this.special = aa.special;
+            this.special = aa.special || " ";
 
 
             this.formationID = "";
@@ -1989,7 +1989,7 @@ log(unit)
                 if (losResult.distance > shooter.pen[1]) {
                     errorMsg.push("No AT Weapons with Range");
                 } else {
-                    wpn = pen[0];
+                    wpn = shooter.pen[0];
                     wpnTip = "Base Pen: " + wpn;
                     //pen for tanks up or down
                     if (shooter.type !== "Infantry" && shooter.type !== "Horse") {
@@ -2111,9 +2111,6 @@ log(finalHits)
             if (finalHits > 0) {
                 outputCard.body.push("[hr]");
 
-                tip = wpnTip; //new tip
-                tip += "<br>___________________<br>";
-
                 if (type === "Armour") {
                     //wpn is pen, wpnTip is pen info, armour is targets armour on that facing
                     let penDice = (wpn > armour) ? (wpn - armour):1;
@@ -2133,19 +2130,23 @@ log(finalHits)
                         if (i > 0) {penTips += "<br>"}; 
                         penTips += "Hit " + (i+1) + ": " + penRolls.toString();
                     }
-                    tip += penTips;
+                    tip = penTips;
+                    tip += "<br>___________________<br>";
+                    tip += "Pen " + wpn + " vs. Armour " + armour;
+                    tip += "<br>" + wpnTip;
 
                     if (destroyed === true) {
-                        tip = '[Destroyed](#" class="showtip" title="' + tip + ')';
+                        tip = ' is [Destroyed](#" class="showtip" title="' + tip + ')';
         //remove target
                     } else if (qc === true) {
-                        tip = '[Takes Damage](#" class="showtip" title="' + tip + ')' + " and will make a QC";
+                        tip = ' [Takes Damage](#" class="showtip" title="' + tip + ')' + " and will make a QC";
                         target.token.set(SM.qc,true);
                     } else {
-                        tip = '[Deflects all Shots](#" class="showtip" title="' + tip + ')';
+                        tip = ' [Deflects all Shots](#" class="showtip" title="' + tip + ')';
                     }
-                    outputCard.body.push(target.name + ' is ' + tip);
+                    outputCard.body.push(target.name + tip);
                 } else {
+
                     //wpn is ai, wpnTip is ai info
                     let rolls = [], qc = 0;
                     for (let i=0;i<finalHits;i++) {
@@ -2157,7 +2158,9 @@ log(finalHits)
                         }
                     }
                     rolls = rolls.sort().reverse();
-                    tip += "Results: " + rolls.toString() + " vs. 4+";
+                    tip = "Results: " + rolls.toString() + " vs. 4+";
+                    tip += "<br>___________________<br>";
+                    tip += wpnTip;
                     tip = '['+ qc + '](#" class="showtip" title="' + tip + ')';
                     s = (qc === 1) ? "":"s";
                     outputCard.body.push('It will take ' + tip + " Quality Check" + s);
@@ -2169,9 +2172,9 @@ log(finalHits)
                 }
             }
 
-            PrintCard();
         }
 
+        PrintCard();
 
         //Sound
         let sound;
