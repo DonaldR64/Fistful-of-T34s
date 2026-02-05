@@ -702,6 +702,7 @@ log("Original AI: " + ai)
             }
             this.pen = pen;
         
+            this.special = aa.special;
 
 
             this.formationID = "";
@@ -765,7 +766,6 @@ log("AI: " + this.antiInf)
                 let info = state.FFT.formationInfo[fID]
                 this.casualties = info.casualties;
                 this.breakpoint = info.breakpoint;
-                this.hq = info.hq;
             }
         }
 
@@ -1462,7 +1462,7 @@ log(unit.name)
             sendChat("",unit.name + " - has no formation in data");
             return false;
         }
-        let cohesion = formation.hq || false;
+        let cohesion = (unit.special.includes("Recon")) ? true:false;
 log("Cohesion: " + cohesion)
         let cohRange = (unit.quality === "Fair") ? 2:(unit.quality === "Good") ? 4:6;
 log("Coh Range: " + cohRange)
@@ -2298,17 +2298,14 @@ log(finalHits)
         let Tag = msg.content.split(";");
         let formationName = Tag[1];
         let breakpoint = Tag[2];
-        let hq = (Tag[3] === "HQ/Recon") ? true:false;
 
         let unit;
         let unitNames = {};
         let unitNumbers = [" 1st "," 2nd "," 3rd "," 4th "," 5th "," 6th "," 7th "," 8th "," 9th "," 10th "];
         let unit1 = new Unit(msg.selected[0]._id);
         let formation = new Formation(formationName,unit1.id);
-        formation.hq = hq;
         formation.breakpoint = breakpoint;
         state.FFT.formationInfo[formation.id].breakpoint = breakpoint;
-        state.FFT.formationInfo[formation.id].hq = hq;
         let number = state.FFT.formNum[formation.player];
         state.FFT.formNum[formation.player]++;
 
