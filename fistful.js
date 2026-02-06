@@ -81,6 +81,7 @@ const FFT = (() => {
 
     let UnitArray = {};
     let FormationArray = {};
+    let CompanyArray = {};
     let qcUnits = [];
     let artUnits = [];
 
@@ -711,6 +712,7 @@ log("Original AI: " + ai)
 
 
             this.formationID = "";
+            this.companyID = "";
 
 
 log("Pen: " + this.pen)
@@ -757,6 +759,7 @@ log("AI: " + this.antiInf)
             this.name = name;
             this.id = fID;
             this.tokenIDs = [uID];
+            this.companyIDs = [];
             FormationArray[fID] = this;
             if (!state.FFT.formationInfo[fID]) {
                 let info = {
@@ -774,7 +777,12 @@ log("AI: " + this.antiInf)
             }
         }
 
-
+        AddCompany(cID) {
+            if (this.companyIDs.includes(cID) === false) {
+                this.companyIDs.push(cID);
+            }
+            CompanyArray[cID].formationID = this.id;
+        }
 
 
         AddUnit(uID) {
@@ -788,7 +796,21 @@ log("AI: " + this.antiInf)
     }
 
 
-
+    class Company {
+        constructor(name,cID = stringGen()) {
+            this.id = cID;
+            this.tokenIDs = [];
+            this.formationID = "";
+            this.name = name;
+            CompanyArray[cID] = this;
+        }
+        AddUnit(uID) {
+            if (this.tokenIDs.includes(uID) === false) {
+                this.tokenIDs.push(uID);
+            }
+            UnitArray[uID].companyID = this.id;
+        }
+    }
 
 
 
@@ -1211,19 +1233,34 @@ log("AI: " + this.antiInf)
         
         tokens.forEach((token) => {
             let character = getObj("character", token.get("represents"));   
-            let fID = decodeURIComponent(token.get("gmnotes")).toString();
+            let gmn = decodeURIComponent(token.get("gmnotes")).toString();
+            gmn = gmn.split(";");
+            let fID = gmn[0];
+            let cID = gmn[1];
             if (character && fID && fID.includes("TargetIcon") === false) {
                 let unit = new Unit(token.get("id"));
                 let formation = FormationArray[fID];
                 let formationInfo = state.FFT.formationInfo[fID];
+                let company = CompanyArray[cID];
+                let companyName = state.FFT.companyInfo[cID];
                 if (!formation) {
                     if (formationInfo) {
                         formation = new Formation(state.FFT.formationInfo[fID].name,unit.id,fID);
+                        if (!company) {
+                            company = new Company(companyName,cID);
+                            formation.AddCompany(company.id);
+                        }
+                        company.AddUnit(unit.id)
                         formation.AddUnit(unit.id);
                     } else {
                         sendChat("",unit.name + " - needs to redefine its Formation");
                     }
                 } else {
+                    if (!company) {
+                        company = new Company(companyName,cID);
+                        formation.AddCompany(company.id);
+                    }
+                    company.AddUnit(unit.id)
                     formation.AddUnit(unit.id);
                 }
             }  
@@ -1469,7 +1506,7 @@ log("AI: " + this.antiInf)
 log(unit.name)
         let passed = true;
         let unitHex = HexMap[unit.hexLabel];
-        let formation = FormationArray[unit.formationID];
+        let company = CompanyArray[unit.companyID];
         if (!formation) {
             sendChat("",unit.name + " - has no formation in data");
             return false;
@@ -1486,8 +1523,9 @@ log("Cohesion: " + cohesion)
 log("Coh Range: " + cohRange)
         if (cohesion === false) {
             for (let i=0;i<formation.tokenIDs.length;i++) {
-                let unit2 = UnitArray[formation.tokenIDs[i]];
+                let unit2 = UnitArray[company.tokenIDs[i]];
                 if (!unit2 || unit2.id === unit.id) {continue};
+                if (!unit2.token) {continue};
                 let dist = unitHex.cube.distance(HexMap[unit2.hexLabel].cube);
                 if (dist <= cohRange) {
 log(unit2.name + " is in cohesion")
@@ -2338,6 +2376,7 @@ log(unit)
             nations: ["",""],
             formNum: [0,0],
             formationInfo: {},
+            companyInfo: {},
             lines: [],
             turn: 0,
             phase: "",
@@ -2391,8 +2430,6 @@ log(unit)
         let breakpoint = Tag[2];
 
         let unit;
-        let unitNames = {};
-        let unitNumbers = [" 1st "," 2nd "," 3rd "," 4th "," 5th "," 6th "," 7th "," 8th "," 9th "," 10th "];
         let unit1 = new Unit(msg.selected[0]._id);
         let formation = new Formation(formationName,unit1.id);
         formation.breakpoint = breakpoint;
@@ -2406,7 +2443,6 @@ log(unit)
             formation.AddUnit(mID);
             unit.token.set({
                 tint_color: "transparent",
-                gmnotes: formation.id,
                 tint_color: "transparent",
                 aura1_color: "#00ff00",
                 aura1_radius: 10,
@@ -2414,31 +2450,10 @@ log(unit)
                 showname: true,
                 showplayers_aura1: true,
                 statusmarkers: "",
-                tooltip: formation.name,
                 show_tooltip: true,
             })
         }
 
-        _.each(formation.tokenIDs, tID => {
-            let unit = UnitArray[tID];
-            let name = unit.charName;
-            let type = "Plt";
-            if (name.includes("Company")) {type = "Co"};
-            let sname = name.replace(/ Platoon| Company/,"");
-            if (unit.type === "Truck" || unit.type === "Halftrack") {
-                name = sname;
-            } else {
-                if (!unitNames[sname]) {
-                    name = sname + " 1st " + type;
-                    unitNames[sname] = 1;
-                } else {
-                    name = sname + unitNumbers[unitNames[sname]] + type;
-                    unitNames[sname] += 1;
-                }
-            }
-            unit.name = name;
-            unit.token.set("name",name);
-        })
 
 
 
@@ -2447,7 +2462,35 @@ log(unit)
         sendChat("",formation.name + " Added")
     }
 
+    const DefineCompany = (msg) => {
+        if (!msg.selected) {
+            sendChat("","No Tokens Selected");
+            return
+        }
+        let Tag = msg.content.split(";");
+        let companyName = Tag[1];
+        let ids = msg.selected.map((e) => e._id);
+        let company = new Company(companyName);
+        let unitI = UnitArray[ids[0]];
 
+        let nation = unitI.nation;
+
+        let formation = FormationArray[unitI.formationID];
+        let hqSymbol = Nations[nation].hq;
+        let gmn = formation.id + ";" + company.id;
+        _.each(ids,id => {
+            let token = UnitArray[id].token;
+            company.AddUnit(id);
+            token.set("gmnotes",gmn);
+            token.set("tooltip",formation.name + " / " + company.name)
+            if (companyName === "HQ Company") {
+                token.set(SM[hqSymbol],true);
+            }
+        })
+        formation.AddCompany(company.id);
+        state.FFT.companyInfo[company.id] = companyName;
+        sendChat("",companyName + " Added")
+    }
 
 
 
@@ -2708,13 +2751,14 @@ log(unit)
     
         switch(args[0]) {
             case '!Dump':
-                log(HexInfo)
                 log("State");
                 log(state.FFT);
                 log("Units");
                 log(UnitArray);
                 log("Formations");
                 log(FormationArray)
+                log("Companys");
+                log(CompanyArray);
                 break;
             case '!ClearState':
                 ClearState(msg);
@@ -2740,6 +2784,9 @@ log(unit)
                 break;
             case '!DefineFormation':
                 DefineFormation(msg);
+                break;
+            case '!DefineCompany':
+                DefineCompany(msg);
                 break;
             case '!Roll':
                 RollDice(msg);
