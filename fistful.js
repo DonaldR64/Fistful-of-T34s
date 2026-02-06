@@ -125,7 +125,7 @@ const FFT = (() => {
         qc: "status_red",
         fired: "status_Shell::5553215",
         move: "status_Advantage-or-Up::2006462",
-        double: "status_Fast::5865486",
+        double: "status_Fast::5868456",
         green: "status_green", //to note has taken an art QC already
         unavail: "status_oneshot::5503748",
         soviet: "status_Soviet::6433738",
@@ -2703,11 +2703,26 @@ log(unit)
 
                 //aStar here
                 if (state.FFT.phase === "Movement") {
-                    label = aStar(unit,label);
+                    let results = aStar(unit,label);
+                    label = results.finalHexLabel;
+                    let cost = results.cost;
+                    let marker = (cost <= unit.movement/2) ? SM["move"]:SM["double"];
+log(cost)
+log(unit.movement)
+log(marker)
                     tok.set({
                         left: HexMap[label].centre.x,
                         top: HexMap[label].centre.y,
                     });
+                    tok.set(SM.move,false);
+                    tok.set(SM.double,false);
+                    tok.set(marker,true);
+
+//rotate the token based on start hex and end hex
+//player can rotate if wants
+                    
+
+
                 }
 
 
@@ -2800,17 +2815,18 @@ log("StepHex: " + stepHexLabel + " Added, Cost: " + cost)
 
         //if there are no paths left to explore or hit end hex
         let finalHexLabel = startHex.label;
+        let totalCost = 0;
         if (explored.length > 0) {
             explored.sort((a,b) => {
                 return b.estimate - a.estimate || a.cost - b.cost;
             })
 log("Explored")
 log(explored)
-            let totalCost = 0;
             let final = explored.length - 1;
             for (let i=1;i<explored.length;i++) {
                 totalCost += explored[i].cost;
                 if (totalCost > move) {
+                    totalCost -= explored[i].cost;
                     final = i - 1; //prev hex
                     break;
                 }
@@ -2821,7 +2837,11 @@ log(explored)
         }
 log("Final Hex Label: " + finalHexLabel)
 
-        return finalHexLabel;
+        let info = {
+            finalHexLabel: finalHexLabel,
+            cost: totalCost,
+        }
+        return info;
     }
 
 
