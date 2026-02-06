@@ -2055,6 +2055,7 @@ log(unit)
         let Tag = msg.content.split(";");
         let shooter = UnitArray[Tag[1]];
         let target = UnitArray[Tag[2]];
+        let closeFlag = false;
 
         SetupCard(shooter.name,target.name,shooter.nation);
 
@@ -2134,6 +2135,7 @@ log(unit)
         if (losResult.distance <= shooter.range[0]) {
             toHit--;
             toHitTip += "<br>+1 Short Range";
+            closeFlag = true;
         }
         if (losResult.distance > shooter.range[1]) {
             toHit++;
@@ -2149,7 +2151,7 @@ log(unit)
         }
         if (type === "AntiInfantry" && ai !== 0) {
             toHit += ai;
-            toHitTip += aiTip;
+            toHitTip += "<br>" + aiTip;
         }
 
 
@@ -2266,14 +2268,21 @@ log(unit)
             sound = "Shotgun";
             if (target.movetype === "Leg" || target.movetype === "Horse" || target.movetype === "Towed") {
                 sound = "MG";
+                if (shooter.special.includes("Flamethrower")) {
+                    sound = "Flame";
+                }
             }
         }
+
         PlaySound(sound);
         //rotate certain units eg tank destroyers, infantry --> basically those without turrets
         let turrets = ["Car","Halftrack","Tank"];
         let angle = Angle(HexMap[shooter.hexLabel].cube.angle(HexMap[target.hexLabel].cube));
         if (turrets.includes(shooter.type) === false) {
             shooter.token.set("rotation",angle);
+        }
+        if (shooter.special.includes("Flamethrower") && closeFlag === true) {
+            spawnFxBetweenPoints(new Point(shooter.token.get("left"),shooter.token.get("top")), new Point(target.token.get("left"),target.token.get("top")), "breath-fire");
         }
 
         shooter.token.set(SM.fired,true);
