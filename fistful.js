@@ -639,6 +639,8 @@ const FFT = (() => {
             this.id = id;
             this.charID = charID;
             this.hexLabel = label;
+            this.startHexLabel = label;
+
 
             this.nation = aa.nation || "Neutral";
             if (state.FFT.nations[0] === "") {
@@ -2725,7 +2727,7 @@ log(unit)
         let startHex = HexMap[unit.startHexLabel];
         let endHex = HexMap[endHexLabel];
 
-        let move = unit.move;
+        let move = unit.movement;
         let distance = startHex.cube.distance(endHex.cube);
 
         let nodes = 1;

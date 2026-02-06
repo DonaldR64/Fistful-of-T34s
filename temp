@@ -2,7 +2,7 @@ const aStar = (unit,endHexLabel) => {
     let startHex = HexMap[unit.startHexLabel];
     let endHex = HexMap[endHexLabel];
 
-    let move = unit.move;
+    let move = unit.movement;
     let distance = startHex.cube.distance(endHex.cube);
 
     let nodes = 1;
