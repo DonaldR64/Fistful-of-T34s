@@ -146,7 +146,7 @@ const FFT = (() => {
 
     }
 
-    const Capitalize = (val) => {
+    const Capit = (val) => {
         return String(val).charAt(0).toUpperCase() + String(val).slice(1);
     }
 
@@ -155,9 +155,13 @@ const FFT = (() => {
     const TerrainInfo = {
         "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
         "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 2,coverArea: true},
-        "River": {name: "River",height: 0, moveCosts: {leg: 1000, tracked:1000, horse: 1000, wheeled: 1000, halftrack: 1000}, coverDirect: 0,coverArea: false,},
+        "River": {name: "River",height: 0, moveCosts: {leg: -1, tracked:-1, horse: -1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
         "Craters": {name: "Cratered Ground",height: 0, moveCosts: {leg: 1, tracked:2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
         "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
+        "Water": {name: "Water",height: 0, moveCosts: {leg: -1, tracked:-1, horse: -1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
+
+
+
     }
 
     const HillHeights = {
@@ -651,7 +655,7 @@ const FFT = (() => {
             this.player = (this.nation === "Neutral") ? 2:(state.FFT.nations[0] === this.nation)? 0:1;
             this.type = aa.type;
             this.movement = parseInt(aa.movement);
-            this.moveType = aa.moveType;
+            this.moveType = aa.movetype.toLowerCase();
             this.quality = aa.quality;
             this.armourF = parseInt(aa.armourF) || "NA"; 
             this.armourSR = parseInt(aa.armourSR) || "NA"; 
@@ -1416,6 +1420,7 @@ log("AI: " + this.antiInf)
                     unit.token.set("aura1_color","#00ff00");
                 }
                 unit.token.set(SM.green,false); //art QC checks
+                unit.startHexLabel = unit.hexLabel;
             })
         }
 
@@ -1475,18 +1480,13 @@ log("AI: " + this.antiInf)
         if (!unit) {return};
         SetupCard(unit.name,"",unit.nation);
         let hex = HexMap[unit.hexLabel];
-        let terInfo = TerrainInfo[hex.terrain];
+log(hex)
+log(unit.moveType)
+
         outputCard.body.push("Hex: " + unit.hexLabel);
         outputCard.body.push("Terrain: " + hex.terrain);
         outputCard.body.push("Elevation: " + hex.elevation);
-        let keys = Object.keys(hex.moveCosts);
-        let line = "Move Costs: ";
-        let arr = []
-        _.each(keys,key => {
-            arr.push(Capitalize(key) + ": " + hex.moveCosts[key]);
-        })
-        line += arr.toString();
-        outputCard.body.push(line);
+        outputCard.body.push("Move Cost: " + hex.moveCosts[unit.moveType] + " for " + Capit(unit.moveType));
         let areaCover = (hex.coverArea === true) ? "Cover":"No Cover";
         let directCover = (hex.coverDirect === 0) ? "No Cover":(hex.coverDirect === 1) ? "Cover Save 5+":"Cover Save 4+";
         outputCard.body.push("Indirect Fire: " + areaCover);
@@ -2696,7 +2696,7 @@ log(unit)
 
                 //aStar here
                 if (state.FFT.phase === "Movement") {
-                    let label = aStar(unit,label);
+                    label = aStar(unit,label);
                     tok.set({
                         left: HexMap[label].centre.x,
                         top: HexMap[label].centre.y,
@@ -2726,10 +2726,12 @@ log(unit)
     const aStar = (unit,endHexLabel) => {
         let startHex = HexMap[unit.startHexLabel];
         let endHex = HexMap[endHexLabel];
-
+log("Start: " + startHex.label)
+log("End: " + endHex.label)
         let move = unit.movement;
+log("Move: " + move)
         let distance = startHex.cube.distance(endHex.cube);
-
+log("Distance: " + distance)
         let nodes = 1;
         let explored = [];
         let frontier = [{
@@ -2746,7 +2748,7 @@ log(unit)
                 return a.estimate - b.estimate || b.cost - a.cost; //2nd part used if estimates are same
             })
             let node = frontier.shift();
-            let nodeHex = HexMap[node.label];
+log("Node: " + node.label)
             nodes++;
             explored.push(node); //add this node to explored paths
             //if this node reaches goal, end loop
@@ -2765,6 +2767,7 @@ log(unit)
                 if (!stepHex) {continue};
                 if (stepHex.offboard === true) {continue};
                 let cost = stepHex.moveCosts[unit.moveType];
+                if (cost === -1) {continue}
                 //check if this step has already been explored
                 let isExplored = (explored.find(e => {
                     return e.label === stepHexLabel
@@ -2775,6 +2778,7 @@ log(unit)
                 }));
                 //if this step has not been explored
                 if (!isExplored && !isFrontier) {
+log("StepHex: " + stepHexLabel + " Added, Cost: " + cost)
                     let est = cost + stepHex.cube.distance(endHex.cube);
                     //add the step to the frontier
                     frontier.push({
@@ -2783,54 +2787,33 @@ log(unit)
                         estimate: est,
                     })
                 }
+
             }
         }
 
         //if there are no paths left to explore or hit end hex
         let finalHexLabel = startHex.label;
         if (explored.length > 0) {
-            array = [];
-            results = [];
             explored.sort((a,b) => {
-                return b.cost - a.cost;
+                return b.estimate - a.estimate || a.cost - b.cost;
             })
-            let last = explored.shift();
-            array.push(last);
-            let finished = explored.length > 0 ? false:true;
-            while (finished === false) {
-                let lowestCost = last.cost;
-                let current = 0;
-                for (let i=0;i<explored.length;i++) {
-                    let next = explored[i];
-                    if (HexMap[next.label].cube.distance(HexMap[last.label].cube) === 1 && next.cost < lowestCost) {
-                        lowestCost = next.cost;
-                        current = i;
-                    }
-                }
-                last = explored[current];
-                explored.splice(current,1);
-                array.push(last);
-                if (last.label === startHex.label) {
-                    finished = true;
-                }
-            }
-            array.reverse();
-            //will be an array from startHex to endHex, of lowest cost
-            //now add up cumulative costs and stop if exceed move
-            let cumulativeCost = 0;
-            let finalSpot = array.length - 1;
-            for (let i=1;i<array.length;i++) {
-                cumulativeCost += array[i].cost;
-                if (cumulativeCost > move) {
-                    finalSpot = i;
+log("Explored")
+log(explored)
+            let totalCost = 0;
+            let final = explored.length - 1;
+            for (let i=1;i<explored.length;i++) {
+                totalCost += explored[i].cost;
+                if (totalCost > move) {
+                    final = i - 1; //prev hex
                     break;
                 }
-                //otherwise place a marker in prev spot with move cost?
             }
-            finalHexLabel = array[finalSpot].label; 
+            finalHexLabel = explored[final].label;
         } else {
             sendChat(""," No Path to this Hex");
         }
+log("Final Hex Label: " + finalHexLabel)
+
         return finalHexLabel;
     }
 
