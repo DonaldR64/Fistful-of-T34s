@@ -2076,7 +2076,7 @@ log(unit)
         let targetFacing = losResult.targetFacing;
 
         let armour = (targetFacing === "Front") ? target.armourF:target.armourSR;
-        let wpn = 0; //either pen or ai
+        let pen,ai,penTip,aiTip;
         let wpnTip = "";
         let type = "Armour";
         if (armour !== "NA") {
@@ -2086,17 +2086,17 @@ log(unit)
                 if (losResult.distance > shooter.pen[1]) {
                     errorMsg.push("No AT Weapons with Range");
                 } else {
-                    wpn = shooter.pen[0];
-                    wpnTip = "Base Pen: " + wpn;
+                    pen = shooter.pen[0];
+                    penTip = "Base Pen: " + pen;
                     //pen for tanks up or down
                     if (shooter.type !== "Infantry" && shooter.type !== "Horse") {
                         if (losResult.distance > shooter.range[1]) {
-                            wpn -= 2;
-                            wpnTip += "<br>-2 Pen for Long Range";
+                            pen -= 2;
+                            penTip += "<br>-2 Pen for Long Range";
                         }
                         if (losResult.distance <= shooter.range[0]) {
-                            wpn += 2;
-                            wpnTip += "<br>+2 Pen for Short Range";
+                            pen += 2;
+                            penTip += "<br>+2 Pen for Short Range";
                         }
                     }
                 }
@@ -2106,12 +2106,12 @@ log(unit)
             if (shooter.antiInf === "NA") {
                 errorMsg.push("No Anti-Infantry Weapons");
             } else {
-                wpn = shooter.antiInf[0];
+                ai = shooter.antiInf[0];
                 if (losResult.distance > shooter.antiInf[1]) {
-                    wpn = 0;
+                    ai = 0;
                 }
-                wpnTip = (wpn >= 0) ? "+" + wpn:wpn;
-                wpnTip = "Anti-Infantry: " + wpnTip;
+                aiTip = (ai >= 0) ? "+" + ai:ai;
+                aiTip = "Anti-Infantry: " + aiTip;
             }
         }
 
@@ -2146,6 +2146,12 @@ log(unit)
             toHit++;
             toHitTip += "<br>-1 Overwatch";
         }
+        if (type === "AntiInfantry" && ai !== 0) {
+            toHit += ai;
+            toHitTip += aiTip;
+        }
+
+
         
         let ROF = parseInt(shooter.rof);
 
@@ -2182,12 +2188,6 @@ log(unit)
             coverRolls = coverRolls.sort().reverse();
             coverTip = "Rolls: " + coverRolls.toString() + " vs. " + coverTip;
         }
-log("In Direct Fire")
-log(hits)
-log(coverSaves)
-log(finalHits)
-
-
         if (hits === 0) {
             tip = '[Missed](#" class="showtip" title="' + tip + ')';
             outputCard.body.push(target.name + " is " + tip);
@@ -2206,12 +2206,11 @@ log(finalHits)
             }
 
             if (finalHits > 0) {
-                outputCard.body.push("[hr]");
 
                 if (type === "Armour") {
-                    //wpn is pen, wpnTip is pen info, armour is targets armour on that facing
-                    let penDice = (wpn > armour) ? (wpn - armour):1;
-                    let penMod = (wpn <= armour) ? (wpn - armour):0; //will always be 0 or a negative #
+                    outputCard.body.push("[hr]");
+                    let penDice = (pen > armour) ? (pen - armour):1;
+                    let penMod = (pen <= armour) ? (pen - armour):0; //will always be 0 or a negative #
                     let penTips = "", deflect = 0, qc = false, destroyed = false;
                     for (let i=0;i<finalHits;i++) {
                         let penRolls = [];
@@ -2229,46 +2228,24 @@ log(finalHits)
                     }
                     tip = penTips;
                     tip += "<br>___________________<br>";
-                    tip += "Pen " + wpn + " vs. Armour " + armour;
-                    tip += "<br>" + wpnTip;
+                    tip += "Pen " + pen + " vs. " + losResult.targetFacing + " Armour " + armour;
+                    tip += "<br>" + penTip;
 
                     if (destroyed === true) {
                         tip = ' is [Destroyed](#" class="showtip" title="' + tip + ')';
         //remove target
                     } else if (qc === true) {
-                        tip = ' [Takes Damage](#" class="showtip" title="' + tip + ')' + " and will make a QC";
+                        tip = ' [Takes Damage](#" class="showtip" title="' + tip + ')';
                         target.token.set(SM.qc,true);
                     } else {
                         tip = ' [Deflects all Shots](#" class="showtip" title="' + tip + ')';
                     }
                     outputCard.body.push(target.name + tip);
                 } else {
-
-
-
-
-
-                    //wpn is ai, wpnTip is ai info
-                    let rolls = [], qc = 0;
-                    for (let i=0;i<finalHits;i++) {
-                        let roll = randomInteger(6);
-                        roll += wpn;
-                        rolls.push(roll);
-                        if (roll > 3) {
-                            qc++
-                        }
-                    }
-                    rolls = rolls.sort().reverse();
-                    tip = "Results: " + rolls.toString() + " vs. 4+";
-                    tip += "<br>___________________<br>";
-                    tip += wpnTip;
-                    tip = '['+ qc + '](#" class="showtip" title="' + tip + ')';
-                    s = (qc === 1) ? "":"s";
-                    outputCard.body.push('It will take ' + tip + " Quality Check" + s);
                     let oldQC = (target.token.get(SM.qc) === false) ? 0:(target.token.get(SM.qc) === true) ? 1:parseInt(target.token.get(SM.qc));
-                    qc += oldQC;
-                    if (qc > 0) {
-                        target.token.set(SM.qc,qc);
+                    finalHits += oldQC;
+                    if (finalHits > 0) {
+                        target.token.set(SM.qc,finalHits);
                     }
                 }
             }
