@@ -1174,6 +1174,10 @@ log("AI: " + this.antiInf)
                 let costKeys = Object.keys(terrain.moveCosts);
                 _.each(costKeys,key => {
                     hex.moveCosts[key] = Math.max(hex.moveCosts[key],terrain.moveCosts[key]);
+                    if (terrain.moveCosts[key] === -1) {
+                        hex.moveCosts[key] = -1;
+                        //impasssable
+                    }
                 })
                 hex.coverDirect = Math.max(hex.coverDirect,terrain.coverDirect);
                 hex.coverArea = (terrain.coverArea === true) ? true:hex.coverArea;
@@ -2683,6 +2687,9 @@ log(unit)
                 if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
                     let bounceBack = false
                     if ((state.FFT.phase === "Movement" && tok.get("aura1_color") === "#000000") || (state.FFT.phase !== "Movement" && state.FFT.phase !== "Deployment")) {
+                        bounceBack = true;
+                    }
+                    if (HexMap[label].moveCosts[unit.moveType] === -1) {
                         bounceBack = true;
                     }
                     if (bounceBack === true) {
