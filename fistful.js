@@ -653,6 +653,7 @@ const FFT = (() => {
             this.armourF = parseInt(aa.armourF) || "NA"; 
             this.armourSR = parseInt(aa.armourSR) || "NA"; 
 
+            this.artFlag = aa.artflag === "On" ? true:false;
             this.avail = (aa.avail) ? (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+","")):"NA";
             this.artsize = aa.artsize ? parseInt(aa.artsize.replace(/[^0-9]+/g, '')):0;
 
@@ -1540,7 +1541,7 @@ log(unit2.name + " is in cohesion")
         let unavail = [];
         _.each(UnitArray,unit => {
             if (unit.player === player) {
-                if (unit.type === "Artillery" || unit.type === "Mortar" || unit.type === "Aircraft") {
+                if (unit.artFlag === true) {
                     let availRoll = randomInteger(6);
                     let target = unit.avail;
                     let tipmods = "";
@@ -1997,8 +1998,8 @@ log(result)
                     if (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.token.get(SM.green) === false) {
                         unit.token.set(SM.green,true);
                         let qc = QualityCheck(unit);
-                        let noun = (qc.pass === true) ? "Suppressed":"Routs";
-                        outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
+                        let noun = (qc.pass === true) ? "Suppressed":"Routed";
+                        outputCard.body.push(unit.name + ' is ' + tip + ', ' + qc.tip + ' its QC and is ' + noun);
                     } else {
                         outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
                         unit.token.set(SM.suppressed,true);
