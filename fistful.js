@@ -2115,7 +2115,7 @@ log(unit)
         if (shooter.token.get(SM.fired) === true) {
             errorMsg.push("[#ff0000]Unit has already Fired[/#]");
         }
-        if (shooter.token.get(SM.unavail) === true) {
+        if (shooter.token.get(SM.unavail) === true || shooter.token.get(SM.double) === true) {
             errorMsg.push("[#ff0000]Unit is unable to Fire[/#]");
         }
 
@@ -2720,7 +2720,7 @@ log(marker)
 
 //rotate the token based on start hex and end hex
 //player can rotate if wants
-                    
+
 
 
                 }
