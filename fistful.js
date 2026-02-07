@@ -150,7 +150,7 @@ const FFT = (() => {
         return String(val).charAt(0).toUpperCase() + String(val).slice(1);
     }
 
-
+    const RoadCosts = {leg: 1,tracked: .5, horse: 1, wheeled: .25, halftrack: .5};
 
     const TerrainInfo = {
         "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
@@ -2819,6 +2819,11 @@ log("Node: " + node.label)
                 if (stepHex.offboard === true) {continue};
                 let cost = stepHex.moveCosts[unit.moveType];
                 if (cost === -1) {continue}
+                if (stepHex.road === true && HexMap[node.label].road === true && state.FFT.roads === true) {
+                    cost = RoadCosts[unit.moveType];
+                }
+
+
                 //check if this step has already been explored
                 let isExplored = (explored.find(e => {
                     return e.label === stepHexLabel
