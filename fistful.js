@@ -9,7 +9,7 @@ const FFT = (() => {
 
     const TurnMarkers = ["","https://s3.amazonaws.com/files.d20.io/images/361055772/zDURNn_0bbTWmOVrwJc6YQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055766/UZPeb6ZiiUImrZoAS58gvQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055764/yXwGQcriDAP8FpzxvjqzTg/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055768/7GFjIsnNuIBLrW_p65bjNQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055770/2WlTnUslDk0hpwr8zpZIOg/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055771/P9DmGozXmdPuv4SWq6uDvw/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055765/V5oPsriRTHJQ7w3hHRBA3A/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055767/EOXU3ujXJz-NleWX33rcgA/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055769/925-C7XAEcQCOUVN1m1uvQ/thumb.png?1695998303"];
 
-
+    const MoveMarkers = ["https://files.d20.io/images/344441274/R0eEVMFzhYmwv6rigIA7GA/thumb.png?1685718541","https://s3.amazonaws.com/files.d20.io/images/435360245/m3tKJi3Pqb_40g75O6ouSg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360246/pXI3HBrGMZ05ldDfH-zYCQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360229/JKMY922qxhf0E3z1l10jQg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360228/YDGEQNR_qVFprdHJSjYNPg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360232/1TysQcieJ5zbgYvXV4pqiA/thumb.png?1743563857","https://s3.amazonaws.com/files.d20.io/images/435360240/KfCmoF5WyWTStCWOTPrkJg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360230/zjvzMFGWotZUORDeIVXrEw/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360226/-TXBFvMfahwOIjXEuS0mTQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360237/gEr7oP4z0ByUKTXpvSHYQQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360241/2HAnTYlC0uVR6mqyMoaACA/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360244/CDOLr8RkQ-pPhwjaOHTbEA/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360243/023KSjjB8QHtrMNbuO3ENQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360242/xx2msq4HjqRN5dUaPl0vfA/thumb.png?1743563857","https://s3.amazonaws.com/files.d20.io/images/435360236/L-iuGURhzreq2t2mKOj3Qg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360247/v2Y15K10F2qZK268wPzYyw/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360239/SXny1fVCh5PeYxLGtnoPTA/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360233/EdB3z27csNyykkc2lWTefw/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360227/JpFvEVLKlKV6n6JsE8zrVg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360234/5b2XrhzPgfgjdoI5y97LnQ/thumb.png?174356385","https://s3.amazonaws.com/files.d20.io/images/435360238/_sWU7YtYJsWT1NZC-wb80Q/thumb.png?1743563857","https://s3.amazonaws.com/files.d20.io/images/435360231/n7HVTuMwWch59Aofq1v96w/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360235/yVtSNUPJOkxq0n2_FknMcA/thumb.png?1743563856"];
 
     let HexSize, HexInfo, DIRECTIONS;
 
@@ -645,7 +645,7 @@ const FFT = (() => {
             this.charID = charID;
             this.hexLabel = label;
             this.startHexLabel = label;
-
+            this.startRotation = token.get("rotation");
 
             this.nation = aa.nation || "Neutral";
             if (state.FFT.nations[0] === "") {
@@ -1372,7 +1372,8 @@ log(vertices)
         state.FFT.turn = 0;
         state.FFT.activePlayer = 2;
         state.FFT.phase = "";
-
+        RemoveMoveMarkers();
+        state.FFT.moveMarkers = [];
         state.FFT.visibility = 70; //can later alter this
 
         state.FFT.roads = (roads === "True") ? true:false;
@@ -1400,6 +1401,12 @@ log(vertices)
             } else {
                 activePlayer = (state.FFT.firstPlayer === 0) ? 1:0;
             }
+            _.each(UnitArray,unit => {
+                unit.token.set(SM.double,false);
+                unit.token.set(SM.move,false);
+                unit.startRotation = unit.token.get("rotation");
+                unit.startHexLabel = unit.hexLabel;
+            })
         }
 
 
@@ -1417,7 +1424,7 @@ log(vertices)
             _.each(UnitArray,unit => {
                 unit.token.set(SM.green,false); //marker for artillery QCs
                 unit.token.set(SM.unavail,false); //marker for avail 
-                unit.token.set(SM.fired,false);
+                unit.token.set(SM.fired,false);                
                 //artillery
                 if (unit.player !== activePlayer) {
                     unit.token.set(SM.suppressed,false);
@@ -1450,13 +1457,13 @@ log(vertices)
                     unit.token.set("aura1_color","#00ff00");
                 }
                 unit.token.set(SM.green,false); //art QC checks
-                unit.startHexLabel = unit.hexLabel;
             })
         }
 
 
 
         if (currentPhase === "Firing") {
+            RemoveMoveMarkers();
             _.each(UnitArray,unit => {
                 if (unit.token.get("aura1_color") === "#000000") {
                     unit.token.set("aura1_color","#00ff00");
@@ -2374,7 +2381,7 @@ log(unit)
     const ClearState = (msg) => {
         LoadPage();
         BuildMap();
-
+        RemoveMoveMarkers();
         //clear arrays
         UnitArray = {};
         FormationArray = {};
@@ -2418,6 +2425,7 @@ log(unit)
             activePlayer: 0,
             firstPlayer: 0,
             roads: true,
+            moveMarkers: [],
         }
 
 
@@ -2713,6 +2721,7 @@ log(unit)
         let unit = UnitArray[tok.id];
         if (unit) {
             let label = (new Point(tok.get("left"),tok.get("top"))).label();
+            let prevLabel = (new Point(prev.left,prev.top)).label();
             if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
                 if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
                     let bounceBack = false
@@ -2731,7 +2740,8 @@ log(unit)
                     }
                 }
 
-                if (state.FFT.phase === "Movement") {
+                if (state.FFT.phase === "Movement" && prevLabel !== label) {
+                    RemoveMoveMarkers();
                     let results = aStar(unit,label);
                     label = results.finalHexLabel;
                     let cost = results.cost;
@@ -2748,9 +2758,8 @@ log(marker)
                     tok.set(marker,true);
 
 //rotate the token based on start hex and end hex
-//player can rotate if wants
-
-
+                    let angle = Angle(HexMap[unit.startHexLabel].cube.angle(HexMap[label].cube));
+                    tok.set("rotation",angle);
 
                 }
 
@@ -2773,6 +2782,27 @@ log(marker)
 
 
     }
+
+    const ResetMove = (msg) => {
+        RemoveMoveMarkers();
+        if (!msg.selected) {
+            sendChat("","No Token Selected");
+            return;
+        }
+        let id = msg.selected[0]._id;
+        let unit = UnitArray[id];
+        if (unit && unit.token) {
+            let hex = HexMap[unit.startHexLabel];
+            unit.token.set({
+                left: hex.centre.x,
+                top: hex.centre.y,
+                rotation: unit.startRotation,
+            })
+        }
+
+    }
+
+
 
     const aStar = (unit,endHexLabel) => {
         let startHex = HexMap[unit.startHexLabel];
@@ -2862,8 +2892,12 @@ log(explored)
                 if (totalCost > move) {
                     totalCost -= explored[i].cost;
                     final = i - 1; //prev hex
+                    sendChat("","Stopped at limit of movement")
                     break;
                 }
+log(explored[i].label)
+log(totalCost)
+                AddMoveMarker(totalCost, explored[i].label);
             }
             finalHexLabel = explored[final].label;
         } else {
@@ -2878,6 +2912,39 @@ log("Final Hex Label: " + finalHexLabel)
         return info;
     }
 
+    const RemoveMoveMarkers = () => {
+        _.each(state.FFT.moveMarkers,markerID => {
+            let tok = findObjs({_type:"graphic", id: markerID})[0];
+            if (tok) {
+                tok.remove();
+            }
+        })
+        state.FFT.moveMarkers = [];
+    }
+
+    const AddMoveMarker = (cost,hexLabel) => {
+        let c = HexMap[hexLabel].centre;
+        cost = Math.round(cost);
+        img = getCleanImgSrc(MoveMarkers[cost]);
+        width = 25;
+        height = 25;
+        markerName = "Map Marker";
+        let newToken = createObj("graphic", {
+            left: c.x,
+            top: c.y,
+            width: width,
+            height: height, 
+            name: markerName,
+            pageid: Campaign().get("playerpageid"),
+            imgsrc: img,
+            layer: "map",
+        })
+
+        if (newToken) {
+            toFront(newToken);
+        } 
+        state.FFT.moveMarkers.push(newToken.id);
+    }
 
 
 
@@ -2976,6 +3043,9 @@ log("Final Hex Label: " + finalHexLabel)
                 break;
             case '!DirectFire':
                 DirectFire(msg)
+                break;
+            case '!ResetMove':
+                ResetMove(msg);
                 break;
         }
     };
