@@ -1395,18 +1395,21 @@ log(vertices)
 
 
         if (currentPhase === "Deployment") {
+            _.each(UnitArray,unit => {
+                if (turn === 0 && HexMap[unit.hexLabel].offboard === false) {
+                    unit.token.set("tint_color","#000000");
+                }
+                unit.token.set(SM.double,false);
+                unit.token.set(SM.move,false);
+                unit.startRotation = unit.token.get("rotation");
+                unit.startHexLabel = unit.hexLabel;
+            })
             if (activePlayer !== state.FFT.firstPlayer || turn === 0) {
                 turn += 1;
                 activePlayer = state.FFT.firstPlayer;
             } else {
                 activePlayer = (state.FFT.firstPlayer === 0) ? 1:0;
             }
-            _.each(UnitArray,unit => {
-                unit.token.set(SM.double,false);
-                unit.token.set(SM.move,false);
-                unit.startRotation = unit.token.get("rotation");
-                unit.startHexLabel = unit.hexLabel;
-            })
         }
 
 
@@ -1465,6 +1468,7 @@ log(vertices)
         if (currentPhase === "Firing") {
             RemoveMoveMarkers();
             _.each(UnitArray,unit => {
+                CheckSpotting(unit,"Movement");
                 if (unit.token.get("aura1_color") === "#000000") {
                     unit.token.set("aura1_color","#00ff00");
                 }
@@ -1488,6 +1492,7 @@ log(vertices)
                     //sets overwatch
                     unit.token.set("aura1_color","#ff00ff");
                 }
+                CheckSpotting(unit,"End")
             })
             if (qcUnits.length > 0) {
                 ButtonInfo("Start Quality Checks","!RunQC");
@@ -1549,8 +1554,8 @@ log(unit.name)
         let passed = true;
         let unitHex = HexMap[unit.hexLabel];
         let company = CompanyArray[unit.companyID];
-        if (!formation) {
-            sendChat("",unit.name + " - has no formation in data");
+        if (!company) {
+            sendChat("",unit.name + " - has no Company Info in data");
             return false;
         }
         let cohesion = (unit.special.includes("Recon")) ? true:false;
@@ -1993,6 +1998,8 @@ log(unit2.name + " is in cohesion")
 
             artillery.token.set(SM.fired,true);
             artillery.token.set("aura1_color","#000000");
+            artillery.token.set("tint_color","transparent");
+
             let index = artUnits.map(e => e.id).indexOf(artilleryID);
             artUnits.splice(index,1);
         }
@@ -2367,15 +2374,86 @@ log(unit)
 
         shooter.token.set(SM.fired,true);
         shooter.token.set("aura1_color","#000000");
-
+        shooter.token.set("tint_color","transparent");
 
     }
 
+    const CheckSpotting = (unit,phase) => {
+
+        if (phase === "Movement" && unit.token.get("tint_color") === "transparent") {return};
+        let moved = (unit.token.get(SM.move) || unit.token.get(SM.double)) ? true:false;
+        let unitHex = HexMap[unit.hexLabel];
+        let cover = unitHex.cover > 0 ? true:false;
+        let fired = unit.token.get(SM.fired);
+        let vis = state.FFT.visibility;
+
+        let threshold;
+        if (unit.moveType === "Leg") {
+            if (fired === true) {
+                threshold = 15;
+            } else {
+                if (moved === true && cover === false) {threshold = 15};
+                if (moved === true && cover === true) {threshold = 10};
+                if (moved === false && cover === false) {threshold = 5};
+                if (moved === false && cover === true) {threshold = 2};
+            }
+        } else if (unit.moveType === "Towed") {
+            if (fired === true) {
+                threshold = vis;
+            } else {
+                if (moved === true && cover === false) {threshold = vis};
+                if (moved === true && cover === true) {threshold = 15};
+                if (moved === false && cover === false) {threshold = 25};
+                if (moved === false && cover === true) {threshold = 5};
+            }
+        } else {
+            if (fired === true) {
+                threshold = vis;
+            } else {
+                if (moved === true && cover === false) {threshold = vis};
+                if (moved === true && cover === true) {threshold = 20};
+                if (moved === false && cover === false) {threshold = 45};
+                if (moved === false && cover === true) {threshold = 10};
+            }
+        }
+log(unit.name + " " + unit.id + ": " + threshold + " is Threshold")
+    
+
+        let spotted = false;
+        let keys = Object.keys(UnitArray);
+        for (let i=0;i<keys.length;i++) {
+            let id = keys[i];
+            if (id === unit.id) {continue};
+            let unit2 = UnitArray[id];
+            if (!unit2) {log("No Unit2");continue};
+log(unit2.name + " looking")
+            if (unit2.nation === unit.nation || unit2.nation === "Neutral") {continue};
+            let distance = HexMap[unit.hexLabel].cube.distance(HexMap[unit2.hexLabel].cube);
+            let los = LOS(unit2,unit).los;
+            if (los === false) {continue};
+            let mod = 0;
+            if (unit.quality.includes("Fair")) {mod -= 5};
+            if (unit.quality.includes("Excellent")) {mod += 5};
+            if (unit.special.toLowerCase().includes("Recon")) {mod += 5};          
+            if (threshold === 2) {
+                mod = 0;
+            }
+            if (distance <= (threshold + mod)) {
+                //spotted
+                log(unit2.name + " Has spotted")
+                unit.token.set("tint_color","transparent");
+                spotted = true;
+                break;
+            }
+        }
+        if (spotted === false && phase === "End") {
+log("Not Spotted")
+            unit.token.set("tint_color","#000000");
+        }
 
 
 
-
-
+    }
 
 
     const ClearState = (msg) => {
@@ -2426,6 +2504,7 @@ log(unit)
             firstPlayer: 0,
             roads: true,
             moveMarkers: [],
+            visibility: 70,
         }
 
 

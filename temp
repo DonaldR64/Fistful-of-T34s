@@ -1,109 +1,74 @@
-const aStar = (unit,endHexLabel) => {
-    let startHex = HexMap[unit.startHexLabel];
-    let endHex = HexMap[endHexLabel];
+    const CheckSpotting = (unit,phase) => {
 
-    let move = unit.movement;
-    let distance = startHex.cube.distance(endHex.cube);
+log(unit.name + " being Tested")
+        if (phase === "Movement" && unit.token.get("tint_color") === "transparent") {return};
+        let moved = (unit.token.get(SM.move) || unit.token.get(SM.double)) ? true:false;
+        let unitHex = HexMap[unit.hexLabel];
+        let cover = unitHex.cover > 0 ? true:false;
+        let fired = unit.token.get(SM.fired);
+        let vis = state.FFT.visibility;
 
-    let nodes = 1;
-    let explored = [];
-    let frontier = [{
-        label: startHex.label,
-        cost: 0,
-        estimate: distance,
-    }]
-
-    while (frontier.length > 0) {
-        //sort paths in frontier by cost,lowest cost first
-        //choose lowest cost path from the frontier
-        //if more than one, choose one with highest cost       
-        frontier.sort(function(a,b) {
-            return a.estimate - b.estimate || b.cost - a.cost; //2nd part used if estimates are same
-        })
-        let node = frontier.shift();
-        let nodeHex = HexMap[node.label];
-        nodes++;
-        explored.push(node); //add this node to explored paths
-        //if this node reaches goal, end loop
-        if (node.label === endHexLabel) {
-            break;
-        }
-        //generate possible next steps
-        let next = HexMap[node.label].cube.neighbours();
-        //for each possible next step
-        for (let i=0;i<next.length;i++) {
-            //calculate the cost of the next step 
-            //by adding the step's cost to the node's cost
-            let stepCube = next[i];
-            let stepHexLabel = stepCube.label();
-            let stepHex = HexMap[stepHexLabel];
-            if (!stepHex) {continue};
-            if (stepHex.offboard === true) {continue};
-            let cost = stepHex.moveCosts[unit.moveType];
-            //check if this step has already been explored
-            let isExplored = (explored.find(e => {
-                return e.label === stepHexLabel
-            }));
-            //avoid repeated nodes during the calcualtion of neighbours
-            let isFrontier = (frontier.find(e => {
-                return e.label === stepHexLabel
-            }));
-            //if this step has not been explored
-            if (!isExplored && !isFrontier) {
-                let est = cost + stepHex.cube.distance(endHex.cube);
-                //add the step to the frontier
-                frontier.push({
-                    label: stepHexLabel,
-                    cost: cost,
-                    estimate: est,
-                })
+        let threshold;
+        if (unit.moveType === "Leg") {
+            if (fired === true) {
+                threshold = 15;
+            } else {
+                if (moved === true && cover === false) {threshold = 15};
+                if (moved === true && cover === true) {threshold = 10};
+                if (moved === false && cover === false) {threshold = 5};
+                if (moved === false && cover === true) {threshold = 2};
+            }
+        } else if (unit.moveType === "Towed") {
+            if (fired === true) {
+                threshold = vis;
+            } else {
+                if (moved === true && cover === false) {threshold = vis};
+                if (moved === true && cover === true) {threshold = 15};
+                if (moved === false && cover === false) {threshold = 25};
+                if (moved === false && cover === true) {threshold = 5};
+            }
+        } else {
+            if (fired === true) {
+                threshold = vis;
+            } else {
+                if (moved === true && cover === false) {threshold = vis};
+                if (moved === true && cover === true) {threshold = 20};
+                if (moved === false && cover === false) {threshold = 45};
+                if (moved === false && cover === true) {threshold = 10};
             }
         }
-    }
 
-    //if there are no paths left to explore or hit end hex
-    let finalHexLabel = startHex.label;
-    if (explored.length > 0) {
-        array = [];
-        results = [];
-        explored.sort((a,b) => {
-            return b.cost - a.cost;
-        })
-        let last = explored.shift();
-        array.push(last);
-        let finished = explored.length > 0 ? false:true;
-        while (finished === false) {
-            let lowestCost = last.cost;
-            let current = 0;
-            for (let i=0;i<explored.length;i++) {
-                let next = explored[i];
-                if (HexMap[next.label].cube.distance(HexMap[last.label].cube) === 1 && next.cost < lowestCost) {
-                    lowestCost = next.cost;
-                    current = i;
-                }
+    
+
+        let spotted = false;
+        let keys = Object.keys(UnitArray);
+        for (let i=0;i<keys.length;i++) {
+            if (i === unit.id) {continue};
+            let unit2 = UnitArray[i];
+            if (!unit2) {continue};
+            if (unit2.nation === unit.nation || unit2.nation === "Neutral") {continue};
+            let distance = HexMap[unit.hexLabel].cube.distance(HexMap[unit2.hexLabel].cube);
+            let los = LOS(unit2,unit).los;
+            if (los === false) {continue};
+            let mod = 0;
+            if (unit.quality.includes("Fair")) {mod -= 5};
+            if (unit.quality.includes("Excellent")) {mod += 5};
+            if (unit.special.toLowerCase().includes("Recon")) {mod += 5};          
+            if (threshold === 2) {
+                mod = 0;
             }
-            last = explored[current];
-            explored.splice(current,1);
-            array.push(last);
-            if (last.label === startHex.label) {
-                finished = true;
-            }
-        }
-        array.reverse();
-        //will be an array from startHex to endHex, of lowest cost
-        //now add up cumulative costs and stop if exceed move
-        let cumulativeCost = 0;
-        let finalSpot = array.length - 1;
-        for (let i=1;i<array.length;i++) {
-            cumulativeCost += array[i].cost;
-            if (cumulativeCost > move) {
-                finalSpot = i;
+            if (distance < (threshold + mod)) {
+                //spotted
+                log(unit2.name + " Has spotted")
+                unit.token.set("tint_color","transparent");
+                spotted = true;
                 break;
             }
         }
-        finalHexLabel = array[finalSpot].label; 
-    } else {
-        sendChat(""," No Path to this Hex");
+        if (spotted === false && phase === "End") {
+            unit.token.set("tint_color","#000000");
+        }
+
+
+
     }
-    return finalHexLabel;
-}
