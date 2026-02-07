@@ -669,7 +669,15 @@ const FFT = (() => {
             this.arteffect = aa.arteffect;
             this.artrange = aa.artrange ? parseInt(aa.artrange):0;
 
+            if (aa.rof.includes("+")) {
+                aa.rof = aa.rof.split("+")[0];
+            }
             this.rof = aa.rof ? parseInt(aa.rof):0;
+            if (this.quality.includes("Excellent")) {
+                this.rof++;
+            }
+
+
             if (aa.range) {
                 this.range = aa.range.split("/")
             } else {
