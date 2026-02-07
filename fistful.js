@@ -612,6 +612,7 @@ const FFT = (() => {
             this.moveCosts = {leg: 1, tracked: 1, horse: 1, wheeled: 1, halftrack: 1}
             this.coverDirect = 0;
             this.coverArea = false;
+            this.road = false;
             this.smoke = "";
             this.smokePlayer = "";
             this.edges = {};
@@ -1201,10 +1202,14 @@ log("AI: " + this.antiInf)
 
 
 
+
+
+
     }
 
     const AddElevations = () => {
         //use terrain lines to build elevations
+        //add roads also
         let paths = findObjs({_pageid: Campaign().get("playerpageid"),_type: "pathv2",layer: "map",});
         _.each(paths,path => {
             let elevation = HillHeights[path.get("stroke").toLowerCase()];
@@ -1217,6 +1222,24 @@ log("AI: " + this.antiInf)
                         hex.elevation = Math.max(hex.elevation,elevation);
                     }
                 });
+            }
+            if (path.get("stroke").toLowerCase() === "#ffffff") {
+                let vertices = translatePoly(path);
+log("Road")
+log(vertices)
+                for (let i=0;i<vertices.length - 1;i++) {
+                    let hl1 = vertices[i].label();
+                    let hl2 = vertices[i+1].label();
+                    let hex1 = HexMap[hl1];
+                    let hex2 = HexMap[hl2];
+                    hex1.road = true;
+                    hex2.road = true;
+                    let cubes = hex1.cube.linedraw(hex2.cube);
+                    _.each(cubes,cube => {
+                        let hex = HexMap[cube.label()];
+                        hex.road = true;
+                    })
+                }
             }
         });
     }
@@ -1341,7 +1364,9 @@ log("AI: " + this.antiInf)
     }
 
     const SetupGame = (msg) => {
-        let firstNation = msg.content.split(";")[1];
+        let Tag = msg.content.split(";");
+        let firstNation = Tag[1];
+        let roads = Tag[2];
         let firstPlayer = state.FFT.nations[0] === firstNation ? 0:1;
         state.FFT.firstPlayer = firstPlayer;
         state.FFT.turn = 0;
@@ -1350,6 +1375,7 @@ log("AI: " + this.antiInf)
 
         state.FFT.visibility = 70; //can later alter this
 
+        state.FFT.roads = (roads === "True") ? true:false;
 
 
 
@@ -1491,6 +1517,9 @@ log(unit.moveType)
         outputCard.body.push("Terrain: " + hex.terrain);
         outputCard.body.push("Elevation: " + hex.elevation);
         outputCard.body.push("Move Cost: " + hex.moveCosts[unit.moveType] + " for " + Capit(unit.moveType));
+        if (hex.road === true) {
+            outputCard.body.push("Road in Hex");
+        }
         let areaCover = (hex.coverArea === true) ? "Cover":"No Cover";
         let directCover = (hex.coverDirect === 0) ? "No Cover":(hex.coverDirect === 1) ? "Cover Save 5+":"Cover Save 4+";
         outputCard.body.push("Indirect Fire: " + areaCover);
@@ -2388,6 +2417,7 @@ log(unit)
             phase: "",
             activePlayer: 0,
             firstPlayer: 0,
+            roads: true,
         }
 
 
@@ -2701,7 +2731,6 @@ log(unit)
                     }
                 }
 
-                //aStar here
                 if (state.FFT.phase === "Movement") {
                     let results = aStar(unit,label);
                     label = results.finalHexLabel;
