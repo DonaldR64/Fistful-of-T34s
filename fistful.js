@@ -83,6 +83,7 @@ const FFT = (() => {
     let FormationArray = {};
     let CompanyArray = {};
     let qcUnits = [];
+    let qcFormations = [];
     let artUnits = [];
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
@@ -737,9 +738,20 @@ log("AI: " + this.antiInf)
 
 
 
-        Destroyed () {
-            
-
+        Destroyed (note = "Nil") {
+//later turn some into wrecks if note === "Wreck"
+            let token = this.token;
+            if (token) {
+                token.set("statusmarkers","");
+                token.set("status_dead",true);
+                token.set("layer","map");
+                toFront(token);
+            }
+            let formation = FormationArray[this.formationID];
+            if (formation) {
+                formation.Casualty(this.id);
+            }
+            delete UnitArray[this.id]
         }
 
 
@@ -799,6 +811,13 @@ log("AI: " + this.antiInf)
             UnitArray[uID].formationID = this.id;
         }
 
+        Casualty(uID) {
+            let index = this.tokenIDs.indexOf(uID);
+            if (index > -1) {
+                this.tokenIDs.splice(index,1);
+            }
+            this.casualties++;
+        }
 
     }
 
@@ -1395,6 +1414,7 @@ log(vertices)
 
 
         if (currentPhase === "Deployment") {
+            RemoveDead();
             _.each(UnitArray,unit => {
                 if (turn === 0 && HexMap[unit.hexLabel].offboard === false) {
                     unit.token.set("tint_color","#000000");
@@ -1454,6 +1474,7 @@ log(vertices)
         }
 
         if (currentPhase === "Movement") {
+            RemoveDead();
             _.each(UnitArray,unit => {
                 if (unit.token.get(SM.fired) === false && unit.token.get(SM.unavail) === false) {
                     //if fired in art phase cant move
@@ -1558,7 +1579,7 @@ log(unit.name)
             sendChat("",unit.name + " - has no Company Info in data");
             return false;
         }
-        let cohesion = (unit.special.includes("Recon")) ? true:false;
+        let cohesion = (unit.special.toLowerCase().includes("recon")) ? true:false;
         let hqSymbol = SM[Nations[unit.nation].hq];
         if (unit.token.get(hqSymbol) === true) {
             cohesion = true;
@@ -1606,7 +1627,7 @@ log(unit2.name + " is in cohesion")
         } else {
             tip = '[Fails](#" class="showtip" title="' + tip + ')';
             passed = false;
-//remove unit
+            unit.Destroyed();
         }
 
         if (unit && unit.token) {
@@ -2116,9 +2137,40 @@ log(unit)
             ButtonInfo("Make Quality Check","!TakeQC;" + unit.id);
             PrintCard();
         } else {
+            qcFormations = [];
+            _.each(FormationArray,formation => {
+                if (formation.casualties >= formation.breakpoint) {
+                    qcFormations.push(formation);
+                }
+            })
+            if (qcFormations.length === 0) {
+                AdvancePhase();
+            } else {
+                RunFormQC();
+            }
+        }
+    }
+
+    const RunFormQC = () => {
+        let formation = qcFormations.shift();
+        if (formation) {
+            let leadUnit = UnitArray[formation.tokenIDs[0]];
+            if (!leadUnit) {
+                log("No Unit in Formation, formation skipped")
+            } else {
+                sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
+                SetupCard(formation.name,"Formation Check",unit.nation);
+                ButtonInfo("Make Quality Check","!TakeFQC;" + unit.id);
+                PrintCard();
+            }
+        } else {
             AdvancePhase();
         }
     }
+
+
+
+
 
     const TakeQC = (msg) => {
         let id = msg.content.split(";")[1];
@@ -2130,11 +2182,35 @@ log(unit)
         outputCard.body.push(unit.name + " " + qc.tip + ' its QC and is ' + noun);
         let phrase = "Next Unit";
         if (qcUnits.length === 0) {
-            phrase = "Next Phase";
+            phrase = "Continue";
         }
         ButtonInfo(phrase,"!RunQC")
         PrintCard();
     }
+
+    const TakeFQC = (msg) => {
+        let id = msg.content.split(";")[1];
+        let unit = UnitArray[id];
+        let formation = FormationArray[unit.formationID];
+        SetupCard(formation.name,"Formation Check",unit.nation);
+        qc = QualityCheck(unit);
+        if (qc.pass === true) {
+            outputCard.body.push("The Formation passes and will stick around for now");
+        } else {
+            outputCard.body.push("The Formation withdraws from the Battlefield");
+            //formation.Remove();
+        }
+        let phrase = "Next Formation";
+        if (qcFormations.length === 0) {
+            phrase = "Next Phase";
+        }
+        ButtonInfo(phrase,"!RunFormQC")
+        PrintCard();        
+    }
+
+
+
+
 
 
 
@@ -2323,7 +2399,7 @@ log(unit)
 
                     if (destroyed === true) {
                         tip = ' is [Destroyed](#" class="showtip" title="' + tip + ')';
-        //remove target
+                        target.Destroyed("Wreck");
                     } else if (qc === true) {
                         tip = ' [Takes Damage](#" class="showtip" title="' + tip + ')';
                         target.token.set(SM.qc,true);
@@ -2434,7 +2510,7 @@ log(unit2.name + " looking")
             let mod = 0;
             if (unit.quality.includes("Fair")) {mod -= 5};
             if (unit.quality.includes("Excellent")) {mod += 5};
-            if (unit.special.toLowerCase().includes("Recon")) {mod += 5};          
+            if (unit.special.toLowerCase().includes("recon")) {mod += 5};          
             if (threshold === 2) {
                 mod = 0;
             }
@@ -2533,12 +2609,6 @@ log("Not Spotted")
         tokens.forEach((token) => {
             if (token.get("status_dead") === true) {
                 token.remove();
-            }
-            let removals = ["Objective","Turn"];
-            for (let i=0;i<removals.length;i++) {
-                if (token.get("name").includes(removals[i]) && info === "All") {
-                    token.remove();
-                }
             }
         });
     }
@@ -3116,6 +3186,12 @@ log("Final Hex Label: " + finalHexLabel)
                 break;
             case '!TakeQC':
                 TakeQC(msg);
+                break;
+            case '!RunFQC':
+                RunFQC();
+                break;
+            case '!TakeFQC':
+                TakeFQC(msg);
                 break;
             case '!CheckArtillery':
                 CheckArtillery();
