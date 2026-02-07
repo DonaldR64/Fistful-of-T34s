@@ -161,7 +161,7 @@
                 <h3>Pen</h3>
                 <h3>Anti-Inf</h3>
                 <h3 style="color: darkred;">Direct Fire</span></h3>                
-                <h3 style="color: darkred;"><span name="attr_rof"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_rof"><span name="attr_rofbonus></span></h3>
                 <h3 style="color: darkred;"><span name="attr_range"></span></h3>
                 <h3 style="color: darkred;"><span name="attr_pen"></span></h3>
                 <h3 style="color: darkred;"><span name="attr_ai"></span></h3>
@@ -206,13 +206,18 @@
     });
 
     on("sheet:opened", function() {
-        getAttrs(["artflag","weaponflag"], function(values) {
+        getAttrs(["artflag","weaponflag","rof","quality"], function(values) {
             let art = values.artflag || "Off";
             let wpn = values.weaponflag || "On";
+            let rofBonus = "";
+            if (values.quality === "Excellent 3+") {
+                rofBonus = "+1";
+            }
             setAttrs({
                 sheetTab: "display",
                 artflag: art,
                 weaponflag: wpn,
+                rofbonus: rofBonus,
             });
         });
     });
