@@ -157,7 +157,7 @@ const FFT = (() => {
         "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
         "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 2,coverArea: true},
         "River": {name: "River",height: 0, moveCosts: {leg: -1, tracked:-1, horse: -1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
-        "Craters": {name: "Cratered Ground",height: 0, moveCosts: {leg: 1, tracked:2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
+        "Craters": {name: "Craters",height: 0, moveCosts: {leg: 1, tracked:2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
         "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
         "Water": {name: "Water",height: 0, moveCosts: {leg: -1, tracked:-1, horse: -1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
 
@@ -1190,7 +1190,11 @@ log("AI: " + this.antiInf)
                 let centre = new Point(token.get("left"),token.get('top'));
                 let centreLabel = centre.toCube().label();
                 let hex = HexMap[centreLabel];
-                hex.terrain = name;
+                if (hex.terrain === "Open") {
+                    hex.terrain = name;
+                } else {
+                    hex.terrain += ", " + terrain.name;
+                }
                 hex.height = terrain.height;
                 let costKeys = Object.keys(terrain.moveCosts);
                 _.each(costKeys,key => {
@@ -2999,7 +3003,7 @@ log("Node: " + node.label)
                 if (stepHex.offboard === true) {continue};
                 let cost = stepHex.moveCosts[unit.moveType];
                 if (cost === -1) {continue}
-                if (stepHex.road === true && HexMap[node.label].road === true && state.FFT.roads === true) {
+                if (stepHex.road === true && HexMap[node.label].road === true && state.FFT.roads === true && stepHex.terrain.includes("Wrecks") === false && stepHex.terrain.includes("Craters") === false) {
                     cost = RoadCosts[unit.moveType];
                 }
 
