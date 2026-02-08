@@ -670,7 +670,17 @@ const FFT = (() => {
             this.arteffect = aa.arteffect;
             this.artrange = aa.artrange ? parseInt(aa.artrange):0;
 
-            this.rof = aa.rof ? parseInt(aa.rof):0;
+
+            //index 0 is ranged, index 1 is CC
+            let rof = aa.rof || 0;
+            if (rof.includes("/")) {
+                rof = rof.split("/");
+                rof = rof.map((e) => parseInt(e));
+            } else {
+                rof = parseInt(rof);
+                rof = [rof,rof];
+            }
+            this.rof = rof;
 
             if (aa.range) {
                 this.range = aa.range.split("/")
@@ -702,7 +712,8 @@ log("Original AI: " + ai)
                 }
             }
             this.antiInf = ai;
-
+            
+            //index 0 is pen, index 1 is at what range
             let pen = aa.pen;
             if (pen === "-" || pen === "NA" || !pen) {
                 ai = "NA"
@@ -710,6 +721,9 @@ log("Original AI: " + ai)
                 if (pen.includes("(")) {
                     //format 4(1") for pen of 4 at 1" or similar
                     pen = pen.split("(");
+                    if (pen[1].includes("C")) {
+                        pen[1] = 1;
+                    }
                     pen = [parseInt(pen[0]), parseInt(pen[1].replace(/\D/g, ''))];
                 } else {    
                     //eg pen is 7, and effective to max range, although modified in direct fire based on range band
@@ -2361,10 +2375,13 @@ log(unit)
             toHitTip += "<br>" + aiTip;
         }
 
-
+        let ROF;
+        if (losResult.distance > 1) {
+            ROF = shooter.rof[0];
+        } else {
+            ROF = shooter.rof[1];
+        }
         
-        let ROF = parseInt(shooter.rof);
-
         let rolls = [];
         let hits = 0;coverSaves = 0;finalHits = 0;
         for (let i=0;i<ROF;i++) {
