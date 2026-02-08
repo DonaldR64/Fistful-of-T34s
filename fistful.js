@@ -741,13 +741,48 @@ log("AI: " + this.antiInf)
 
 
         Destroyed (note = "Nil") {
-//later turn some into wrecks if note === "Wreck"
             let token = this.token;
             if (token) {
-                token.set("statusmarkers","");
-                token.set("status_dead",true);
-                token.set("layer","map");
-                toFront(token);
+                if (note === "Wreck") {
+                    token.set({
+                        name: "Wrecks",
+                        layer: "map",
+                        statusmarkers: "",
+                    })
+                    let img = getCleanImgSrc("https://files.d20.io/images/444760310/hU74_47luSi2mkY1ejzjcQ/thumb.png?1749828980");
+                    let newToken = createObj("graphic", {
+                        left: token.get("left"),
+                        top: token.get("top"),
+                        width: 70,
+                        height: 70, 
+                        name: "BurningSmoke",
+                        pageid: Campaign().get("playerpageid"),
+                        imgsrc: img,
+                        layer: "foreground",
+                    })
+                    let hex = HexMap[this.hexLabel];
+                    hex.terrain += ", Wrecks";
+                    let terrain = TerrainInfo["Wrecks"];
+                    let costKeys = Object.keys(terrain.moveCosts);
+                    _.each(costKeys,key => {
+                        hex.moveCosts[key] = Math.max(hex.moveCosts[key],terrain.moveCosts[key]);
+                        if (terrain.moveCosts[key] === -1) {
+                            hex.moveCosts[key] = -1;
+                            //impasssable
+                        }
+                    })
+                    hex.coverDirect = Math.max(hex.coverDirect,terrain.coverDirect);
+                    hex.coverArea = (terrain.coverArea === true) ? true:hex.coverArea;
+                    HexMap[this.hexLabel] = hex;
+                } else {
+                    token.set("statusmarkers","");
+                    token.set("status_dead",true);
+                    token.set("layer","map");
+                    toFront(token);
+                }
+
+
+
             }
             let formation = FormationArray[this.formationID];
             if (formation) {
@@ -2167,9 +2202,9 @@ log(unit)
             if (!leadUnit) {
                 log("No Unit in Formation, formation skipped")
             } else {
-                sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
-                SetupCard(formation.name,"Formation Check",unit.nation);
-                ButtonInfo("Make Quality Check","!TakeFQC;" + unit.id);
+                sendPing(leadUnit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
+                SetupCard(formation.name,"Formation Check",leadUnit.nation);
+                ButtonInfo("Make Quality Check","!TakeFQC;" + leadUnit.id);
                 PrintCard();
             }
         } else {
@@ -3056,7 +3091,7 @@ log(explored)
             let final = explored.length - 1;
             for (let i=1;i<explored.length;i++) {
                 totalCost += explored[i].cost;
-                let hexCover = HexMap[explored[i]].cover > 0 ? true:false;
+                let hexCover = HexMap[explored[i].label].cover > 0 ? true:false;
                 if (totalCost > move) {
                     totalCost -= explored[i].cost;
                     final = i - 1; //prev hex
