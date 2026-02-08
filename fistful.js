@@ -152,15 +152,15 @@ const FFT = (() => {
         return String(val).charAt(0).toUpperCase() + String(val).slice(1);
     }
 
-    const RoadCosts = {leg: 1,tracked: .5, horse: .5, wheeled: .25, halftrack: .5};
+    const RoadCosts = {leg: 1,tracked: .5, wheeled: .25, halftrack: .5};
 
     const TerrainInfo = {
-        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
-        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 2,coverArea: true},
-        "River": {name: "River",height: 0, moveCosts: {leg: -1, tracked:-1, horse: -1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
-        "Craters": {name: "Craters",height: 0, moveCosts: {leg: 1, tracked:2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
-        "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, horse: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
-        "Water": {name: "Water",height: 0, moveCosts: {leg: -1, tracked:-1, horse: -1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
+        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
+        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2}, coverDirect: 2,coverArea: true},
+        "River": {name: "River",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
+        "Craters": {name: "Craters",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
+        "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
+        "Water": {name: "Water",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
 
 
 
@@ -611,7 +611,7 @@ const FFT = (() => {
             this.elevation = 0;
             this.terrain = "Open";
             this.offboard = false;
-            this.moveCosts = {leg: 1, tracked: 1, horse: 1, wheeled: 1, halftrack: 1}
+            this.moveCosts = {leg: 1, tracked: 1, wheeled: 1, halftrack: 1}
             this.coverDirect = 0;
             this.coverArea = false;
             this.road = false;
@@ -1459,7 +1459,7 @@ log(vertices)
         let activePlayer = state.FFT.activePlayer;
         let phase = state.FFT.phase;
 
-        let phases = ["Deployment","Artillery","Movement","Firing","End"];
+        let phases = ["Deployment","Artillery","Movement","Close Combat","Firing","End"];
         
         let currentPhase = phases[phases.indexOf(phase) + 1] || "Deployment";
 
@@ -1534,6 +1534,12 @@ log(vertices)
                 }
                 unit.token.set(SM.green,false); //art QC checks
             })
+        }
+
+        if (currentPhase === "Close Combat") {
+            //check if any
+
+
         }
 
 
@@ -1805,7 +1811,7 @@ log(unit2.name + " is in cohesion")
         let theta = Angle(unit.token.get("rotation")) * Math.PI/180;
         let w = unit.token.get("width");
         let h = unit.token.get("height");
-        let squareTokens = ["Infantry","Horse","Mortar","Artillery","AT Gun"]
+        let squareTokens = ["Infantry","Mortar","Artillery","AT Gun"]; //tokens without a direction triangle
         if (squareTokens.includes(unit.type) === false) {
             h -= 10;
         }
@@ -2320,7 +2326,7 @@ log(unit)
                     pen = shooter.pen[0];
                     penTip = "Base Pen: " + pen;
                     //pen for tanks up or down
-                    if (shooter.type !== "Infantry" && shooter.type !== "Horse") {
+                    if (shooter.type !== "Infantry") {
                         if (losResult.distance > shooter.range[1]) {
                             pen -= 2;
                             penTip += "<br>-2 Pen for Long Range";
@@ -2378,6 +2384,13 @@ log(unit)
             toHit++;
             toHitTip += "<br>-1 Overwatch";
         }
+        if (losResult.inSmoke === true) {
+            toHit++;
+            toHitTip += "<br>-1 for Smoke";
+        }
+
+
+
         if (type === "AntiInfantry" && ai !== 0) {
             toHit += ai;
             toHitTip += "<br>" + aiTip;
@@ -2491,14 +2504,14 @@ log(unit)
 
         //Sound
         let sound;
-        if (shooter.type === "Infantry" || shooter.type === "Horse") {
+        if (shooter.type === "Infantry") {
             sound = "Rifles";
             if (shooter.name.includes("HMG")) {
                 sound = "MG";
             }
         } else {
             sound = "Shotgun";
-            if (target.movetype === "Leg" || target.movetype === "Horse" || target.movetype === "Towed") {
+            if (target.movetype === "Leg" || target.movetype === "Towed") {
                 sound = "MG";
                 if (shooter.special.includes("Flamethrower")) {
                     sound = "Flame";
@@ -2818,6 +2831,9 @@ log("Not Spotted")
         } else {
             outputCard.body.push("Shooter has LOS to Target");
             outputCard.body.push("Target has " + coverLevels[losResult.coverDirect] + " Cover vs. Direct Fire");
+            if (losResult.inSmoke === true) {
+                outputCard.body.push("Target is in Smoke");
+            }
             let areaCover = (losResult.coverArea === true) ? "Cover":"No Cover";
             outputCard.body.push("Target has " + areaCover + " vs. Indirect Fire");
             outputCard.body.push("Target is in the " + losResult.shooterFacing + " Arc");
@@ -2900,6 +2916,7 @@ log("Not Spotted")
             coverArea: targetHex.coverArea,
             shooterFacing: shooterFacing,
             targetFacing: targetFacing,
+            inSmoke: (targetHex.smoke !== "") ? true:false,
         }
 
         return result;
