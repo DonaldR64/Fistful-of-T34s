@@ -839,7 +839,7 @@ log("AI: " + this.antiInf)
                     let dist = this.Distance(unit2);
                     if (dist <= cohRange) {
                         cohesion = true;
-                        break;
+                        unit2.token.set("aura2_color","#00ff00");
                     }
                 }
             }
@@ -1584,6 +1584,7 @@ log(vertices)
 
         if (currentPhase === "Close Combat") {
             outputCard.body.push("Active Player chooses order of combats");
+            outputCard.body.push("")
             RemoveMoveMarkers();
         }
 
@@ -2313,7 +2314,7 @@ log(unit)
             errorMsg.push("[#ff0000]Unit is unable to Fire[/#]");
         }
 
-        let closeCombat = (los.distance === 1) ? true:false;
+        let closeCombat = (losResult.distance === 1) ? true:false;
 
         let targetFacing = losResult.targetFacing;
 
@@ -2516,9 +2517,6 @@ log(unit)
             }
 
         }
-
-        PrintCard();
-
         //Sound
         let sound;
         if (shooter.type === "Infantry") {
@@ -2546,20 +2544,35 @@ log(unit)
         if (shooter.special.includes("Flamethrower") && shortRangeFlag === true) {
             spawnFxBetweenPoints(new Point(shooter.token.get("left"),shooter.token.get("top")), new Point(target.token.get("left"),target.token.get("top")), "breath-fire");
         }
-
+log("CC: " + closeCombat)
         if (closeCombat === false) {
             shooter.token.set(SM.fired,true);
         } else {
             //deprecate the movement marker 
-            let m = parseInt(shooter.token.get(SM.ccmove));
-            if (m > 0) {
-                m--;
+            if (shooter.token.get(SM.ccmove)) {
+                let m = parseInt(shooter.token.get(SM.ccmove));
+                if (m > 0) {
+                    m--;
+                }
+                if (m > 0) {
+                    shooter.token.set(SM.ccmove,m);
+                }
             }
-            if (m > 0) {
-                shooter.token.set(SM.ccmove,m);
+            let qc = QualityCheck(target);
+log("QC")
+log(qc)
+            let noun = (qc.pass === true) ? "is Suppressed":"Surrenders or Routs";
+            outputCard.body.push(target.name + " " + qc.tip + ' its QC and ' + noun);
+            if (qc.pass === true) {
+                target.token.set(SM.suppressed,true);
             }
         }
         shooter.token.set("tint_color","transparent");
+
+
+
+
+        PrintCard();
 
     }
 
@@ -3011,9 +3024,6 @@ log("Not Spotted")
             if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
                 if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
                     let bounceBack = false
-                    if (state.FFT.phase !== "Movement" && state.FFT.phase !== "Deployment") {
-                        bounceBack = true;
-                    }
                     if (HexMap[label].moveCosts[unit.moveType] === -1) {
                         bounceBack = true;
                     }
@@ -3021,7 +3031,7 @@ log("Not Spotted")
                         tok.set("left",prev.left);
                         tok.set("top",prev.top);
                         tok.set("rotation",prev.rotation);
-                        sendChat("","Not Able to Move");
+                        sendChat("","Not Able to Move to that Hex");
                         return;
                     }
                 }
@@ -3046,7 +3056,6 @@ log(marker)
 //rotate the token based on start hex and end hex
                     let angle = Angle(HexMap[unit.startHexLabel].cube.angle(HexMap[label].cube));
                     tok.set("rotation",angle);
-                    unit.TestCohesion();
                 }
 
                 log(unit.name + ' is moving from ' + unit.hexLabel + ' to ' + label)
@@ -3060,6 +3069,8 @@ log(marker)
                     left: HexMap[label].centre.x,
                     top: HexMap[label].centre.y,
                 })
+                unit.TestCohesion();
+
             }
         }
 
