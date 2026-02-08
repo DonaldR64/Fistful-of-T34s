@@ -131,6 +131,7 @@ const FFT = (() => {
         unavail: "status_oneshot::5503748",
         soviet: "status_Soviet::6433738",
         german: "status_Iron-Cross::7650254",
+        brave: "status_blue", //used to make note of fair troops breaking cover
     }
 
 
@@ -1575,7 +1576,7 @@ log(unit.moveType)
     }
 
 
-    const QualityCheck = (unit) => {
+    const QualityCheck = (unit,reason = "Fire") => {
 log(unit.name)
         let passed = true;
         let unitHex = HexMap[unit.hexLabel];
@@ -1589,6 +1590,7 @@ log(unit.name)
         if (unit.token.get(hqSymbol) === true) {
             cohesion = true;
         }
+        if (reason === "Movement") {cohesion = true}; //eg when breaking cover
 
 
 log("Cohesion: " + cohesion)
@@ -1632,7 +1634,9 @@ log(unit2.name + " is in cohesion")
         } else {
             tip = '[Fails](#" class="showtip" title="' + tip + ')';
             passed = false;
-            unit.Destroyed();
+            if (reason === "Fire") {
+                unit.Destroyed();
+            }
         }
 
         if (unit && unit.token) {
@@ -2967,7 +2971,7 @@ log("End: " + endHex.label)
         if (unit.token.get(SM.suppressed)) {
             move = Math.max(0,move - 2);
         }
-        
+
 
 log("Move: " + move)
         let distance = startHex.cube.distance(endHex.cube);
@@ -3045,14 +3049,33 @@ log("StepHex: " + stepHexLabel + " Added, Cost: " + cost)
             })
 log("Explored")
 log(explored)
+
+
+
+            let coverStart = startHex.cover > 0 ? true:false;
             let final = explored.length - 1;
             for (let i=1;i<explored.length;i++) {
                 totalCost += explored[i].cost;
+                let hexCover = HexMap[explored[i]].cover > 0 ? true:false;
                 if (totalCost > move) {
                     totalCost -= explored[i].cost;
                     final = i - 1; //prev hex
                     sendChat("","Stopped at limit of movement")
                     break;
+                }
+                if (unit.quality.includes("Fair") && coverStart === true && hexCover === false && unit.token.get(SM.brave) === false) {
+                    //quality check to leave cover, only needs to do once
+                    unit.token.set(SM.brave,true);
+                    let qc = QualityCheck(unit,"Movement");
+                    if (qc.pass === false) {
+                        SetupCard(unit.name,"Breaking Cover",unit.nation);
+                        outputCard.body.push("The Unit " + qc.tip + " its QC and remains in cover and can move no further");
+                        PrintCard();
+                        unit.token.set("aura1_color","#000000");
+                        totalCost -= explored[i].cost;
+                        final = i - 1; //prev hex
+                        break;
+                    }
                 }
 log(explored[i].label)
 log(totalCost)
