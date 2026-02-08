@@ -132,6 +132,7 @@ const FFT = (() => {
         soviet: "status_Soviet::6433738",
         german: "status_Iron-Cross::7650254",
         brave: "status_blue", //used to make note of fair troops breaking cover
+        ccmove: "status_stopwatch", //track movement for cc units
     }
 
 
@@ -2279,7 +2280,7 @@ log(unit)
         let Tag = msg.content.split(";");
         let shooter = UnitArray[Tag[1]];
         let target = UnitArray[Tag[2]];
-        let closeFlag = false;
+        let shortRangeFlag = false;
 
         SetupCard(shooter.name,target.name,shooter.nation);
 
@@ -2352,6 +2353,19 @@ log(unit)
             }
         }
 
+
+        let ROF;
+        if (losResult.distance > 1) {
+            ROF = shooter.rof[0];
+        } else {
+            ROF = shooter.rof[1];
+        }
+
+        if (ROF === 0) {
+            errorMsg.push("Target has no ROF for this range");
+        }
+
+
         if (errorMsg.length > 0) {
             _.each(errorMsg,msg => {
                 outputCard.body.push(msg);
@@ -2370,7 +2384,7 @@ log(unit)
         if (losResult.distance <= shooter.range[0]) {
             toHit--;
             toHitTip += "<br>+1 Short Range";
-            closeFlag = true;
+            shortRangeFlag = true;
         }
         if (losResult.distance > shooter.range[1]) {
             toHit++;
@@ -2388,20 +2402,11 @@ log(unit)
             toHit++;
             toHitTip += "<br>-1 for Smoke";
         }
-
-
-
         if (type === "AntiInfantry" && ai !== 0) {
             toHit += ai;
             toHitTip += "<br>" + aiTip;
         }
 
-        let ROF;
-        if (losResult.distance > 1) {
-            ROF = shooter.rof[0];
-        } else {
-            ROF = shooter.rof[1];
-        }
         
         let rolls = [];
         let hits = 0;coverSaves = 0;finalHits = 0;
@@ -2526,12 +2531,22 @@ log(unit)
         if (turrets.includes(shooter.type) === false) {
             shooter.token.set("rotation",angle);
         }
-        if (shooter.special.includes("Flamethrower") && closeFlag === true) {
+        if (shooter.special.includes("Flamethrower") && shortRangeFlag === true) {
             spawnFxBetweenPoints(new Point(shooter.token.get("left"),shooter.token.get("top")), new Point(target.token.get("left"),target.token.get("top")), "breath-fire");
         }
 
-        shooter.token.set(SM.fired,true);
-        shooter.token.set("aura1_color","#000000");
+        if (closeCombat === false) {
+            shooter.token.set(SM.fired,true);
+        } else {
+            //deprecate the movement marker 
+            let m = parseInt(shooter.token.get(SM.ccmove));
+            if (m > 0) {
+                m--;
+            }
+            if (m > 0) {
+                shooter.token.set(SM.ccmove,m);
+            }
+        }
         shooter.token.set("tint_color","transparent");
 
     }
@@ -2720,7 +2735,7 @@ log("Not Spotted")
                 tint_color: "transparent",
                 tint_color: "transparent",
                 aura1_color: "#00ff00",
-                aura1_radius: 10,
+                aura1_radius: 1,
                 disableTokenMenu: true,
                 showname: true,
                 showplayers_aura1: true,
@@ -2960,7 +2975,7 @@ log("Not Spotted")
             if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
                 if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
                     let bounceBack = false
-                    if ((state.FFT.phase === "Movement" && tok.get("aura1_color") === "#000000") || (state.FFT.phase !== "Movement" && state.FFT.phase !== "Deployment")) {
+                    if (state.FFT.phase !== "Movement" && state.FFT.phase !== "Deployment") {
                         bounceBack = true;
                     }
                     if (HexMap[label].moveCosts[unit.moveType] === -1) {
