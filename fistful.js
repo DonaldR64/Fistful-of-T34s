@@ -803,10 +803,53 @@ log("AI: " + this.antiInf)
             delete UnitArray[this.id]
         }
 
+        Distance = (unit2) => {
+            let hex1 = HexMap[this.hexLabel];
+            let hex2 = HexMap[unit2.hexLabel];
+            let distance = hex1.cube.distance(hex2.cube);
+            return distance;
+        }
 
+        SetOverwatch = (state) => {
+            let colour = (state === true) ? "#000000":"transparent";
+            this.token.set("aura1_color",colour);
+        }
 
+        CheckOverwatch = () => {
+            return (this.token.get("aura1_color") === "#000000") ? true:false;
+        }
 
+        CheckCohesion = () => {
+            return (this.token.get("aura2_color") === "#00ff00") ? true:false;
+        }
 
+        TestCohesion = () => {
+            //tests and sets - done during movement, beg. of turn
+            let cohesion = false;
+            let hqSymbol = SM[Nations[this.nation].hq];
+            if (this.special.toLowerCase().includes("recon") || this.token.get(hqSymbol)) {
+                cohesion = true;
+            } else {
+                let cohRange = (this.quality.includes("Fair")) ? 2:(this.quality.includes("Good")) ? 4:6;
+                let company = CompanyArray[this.companyID];
+                for (let i=0;i<company.tokenIDs.length;i++) {
+                    let unit2 = UnitArray[company.tokenIDs[i]];
+                    if (!unit2 || unit2.id === this.id) {continue};
+                    if (!unit2.token) {continue};
+                    let dist = this.Distance(unit2);
+                    if (dist <= cohRange) {
+                        cohesion = true;
+                        break;
+                    }
+                }
+            }
+            if (cohesion === true) {
+                this.token.set("aura2_color","#00ff00");
+            } else {
+                this.token.set("aura2_color","#ffff00");
+            }
+            return cohesion;
+        }
 
 
 
@@ -1465,9 +1508,16 @@ log(vertices)
         let currentPhase = phases[phases.indexOf(phase) + 1] || "Deployment";
 
 
-
         if (currentPhase === "Deployment") {
             RemoveDead();
+
+            if (activePlayer !== state.FFT.firstPlayer || turn === 0) {
+                turn += 1;
+                activePlayer = state.FFT.firstPlayer;
+            } else {
+                activePlayer = (state.FFT.firstPlayer === 0) ? 1:0;
+            }
+
             _.each(UnitArray,unit => {
                 if (turn === 0 && HexMap[unit.hexLabel].offboard === false) {
                     unit.token.set("tint_color","#000000");
@@ -1476,13 +1526,12 @@ log(vertices)
                 unit.token.set(SM.move,false);
                 unit.startRotation = unit.token.get("rotation");
                 unit.startHexLabel = unit.hexLabel;
+                if (unit.player === activePlayer) {
+                    unit.TestCohesion();
+                }
             })
-            if (activePlayer !== state.FFT.firstPlayer || turn === 0) {
-                turn += 1;
-                activePlayer = state.FFT.firstPlayer;
-            } else {
-                activePlayer = (state.FFT.firstPlayer === 0) ? 1:0;
-            }
+
+
         }
 
 
@@ -1506,8 +1555,8 @@ log(vertices)
                     unit.token.set(SM.suppressed,false);
                 }
                 //reset units on overwatch to green status
-                if (unit.player === activePlayer && unit.token.get("aura1_color") === "#ff00ff") {
-                    unit.token.set("aura1_color","#00ff00");
+                if (unit.player === activePlayer) {
+                    unit.SetOverwatch(false);
                 }
             })
             //check for available artillery
@@ -1529,29 +1578,22 @@ log(vertices)
         if (currentPhase === "Movement") {
             RemoveDead();
             _.each(UnitArray,unit => {
-                if (unit.token.get(SM.fired) === false && unit.token.get(SM.unavail) === false) {
-                    //if fired in art phase cant move
-                    unit.token.set("aura1_color","#00ff00");
-                }
                 unit.token.set(SM.green,false); //art QC checks
             })
         }
 
         if (currentPhase === "Close Combat") {
-            //check if any
-
-
+            outputCard.body.push("Active Player chooses order of combats");
+            RemoveMoveMarkers();
         }
 
 
 
         if (currentPhase === "Firing") {
+            ccFlag = false;
             RemoveMoveMarkers();
             _.each(UnitArray,unit => {
                 CheckSpotting(unit,"Movement");
-                if (unit.token.get("aura1_color") === "#000000") {
-                    unit.token.set("aura1_color","#00ff00");
-                }
             })
         }
 
@@ -1570,7 +1612,7 @@ log(vertices)
                 }
                 if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false && unit.player === activePlayer) {
                     //sets overwatch
-                    unit.token.set("aura1_color","#ff00ff");
+                    unit.SetOverwatch(true);
                 }
                 CheckSpotting(unit,"End")
             })
@@ -1632,36 +1674,9 @@ log(unit.moveType)
     const QualityCheck = (unit,reason = "Fire") => {
 log(unit.name)
         let passed = true;
-        let unitHex = HexMap[unit.hexLabel];
-        let company = CompanyArray[unit.companyID];
-        if (!company) {
-            sendChat("",unit.name + " - has no Company Info in data");
-            return false;
-        }
-        let cohesion = (unit.special.toLowerCase().includes("recon")) ? true:false;
-        let hqSymbol = SM[Nations[unit.nation].hq];
-        if (unit.token.get(hqSymbol) === true) {
-            cohesion = true;
-        }
+        let cohesion = unit.CheckCohesion();
         if (reason === "Movement") {cohesion = true}; //eg when breaking cover
 
-
-log("Cohesion: " + cohesion)
-        let cohRange = (unit.quality === "Fair") ? 2:(unit.quality === "Good") ? 4:6;
-log("Coh Range: " + cohRange)
-        if (cohesion === false) {
-            for (let i=0;i<formation.tokenIDs.length;i++) {
-                let unit2 = UnitArray[company.tokenIDs[i]];
-                if (!unit2 || unit2.id === unit.id) {continue};
-                if (!unit2.token) {continue};
-                let dist = unitHex.cube.distance(HexMap[unit2.hexLabel].cube);
-                if (dist <= cohRange) {
-log(unit2.name + " is in cohesion")
-                    cohesion = true;
-                    break;
-                }
-            }
-        }
         let qualityRoll = randomInteger(6);
         let target = unit.quality.replace(/[^\d]/g,"");
 
@@ -1746,7 +1761,6 @@ log(unit2.name + " is in cohesion")
                             unavail.push(tip + unit.name + " is Reloading and Unavailable");
                         }
                         unit.token.set(SM.unavail,true);
-                        unit.token.set("aura1_color","#000000");
                     }
                 }
             }
@@ -1854,7 +1868,7 @@ log(unit2.name + " is in cohesion")
                 }
                 targetArray.push(info);
             } else {
-                let d = HexMap[target.hexLabel].cube.distance(HexMap[unit.hexLabel].cube);
+                let d = target.Distance(unit);
                 if (d <= (radius +1)) {
                     //to capture those just outside hexes
                     let check = BlastCheck(target,unit,radius)
@@ -2030,7 +2044,7 @@ log(unit2.name + " is in cohesion")
         SetupCard(artillery.name,subtitle,spotter.nation);
         //check LOS and Range
         let losResult = LOS(spotter,target);
-        let distance = HexMap[artillery.hexLabel].cube.distance(HexMap[target.hexLabel].cube);
+        let distance = artillery.Distance(target);
         if (distance > artillery.artrange) {
             outputCard.body.push("Out of Range of Artillery Unit");
         } else if (losResult.los === false) {
@@ -2080,7 +2094,6 @@ log(unit2.name + " is in cohesion")
             delete UnitArray[target.id];
 
             artillery.token.set(SM.fired,true);
-            artillery.token.set("aura1_color","#000000");
             artillery.token.set("tint_color","transparent");
 
             let index = artUnits.map(e => e.id).indexOf(artilleryID);
@@ -2308,14 +2321,13 @@ log(unit)
 
         if (closeCombat === true && shooter.type === "Infantry" && target.armour === true) {
             //side armour bit, check for friendlies
-
-
-
+            if (Friendlies(target) === false) {
+                armour = target.armourSR;
+            }
         }
 
 
         let pen,ai,penTip,aiTip;
-        let wpnTip = "";
         let type = "Armour";
         if (target.armour === true) {
             if (shooter.pen === "NA") {
@@ -2394,7 +2406,7 @@ log(unit)
             toHit++;
             toHitTip += "<br>-1 Suppressed";
         }
-        if (shooter.token.get("aura1_color") === "#ff00ff") {
+        if (shooter.CheckOverwatch()) {
             toHit++;
             toHitTip += "<br>-1 Overwatch";
         }
@@ -2551,6 +2563,24 @@ log(unit)
 
     }
 
+    const Friendlies = (unit) => {
+        let result = false;
+        let keys = Object.keys(UnitArray);
+        for (let i=0;i<keys.length;i++) {
+            let unit2 = UnitArray[keys[i]];
+            if (unit2.id === unit.id || unit2.nation !== unit.nation) {continue}
+            let distance = unit.Distance(unit2);
+            if (distance === 1) {
+                result = true;
+                break;
+            }
+        }
+        return result;
+    }
+
+
+
+
     const CheckSpotting = (unit,phase) => {
 
         if (phase === "Movement" && unit.token.get("tint_color") === "transparent") {return};
@@ -2601,7 +2631,7 @@ log(unit.name + " " + unit.id + ": " + threshold + " is Threshold")
             if (!unit2) {log("No Unit2");continue};
 log(unit2.name + " looking")
             if (unit2.nation === unit.nation || unit2.nation === "Neutral") {continue};
-            let distance = HexMap[unit.hexLabel].cube.distance(HexMap[unit2.hexLabel].cube);
+            let distance = unit.Distance(unit2);
             let los = LOS(unit2,unit).los;
             if (los === false) {continue};
             let mod = 0;
@@ -2650,11 +2680,14 @@ log("Not Spotted")
                 tint_color: "transparent",
                 aura1_color: "transparent",
                 aura1_radius: 0,
+                aura2_color: "transparent",
+                aura2_radius: 0,
                 showplayers_bar1: false,
                 showplayers_bar2: false,
                 showplayers_bar3: false,
                 showname: true,
                 showplayers_aura1: true,
+                showplayers_aura2: true,
                 gmnotes: "",
                 statusmarkers: "",
                 tooltip: "",
@@ -2734,11 +2767,14 @@ log("Not Spotted")
             unit.token.set({
                 tint_color: "transparent",
                 tint_color: "transparent",
-                aura1_color: "#00ff00",
+                aura1_color: "transparent",
                 aura1_radius: 1,
+                aura2_color: "#00ff00",
+                aura2_radius: 5,
                 disableTokenMenu: true,
                 showname: true,
                 showplayers_aura1: true,
+                showplayers_aura2: true,
                 statusmarkers: "",
                 show_tooltip: true,
             })
@@ -2881,7 +2917,7 @@ log("Not Spotted")
         
         let shooterHex = HexMap[shooter.hexLabel];
         let targetHex = HexMap[target.hexLabel];
-        let distance = shooterHex.cube.distance(targetHex.cube);
+        let distance = shooter.Distance(target);
         
         //firing arc on weapon
         let angle = TargetAngle(shooter,target);
@@ -3010,10 +3046,8 @@ log(marker)
 //rotate the token based on start hex and end hex
                     let angle = Angle(HexMap[unit.startHexLabel].cube.angle(HexMap[label].cube));
                     tok.set("rotation",angle);
-
+                    unit.TestCohesion();
                 }
-
-
 
                 log(unit.name + ' is moving from ' + unit.hexLabel + ' to ' + label)
                 let index = HexMap[unit.hexLabel].tokenIDs.indexOf(unit.id);
@@ -3163,7 +3197,6 @@ log(explored)
                         SetupCard(unit.name,"Breaking Cover",unit.nation);
                         outputCard.body.push("The Unit " + qc.tip + " its QC and remains in cover and can move no further");
                         PrintCard();
-                        unit.token.set("aura1_color","#000000");
                         totalCost -= explored[i].cost;
                         final = i - 1; //prev hex
                         break;
