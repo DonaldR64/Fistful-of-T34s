@@ -673,16 +673,7 @@ const FFT = (() => {
             this.artrange = aa.artrange ? parseInt(aa.artrange):0;
 
 
-            //index 0 is ranged, index 1 is CC
-            let rof = aa.rof || 0;
-            if (rof.includes("/")) {
-                rof = rof.split("/");
-                rof = rof.map((e) => parseInt(e));
-            } else {
-                rof = parseInt(rof);
-                rof = [rof,rof];
-            }
-            this.rof = rof;
+            this.rof = aa.rof || 0;
 
             if (aa.range) {
                 this.range = aa.range.split("/")
@@ -2367,15 +2358,26 @@ log(unit)
         }
 
 
-        let ROF;
-        if (losResult.distance > 1) {
-            ROF = shooter.rof[0];
-        } else {
-            ROF = shooter.rof[1];
-        }
+        let ROF = DeepCopy(shooter.rof);
 
+        let flag = false;
+        if (ROF.includes("(")) {
+            ROF = ROF.replace("(","");
+            ROF = ROF.replace(")","");
+            if (shooter.token.get(SM.move)) {
+                flag = true;
+            }
+        }
+        ROF = ROF.split("/");
+        if (closeCombat === true && ROF.length > 1) {
+            ROF = ROF[1];
+        } else {
+            ROF = ROF[0];
+        }
+        ROF = parseInt(ROF);
+        if (flag === true) {ROF--};
         if (ROF === 0) {
-            errorMsg.push("Target has no ROF for this range");
+            errorMsg.push("Target has no ROF due to movement");
         }
 
 
