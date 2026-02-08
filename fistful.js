@@ -2964,6 +2964,11 @@ log(marker)
 log("Start: " + startHex.label)
 log("End: " + endHex.label)
         let move = unit.movement;
+        if (unit.token.get(SM.suppressed)) {
+            move = Math.max(0,move - 2);
+        }
+        
+
 log("Move: " + move)
         let distance = startHex.cube.distance(endHex.cube);
 log("Distance: " + distance)
