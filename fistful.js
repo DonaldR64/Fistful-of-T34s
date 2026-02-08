@@ -660,8 +660,9 @@ const FFT = (() => {
             this.movement = parseInt(aa.movement);
             this.moveType = aa.movetype.toLowerCase();
             this.quality = aa.quality;
-            this.armourF = parseInt(aa.armourF) || "NA"; 
-            this.armourSR = parseInt(aa.armourSR) || "NA"; 
+            this.armourF = (aa.armourF = "-") ? "NA":parseInt(aa.armourF);
+            this.armourSR = (aa.armourSR = "-") ? "NA":parseInt(aa.armourSR);
+            this.armour = (this.armourF !== "NA" || this.armourSR !== "NA") ? true:false;
 
             this.artFlag = aa.artflag === "On" ? true:false;
             this.avail = (aa.avail) ? (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+","")):"NA";
@@ -713,21 +714,17 @@ log("Original AI: " + ai)
             }
             this.antiInf = ai;
             
-            //index 0 is pen, index 1 is at what range
+            //index 0 is pen, index 1 is true if only at CC
             let pen = aa.pen;
             if (pen === "-" || pen === "NA" || !pen) {
-                ai = "NA"
+                pen = "NA";
             } else {
-                if (pen.includes("(")) {
-                    //format 4(1") for pen of 4 at 1" or similar
+                if (pen.includes("C")) {
                     pen = pen.split("(");
-                    if (pen[1].includes("C")) {
-                        pen[1] = 1;
-                    }
-                    pen = [parseInt(pen[0]), parseInt(pen[1].replace(/\D/g, ''))];
+                    pen = parseInt(pen[0].replace(/\D/g, ''));
+                    pen = [pen,true];
                 } else {    
-                    //eg pen is 7, and effective to max range, although modified in direct fire based on range band
-                    pen = [parseInt(pen),this.range[2]];
+                    pen = [parseInt(pen),false];
                 }
             }
             this.pen = pen;
@@ -2296,18 +2293,29 @@ log(unit)
             errorMsg.push("[#ff0000]Unit is unable to Fire[/#]");
         }
 
+        let closeCombat = (los.distance === 1) ? true:false;
+
         let targetFacing = losResult.targetFacing;
 
         let armour = (targetFacing === "Front") ? target.armourF:target.armourSR;
+
+        if (closeCombat === true && shooter.type === "Infantry" && target.armour === true) {
+            //side armour bit, check for friendlies
+
+
+
+        }
+
+
         let pen,ai,penTip,aiTip;
         let wpnTip = "";
         let type = "Armour";
-        if (armour !== "NA") {
+        if (target.armour === true) {
             if (shooter.pen === "NA") {
                 errorMsg.push("No Anti-Tank Weapons");
             } else {
-                if (losResult.distance > shooter.pen[1]) {
-                    errorMsg.push("No AT Weapons with Range");
+                if (shooter.pen[1] === true && closeCombat === false) {
+                    errorMsg.push("Only AT in Close Combat");
                 } else {
                     pen = shooter.pen[0];
                     penTip = "Base Pen: " + pen;
