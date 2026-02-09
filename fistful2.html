@@ -136,8 +136,10 @@
             <div class="attrinfo">
                 <h3>Type</h3>
                 <h3>Movement</h3>
+                <h3>Move Costs</h3>
                 <h3 style="color: darkred;"><span name="attr_movetype"></span></h3>
                 <h3 style="color: darkred;"><span name="attr_movement"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_movecosts"></span></h3>
             </div>
           </section>
 
@@ -215,14 +217,31 @@
     });
 
     on("sheet:opened", function() {
-        getAttrs(["artflag","weapon1flag","weapon2flag","rof","quality"], function(values) {
+        getAttrs(["artflag","weapon1flag","weapon2flag","movetype"], function(values) {
             let art = values.artflag || "Off";
             let wpn1 = values.weapon1flag || "On";
             let wpn2 = values.weapon2flag || "Off";
+            let move = values.movetype;
+            let movecosts;
+            if (move === "Leg") {
+                movecosts = "All: 1";
+            }
+            if (move === "Towed" || move === "Aircraft") {
+                movecosts = "N/A";
+            }
+            if (move === "Wheeled") {
+                movecosts = "Open: 1, Road: 1/4, Woods/Town: 2";
+            }
+            if (move === "Tracked" || move === "Halftrack") {
+                movecosts = "Open: 1, Road: 1/2, Woods/Town: 2";
+            }
+
+
             setAttrs({
                 sheetTab: "display",
                 artflag: art,
                 weapon1flag: wpn,
+                movecosts: movecosts,
             });
         });
     });
