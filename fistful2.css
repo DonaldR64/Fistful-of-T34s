@@ -46,7 +46,7 @@ main {
   grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
   grid-template-areas:"common common common common"
                       "common common common common"
-                      "attr   attr   attr   attr3"
+                      "attr   attr   attr3  attr3"
                       "attr2  attr2  attr2  attr2"
                       "attr2  attr2  attr2  attr2";
 }
