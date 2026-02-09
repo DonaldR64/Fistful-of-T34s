@@ -136,8 +136,8 @@ const FFT = (() => {
 
 
     const SM = {
-        suppA: "status_yellow",
-        suppB: "status_orange",
+        suppA: "status_pink",
+        suppB: "status_yellow",
         qc: "status_red",
         fired: "status_Shell::5553215",
         move: "status_Advantage-or-Up::2006462",
@@ -679,7 +679,8 @@ const FFT = (() => {
             this.player = (this.nation === "Neutral") ? 2:(state.FFT.nations[0] === this.nation)? 0:1;
             this.type = aa.type;
             this.movement = parseInt(aa.movement);
-            this.moveType = aa.movetype.toLowerCase();
+            
+            this.moveType = aa.movetype ? aa.movetype.toLowerCase(): "NA";
             this.armourF = (aa.armourF = "-") ? "NA":parseInt(aa.armourF);
             this.armourSR = (aa.armourSR = "-") ? "NA":parseInt(aa.armourSR);
             this.armour = (this.armourF !== "NA" || this.armourSR !== "NA") ? true:false;
@@ -839,6 +840,7 @@ log("AI: " + this.antiInf)
         }
 
         TestCohesion = () => {
+            if (this.name.includes("Target")) {return}
             //tests and sets - done during movement, beg. of turn
             let cohesion = false;
             let hqSymbol = SM[Nations[this.nation].hq];
@@ -865,6 +867,18 @@ log("AI: " + this.antiInf)
             }
             return cohesion;
         }
+
+        CheckSuppression = () => {
+            if (this.token.get(SM.suppA) || this.token.get(SM.suppB)) {
+                return true;
+            } else {return false};
+        }
+
+        Suppress = (type,flag) => {
+            let marker = (type === "A") ? SM.suppA:SM.suppB;
+            this.token.set(marker,flag);
+        }
+
 
 
 
@@ -1571,7 +1585,7 @@ log(vertices)
                 unit.token.set(SM[marker],false);
             })
             if (unit.player !== activePlayer) {
-                unit.token.set(SM.suppA,false);
+                unit.Suppress("A",false);
             }
             if (unit.player === activePlayer) {
                 unit.SetOverwatch(false);
@@ -1610,7 +1624,7 @@ log(vertices)
 
         outputCard.body.push("[hr]");
         outputCard.body.push("[U]Phases[/u]");
-        let phases = ["Command","Artillery","Movement","Close Combat","Direct Fire","End"];
+        let phases = ["Reinforcements","Artillery","Movement","Close Combat","Direct Fire","End"];
         _.each(phases,phase => {
             outputCard.body.push(phase);
         })
@@ -1714,7 +1728,7 @@ log(unit.name)
                         target--;
                         tipmods += "<br>On Board Artillery +1";
                     }
-                    if (unit.token.get(SM.suppressed) === true) {
+                    if (unit.CheckSuppression() === true) {
                         target++
                         tipmods += "<br>Suppressed -1";
                     }            
@@ -1993,7 +2007,7 @@ log(unit.name)
         toFront(newToken);
 
         let target = new Unit(newToken.get("id"));
-
+log(target)
 
 
     }
@@ -2114,7 +2128,7 @@ log(hex)
             let bonus = 0, bonusText = "";
             if (artEffect === "+1") {
                 bonus = 1;
-                bonusText = artEffect;
+                bonusText = artEffect + " vs. All";
             } else if (artEffect === "+1 vs. Armour" && ArmourTypes.includes(unit.type)) {
                 bonus = 1;
                 bonusText = artEffect;
@@ -2146,17 +2160,17 @@ log(result)
                     if (hex.coverArea === true || ArmourTypes.includes(unit.type)) {
                         if (unit.artQC === false) {
                             unit.artQC = true;
-                            unit.token.set(SM.suppressed,true);
+                            unit.Suppress("A",true);
                             let qc = QualityCheck(unit);
                             let noun = (qc.pass === true) ? "Suppressed":"Routs";
                             outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
                         } else {
-                            unit.token.set(SM.suppressed,true);
+                            unit.Suppress("A",true);
                             outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
                         }         
                     } else {
                         outputCard.body.push(unit.name + ' is ' + tip + ' and Destroyed');
-//destroy unit
+                        unit.Destroyed();
                     }
                 } else {
                     if (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.artQC === false) {
@@ -2164,9 +2178,12 @@ log(result)
                         let qc = QualityCheck(unit);
                         let noun = (qc.pass === true) ? "Suppressed":"Routed";
                         outputCard.body.push(unit.name + ' is ' + tip + ', ' + qc.tip + ' its QC and is ' + noun);
+                        if (noun === "Suppressed") {
+                            unit.Suppress("A",true);
+                        }
                     } else {
                         outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
-                        unit.token.set(SM.suppressed,true);
+                        unit.Suppress("A",true);
                     }
                 }
             } else {
@@ -2394,7 +2411,7 @@ log(unit)
             toHit++;
             toHitTip += "<br>-1 Long Range";
         }
-        if (shooter.token.get(SM.suppressed)) {
+        if (shooter.CheckSuppression() === true) {
             toHit++;
             toHitTip += "<br>-1 Suppressed";
         }
@@ -2555,7 +2572,7 @@ log(qc)
             let noun = (qc.pass === true) ? "is Suppressed":"Surrenders or Routs";
             outputCard.body.push(target.name + " " + qc.tip + ' its QC and ' + noun);
             if (qc.pass === true) {
-                target.token.set(SM.suppressed,true);
+                target.Suppress("B",true);
             }
         }
         shooter.token.set("tint_color","transparent");
@@ -3022,8 +3039,8 @@ log("Not Spotted")
             if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
                 RemoveMoveMarkers();   
                 
-                if (state.FFT.turn > 0) {
-                    if (tok.get("name").includes("Target") === false && HexMap[label].moveCosts[unit.moveType] === -1) {
+                if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
+                    if (HexMap[label].moveCosts[unit.moveType] === -1) {
                         tok.set("left",prev.left);
                         tok.set("top",prev.top);
                         tok.set("rotation",prev.rotation);
@@ -3098,7 +3115,7 @@ log("Not Spotted")
 log("Start: " + startHex.label)
 log("End: " + endHex.label)
         let move = unit.movement;
-        if (unit.token.get(SM.suppressed)) {
+        if (unit.CheckSuppression() === true) {
             move = Math.max(0,move - 2);
         }
 
