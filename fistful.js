@@ -742,9 +742,14 @@ log("Original AI: " + ai)
         
             this.special = aa.special || " ";
 
+            this.spotter = false;
+            this.artQC = false;
 
             this.formationID = "";
             this.companyID = "";
+
+
+
 
 
 log("Pen: " + this.pen)
@@ -1574,10 +1579,18 @@ log(vertices)
 
             unit.startRotation = unit.token.get("rotation");
             unit.startHexLabel = unit.hexLabel;
+            unit.spotter = false;
+            unit.artQC = false;
+
+
             unit.token.set("bar1_value",unit.movement);
             if (unit.player === activePlayer) {
                 unit.TestCohesion();
             }
+
+
+
+
 
         })
 
@@ -1755,8 +1768,8 @@ log(unit.name)
         let spotterID = msg.selected[0]._id;
         let spotter = UnitArray[spotterID];
         SetupCard(spotter.name,"Call Artillery",spotter.nation);
-        if (state.FFT.phase !== "Artillery") {
-            outputCard.body.push("Not the Artillery Phase");
+        if (spotter.spotter === true) {
+            outputCard.body.push("Unit has already Spotted this Turn");
         } else if (artUnits.length === 0) {
             outputCard.body.push("There is no Available Artillery or Airstrikes");
         } else {
@@ -2060,6 +2073,7 @@ log(unit.name)
             target.token.remove();
             delete UnitArray[target.id];
 
+            spotter.spotter = true;
             artillery.token.set(SM.fired,true);
             artillery.token.set("tint_color","transparent");
 
@@ -2130,8 +2144,8 @@ log(result)
                 
                 if (result >= 6) {
                     if (hex.coverArea === true || ArmourTypes.includes(unit.type)) {
-                        if (unit.token.get(SM.green) === false) {
-                            unit.token.set(SM.green, true);
+                        if (unit.artQC === false) {
+                            unit.artQC = true;
                             unit.token.set(SM.suppressed,true);
                             let qc = QualityCheck(unit);
                             let noun = (qc.pass === true) ? "Suppressed":"Routs";
@@ -2145,8 +2159,8 @@ log(result)
 //destroy unit
                     }
                 } else {
-                    if (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.token.get(SM.green) === false) {
-                        unit.token.set(SM.green,true);
+                    if (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.artQC === false) {
+                        unit.artQC = true;
                         let qc = QualityCheck(unit);
                         let noun = (qc.pass === true) ? "Suppressed":"Routed";
                         outputCard.body.push(unit.name + ' is ' + tip + ', ' + qc.tip + ' its QC and is ' + noun);
@@ -3006,40 +3020,38 @@ log("Not Spotted")
             let label = (new Point(tok.get("left"),tok.get("top"))).label();
             let prevLabel = (new Point(prev.left,prev.top)).label();
             if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
-                if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
-                    let bounceBack = false
-                    if (HexMap[label].moveCosts[unit.moveType] === -1) {
-                        bounceBack = true;
-                    }
-                    if (bounceBack === true) {
+                RemoveMoveMarkers();   
+                
+                if (state.FFT.turn > 0) {
+                    if (tok.get("name").includes("Target") === false && HexMap[label].moveCosts[unit.moveType] === -1) {
                         tok.set("left",prev.left);
                         tok.set("top",prev.top);
                         tok.set("rotation",prev.rotation);
                         sendChat("","Not Able to Move to that Hex");
                         return;
                     }
-                }
+                    if (prevLabel !== label && HexMap[unit.startHexLabel].offboard === false) {
+                        let results = aStar(unit,label);
+                        label = results.finalHexLabel;
+                        let cost = results.cost;
+                        let marker = (cost <= unit.movement/2) ? SM["move"]:SM["double"];
+    log(cost)
+    log(unit.movement)
+    log(marker)
+                        tok.set({
+                            left: HexMap[label].centre.x,
+                            top: HexMap[label].centre.y,
+                        });
+                        tok.set(SM.move,false);
+                        tok.set(SM.double,false);
+                        tok.set(marker,true);
 
-                if (state.FFT.phase === "Movement" && prevLabel !== label) {
-                    RemoveMoveMarkers();
-                    let results = aStar(unit,label);
-                    label = results.finalHexLabel;
-                    let cost = results.cost;
-                    let marker = (cost <= unit.movement/2) ? SM["move"]:SM["double"];
-log(cost)
-log(unit.movement)
-log(marker)
-                    tok.set({
-                        left: HexMap[label].centre.x,
-                        top: HexMap[label].centre.y,
-                    });
-                    tok.set(SM.move,false);
-                    tok.set(SM.double,false);
-                    tok.set(marker,true);
-
-//rotate the token based on start hex and end hex
-                    let angle = Angle(HexMap[unit.startHexLabel].cube.angle(HexMap[label].cube));
-                    tok.set("rotation",angle);
+                        let angle = Angle(HexMap[unit.startHexLabel].cube.angle(HexMap[label].cube));
+                        tok.set("rotation",angle);
+                    } else if (prevLabel === label && tok.get("rotation") === unit.startRotation) {
+                        tok.set(SM.move,false);
+                        tok.set(SM.double,false);
+                    }
                 }
 
                 log(unit.name + ' is moving from ' + unit.hexLabel + ' to ' + label)
@@ -3054,12 +3066,8 @@ log(marker)
                     top: HexMap[label].centre.y,
                 })
                 unit.TestCohesion();
-
             }
         }
-
-
-
     }
 
     const ResetMove = (msg) => {
@@ -3077,8 +3085,9 @@ log(marker)
                 top: hex.centre.y,
                 rotation: unit.startRotation,
             })
+            unit.token.set(SM.move,false);
+            unit.token.set(SM.double,false);
         }
-
     }
 
 
