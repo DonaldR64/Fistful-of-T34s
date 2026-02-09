@@ -2359,7 +2359,7 @@ log(unit)
 
 
         let ROF = DeepCopy(shooter.rof);
-
+        let rofTip = "";
         let flag = false;
         if (ROF.includes("(")) {
             ROF = ROF.replace("(","");
