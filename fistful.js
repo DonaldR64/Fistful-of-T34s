@@ -1,5 +1,5 @@
 const FFT = (() => {
-    const version = '2026.1.31';
+    const version = '2026.2.9';
     if (!state.FFT) {state.FFT = {}};
 
     const pageInfo = {};
