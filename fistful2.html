@@ -217,10 +217,8 @@
     });
 
     on("sheet:opened", function() {
-        getAttrs(["artflag","weapon1flag","weapon2flag","movetype"], function(values) {
+        getAttrs(["artflag","movetype"], function(values) {
             let art = values.artflag || "Off";
-            let wpn1 = values.weapon1flag || "On";
-            let wpn2 = values.weapon2flag || "Off";
             let move = values.movetype;
             let movecosts;
             if (move === "Leg") {
@@ -240,7 +238,6 @@
             setAttrs({
                 sheetTab: "display",
                 artflag: art,
-                weapon1flag: wpn,
                 movecosts: movecosts,
             });
         });
