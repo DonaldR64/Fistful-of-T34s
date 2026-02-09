@@ -85,6 +85,9 @@ const FFT = (() => {
     let qcUnits = [];
     let qcFormations = [];
     let artUnits = [];
+    let activePlayer = state.FFT.activePlayer || 0;
+    let currentPhase = "Start";
+
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
 
@@ -133,17 +136,16 @@ const FFT = (() => {
 
 
     const SM = {
-        suppressed: "status_yellow",
+        suppA: "status_yellow",
+        suppB: "status_orange",
         qc: "status_red",
         fired: "status_Shell::5553215",
         move: "status_Advantage-or-Up::2006462",
         double: "status_Fast::5868456",
-        green: "status_green", //to note has taken an art QC already
         unavail: "status_oneshot::5503748",
         soviet: "status_Soviet::6433738",
         german: "status_Iron-Cross::7650254",
-        brave: "status_blue", //used to make note of fair troops breaking cover
-        ccmove: "status_stopwatch", //track movement for cc units,
+
 
 
 
@@ -1509,114 +1511,10 @@ log(vertices)
     }
 
 
-    const AdvancePhase = () => {
+    const EndTurn = () => {
         let turn = state.FFT.turn;
-        let activePlayer = state.FFT.activePlayer;
-        let phase = state.FFT.phase;
-
-        let phases = ["Deployment","Artillery","Movement","Close Combat","Firing","End"];
-        
-        let currentPhase = phases[phases.indexOf(phase) + 1] || "Deployment";
-
-
-        if (currentPhase === "Deployment") {
-            RemoveDead();
-
-            if (activePlayer !== state.FFT.firstPlayer || turn === 0) {
-                turn += 1;
-                activePlayer = state.FFT.firstPlayer;
-            } else {
-                activePlayer = (state.FFT.firstPlayer === 0) ? 1:0;
-            }
-
-            _.each(UnitArray,unit => {
-                if (turn === 0 && HexMap[unit.hexLabel].offboard === false) {
-                    unit.token.set("tint_color","#000000");
-                }
-                unit.token.set(SM.double,false);
-                unit.token.set(SM.move,false);
-                unit.startRotation = unit.token.get("rotation");
-                unit.startHexLabel = unit.hexLabel;
-                if (unit.player === activePlayer) {
-                    unit.TestCohesion();
-                }
-            })
-
-
-        }
-
-
-
-
-        state.FFT.turn = turn;
-        state.FFT.phase = currentPhase;
-        state.FFT.activePlayer = activePlayer;
-
-        SetupCard(state.FFT.nations[activePlayer] + " " + currentPhase + " Phase","Turn " + turn,state.FFT.nations[activePlayer]);
-
-        if (currentPhase === "Artillery") {
-            //remove green markers for artillery QCs
-            //remove yellow suppression markers if appropr turn
-            _.each(UnitArray,unit => {
-                unit.token.set(SM.green,false); //marker for artillery QCs
-                unit.token.set(SM.unavail,false); //marker for avail 
-                unit.token.set(SM.fired,false);                
-                //artillery
-                if (unit.player !== activePlayer) {
-                    unit.token.set(SM.suppressed,false);
-                }
-                //reset units on overwatch to green status
-                if (unit.player === activePlayer) {
-                    unit.SetOverwatch(false);
-                }
-            })
-            //check for available artillery
-            ArtilleryAvailability(activePlayer);
-            //remove smoke
-            _.each(HexMap,hex => {
-                if (hex.smokePlayer === activePlayer) {
-                    let smokeID = hex.smoke;
-                    let smoke = findObjs({_type:"graphic", id: smokeID})[0];
-                    smoke.remove();
-                    hex.smoke = "";
-                    hex.smokePlayer = "";
-                }
-            })
-
-
-        }
-
-        if (currentPhase === "Movement") {
-            RemoveDead();
-            _.each(UnitArray,unit => {
-                unit.token.set(SM.green,false); //art QC checks
-            })
-        }
-
-        if (currentPhase === "Close Combat") {
-            outputCard.body.push("Active Player chooses order of combats");
-            outputCard.body.push("")
-            RemoveMoveMarkers();
-        }
-
-
-
-        if (currentPhase === "Firing") {
-            ccFlag = false;
-            RemoveMoveMarkers();
-            _.each(UnitArray,unit => {
-                CheckSpotting(unit,"Movement");
-            })
-        }
-
-
-
-
-
-        if (currentPhase === "End") {
-
-            //qchecks
-            //allowing players to do it
+        if (turn > 0) {
+            //qchecks, spotting, overwatch
             qcUnits = [];
             _.each(UnitArray,unit => {
                 if (unit.token.get(SM.qc)) {
@@ -1629,24 +1527,82 @@ log(vertices)
                 CheckSpotting(unit,"End")
             })
             if (qcUnits.length > 0) {
+                SetupCard("End Turn","Quality Checks",state.FFT.nations[activePlayer]);
                 ButtonInfo("Start Quality Checks","!RunQC");
+                PrintCard();
             } else {
-                outputCard.body.push("No Quality Checks, can Advance to next Player");
+                NextPlayersTurn();
             }
+        } else {
+            NextPlayersTurn();
         }
+    }
+ 
+
+
+
+    const NextPlayersTurn = () => {
+        let turn = state.FFT.turn;
+        activePlayer = state.FFT.activePlayer;
+        RemoveDead();
+        if (activePlayer !== state.FFT.firstPlayer || turn === 0) {
+            turn += 1;
+            activePlayer = state.FFT.firstPlayer;
+        } else {
+            activePlayer = (state.FFT.firstPlayer === 0) ? 1:0;
+        }
+        
+        state.FFT.turn = turn;
+        state.FFT.activePlayer = activePlayer;
+
+        SetupCard(state.FFT.nations[activePlayer] + " Turn","Turn " + turn,state.FFT.nations[activePlayer]);
+
+        _.each(UnitArray,unit => {
+            if (turn === 0 && HexMap[unit.hexLabel].offboard === false) {
+                unit.token.set("tint_color","#000000");
+            }
+            let markers = ("double","move","fire","unavail");
+            _.each(markers,marker => {
+                unit.token.set(SM[marker],false);
+            })
+            if (unit.player !== activePlayer) {
+                unit.token.set(SM.suppA,false);
+            }
+            if (unit.player === activePlayer) {
+                unit.SetOverwatch(false);
+            }
+
+            unit.startRotation = unit.token.get("rotation");
+            unit.startHexLabel = unit.hexLabel;
+            unit.token.set("bar1_value",unit.movement);
+            if (unit.player === activePlayer) {
+                unit.TestCohesion();
+            }
+
+        })
+
+        //remove smoke
+        _.each(HexMap,hex => {
+            if (hex.smokePlayer === activePlayer) {
+                let smokeID = hex.smoke;
+                let smoke = findObjs({_type:"graphic", id: smokeID})[0];
+                smoke.remove();
+                hex.smoke = "";
+                hex.smokePlayer = "";
+            }
+        })
+
+        outputCard.body.push("[U]Available Artillery[/u]");
+        ArtilleryAvailability(activePlayer);
+
+        outputCard.body.push("[hr]");
+        outputCard.body.push("[U]Phases[/u]");
+        let phases = ["Command","Artillery","Movement","Close Combat","Direct Fire","End"];
+        _.each(phases,phase => {
+            outputCard.body.push(phase);
+        })
 
         PrintCard();
-
-
-
-
-
-
-
-
-
-
-
     }
 
     const TokenInfo = (msg) => {
@@ -1778,7 +1734,6 @@ log(unit.name)
             }
         })
         if (avail.length > 0) {
-            outputCard.body.push("Available Artillery");
             for (let i=0;i<avail.length;i++) {
                 outputCard.body.push(avail[i]);
             }
@@ -1787,7 +1742,7 @@ log(unit.name)
             }
         }
         if (avail.length === 0) {
-            outputCard.body.push("There is no Available Artillery");
+            outputCard.body.push("No Artillery or Air Support");
         }
         if (unavail.length > 0) {
             for (let i=0;i<unavail.length;i++) {
@@ -2717,7 +2672,8 @@ log("Not Spotted")
                 aura1_radius: 0,
                 aura2_color: "transparent",
                 aura2_radius: 0,
-                showplayers_bar1: false,
+                bar1_value: 0,
+                showplayers_bar1: true,
                 showplayers_bar2: false,
                 showplayers_bar3: false,
                 showname: true,
@@ -2809,6 +2765,10 @@ log("Not Spotted")
                 aura2_color: "transparent",
                 aura2_radius: 5,
                 disableTokenMenu: true,
+                bar1_value: unit.movement,
+                showplayers_bar1: true,
+                showplayers_bar2: false,
+                showplayers_bar3: false,
                 showname: true,
                 showplayers_aura1: true,
                 showplayers_aura2: true,
@@ -3339,8 +3299,8 @@ log("Final Hex Label: " + finalHexLabel)
             case '!AddAbilities':
                 AddAbilities(msg);
                 break;
-            case '!AdvancePhase':
-                AdvancePhase();
+            case '!EndTurn':
+                EndTurn();
                 break;
             case '!SetupGame':
                 SetupGame(msg);
