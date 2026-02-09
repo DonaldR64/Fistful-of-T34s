@@ -1580,10 +1580,11 @@ log(vertices)
             if (turn === 0 && HexMap[unit.hexLabel].offboard === false) {
                 unit.token.set("tint_color","#000000");
             }
-            let markers = ("double","move","fire","unavail");
-            _.each(markers,marker => {
-                unit.token.set(SM[marker],false);
-            })
+            unit.token.set(SM.fired,false);
+            unit.token.set(SM.unavail,false);
+            unit.token.set(SM.move,false);
+            unit.token.set(SM.double,false);
+
             if (unit.player !== activePlayer) {
                 unit.Suppress("A",false);
             }
@@ -2127,17 +2128,17 @@ log(hex)
             let artEffect = artillery.arteffect;
             let bonus = 0, bonusText = "";
             if (artEffect === "+1") {
-                bonus = 1;
-                bonusText = artEffect + " vs. All";
+                bonus ++;
+                bonusText = artEffect + " to Hit";
             } else if (artEffect === "+1 vs. Armour" && ArmourTypes.includes(unit.type)) {
-                bonus = 1;
+                bonus ++;
                 bonusText = artEffect;
             } else if (artEffect === "-1 vs. Armour" && ArmourTypes.includes(unit.type)) {
-                bonus = -1;
+                bonus--;
                 bonusText = artEffect;
             } 
             if (info.coverage === "Partial") {
-                bonus = -1;
+                bonus--;
             }
 
 
