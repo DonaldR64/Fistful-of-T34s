@@ -98,6 +98,12 @@ const FFT = (() => {
             "borderColour": "#ff0000",
             "borderStyle": "5px groove",
             "hq": "soviet",
+            "excellent": "status_letters_and_numbers0005::5982122",
+            "fair": "status_letters_and_numbers0006::5982123",
+            "good": "status_letters_and_numbers0007::5982124",
+
+
+
         },
         "Wermacht": {
             "image": "",
@@ -107,6 +113,11 @@ const FFT = (() => {
             "borderColour": "#000000",
             "borderStyle": "5px double",
             "hq": "german",
+            "excellent": "status_letters_and_numbers0205::5982324",
+            "fair": "status_letters_and_numbers0206::5982325",
+            "good": "status_letters_and_numbers0207::5982326",
+
+
         },
 
         "Neutral": {
@@ -132,7 +143,14 @@ const FFT = (() => {
         soviet: "status_Soviet::6433738",
         german: "status_Iron-Cross::7650254",
         brave: "status_blue", //used to make note of fair troops breaking cover
-        ccmove: "status_stopwatch", //track movement for cc units
+        ccmove: "status_stopwatch", //track movement for cc units,
+
+
+
+
+
+
+
     }
 
 
