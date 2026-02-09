@@ -1,0 +1,235 @@
+<input type="hidden" class="sheet-tabstoggle" name="attr_sheetTab"  value="display"  />
+<div>
+    <button type="action" name="act_input" >Input</button>
+    <button type="action" name="act_display" >Display</button>
+</div>
+
+<div class="sheet-input">
+    <div class="2colrow">
+        <div class="col">
+            <h3>Unit Information</h3>
+            <label>Name:</label><input type="text" name="attr_character_name">
+            <br>
+            <label for="attr_type">Type:</label>
+            <select name="attr_type">
+                <option value="" selected disabled hidden>Choose here</option>
+                <option value="Infantry">Infantry</option>
+                <option value="Mortar">Mortar</option>
+                <option value="Artillery">Artillery</option>
+                <option value="AT Gun">AT Gun</option>
+                <option value="Truck">Truck</option>
+                <option value="Car">Car</option>
+                <option value="Halftrack">Halftrack</option>
+                <option value="Tank Destroyer">Tank Destroyer</option>
+                <option value="Tank">Tank</option>
+                <option value="Aircraft">Aircraft</option>
+            </select>
+            <label for="attr_nation">Nation:</label>
+            <select name="attr_nation">
+                <option value="" selected disabled hidden>Choose here</option>
+                <option value="Wermacht">Wermacht</option>
+                <option value="Red Army">Red Army</option>
+               
+            </select>
+            <label>Special Info:</label><input type="text" name="attr_special">
+            <br>
+
+        </div>
+        <div class="col">
+            <h3>Attributes</h3>
+            <label>Movement:</label><input type="number" name="attr_movement">
+            <br>
+            <label for="attr_movetype">Movement Type:</label>
+            <select name="attr_movetype">
+                <option value="" selected disabled hidden>Choose here</option>
+                <option value="Leg">Leg</option>
+                <option value="Towed">Towed</option>
+                <option value="Wheeled">Wheeled</option>
+                <option value="Halftrack">Halftrack</option>
+                <option value="Tracked">Tracked</option>
+                <option value="Aircraft">Aircraft</option>
+            </select>
+
+            <label>Front Armour:</label><input type="text" name="attr_armourF">
+            <br>
+            <label>Side/Rear Armour:</label><input type="text" name="attr_armourSR">
+            <br>
+        </div>
+        <div class="col">
+            <h3>Weapons</h3>
+            <label for="attr_weapon1flag">Weapon 1</label>
+            <select name="attr_weapon1flag">
+                <option selected="selected" value = "On">On</option>
+                <option value = "Off">Off</option>
+            </select>
+            <h3>Weapon 1</h3>
+            label>Name:</label><input type="text" name="attr_wpn1name">
+            <br>
+            <label>ROF:</label><input type="text" name="attr_wpn1rof">
+            <br>
+            <label>Range:</label><input type="text" name="attr_wpn1range">
+            <br>
+            <label>AI:</label><input type="text" name="attr_wpn1ai">
+            <br>
+            <label>Pen:</label><input type="text" name="attr_wpn1pen">
+            <br>
+            <label for="attr_weapon2flag">Weapon 2</label>
+            <select name="attr_weapon2flag">
+                <option selected="selected" value = "On">On</option>
+                <option value = "Off">Off</option>
+            </select>
+            <h3>Weapon 2</h3>
+            label>Name:</label><input type="text" name="attr_wpn1name">
+            <br>
+            <label>ROF:</label><input type="text" name="attr_wpn1rof">
+            <br>
+            <label>Range:</label><input type="text" name="attr_wpn1range">
+            <br>
+            <label>AI:</label><input type="text" name="attr_wpn1ai">
+            <br>
+            <label>Pen:</label><input type="text" name="attr_wpn1pen">
+            <br>
+        </div>
+
+        <div class="col">
+            <h3>Artillery</h3>
+            <label for="attr_artflag">Artillery Info:</label>
+            <select name="attr_artflag">
+                <option selected="selected" value = "Off">Off</option>
+                <option value = "On">On</option>
+            </select>
+            <br>
+            <label>Range</label><input type="text" name="attr_artrange">
+            <br>
+            <label>Availability</label><input type="text" name="attr_avail">
+            <br>
+            <label>Size</label><input type="text" name="attr_artsize">
+            <br>
+            <label>Effectiveness</label><input type="text" name="attr_arteffect">
+        </div>
+
+
+
+    </div>    
+
+
+</div>
+
+
+
+<div class="sheet-display">
+    <input type="hidden" name="attr_nation"/>
+    <div class="mysheet">
+      <div class="bits">
+        <main>
+          <section class="common">
+                <div class="top-right">
+                    <h1><span name="attr_character_name"></span></h1>   
+                    <h3><span name="attr_nation"></span> <span name="attr_type"></span></h3>
+                    <h4><span name="attr_special"></span></h4>
+                </div>
+              <img alt="Character Avatar" name="attr_character_avatar" style="width:600px;height:auto; bottom: 0;"/>
+          </section>
+
+          <section class="attr">
+            <h2>Movement</h2>
+            <div class="attrinfo">
+                <h3>Type</h3>
+                <h3>Movement</h3>
+                <h3 style="color: darkred;"><span name="attr_movetype"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_movement"></span></h3>
+            </div>
+          </section>
+
+          <section class="attr3">
+            <h2>Armour</h2>
+            <div class="attr3info">
+                <h3>Front</h3>
+                <h3>Side/Rear</h3>
+                <h3 style="color: darkred;"><span name="attr_armourF"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_armourSR"></span></h3>
+            </div>
+          </section>
+
+
+
+          <section class="attr2">
+            <input type="hidden" name="attr_weapon1flag" class="weapon1-status" value="On">
+            <h2>Direct Fire</h2>
+            <div class="attr2info">
+                <h3>Weapon</h3>
+                <h3>ROF</h3>
+                <h3>Range</h3>
+                <h3>AI</h3>
+                <h3>Pen</h3>
+                <h3 style="color: darkred;"><span name="attr_wpn1name"></span></h3>                
+                <h3 style="color: darkred;"><span name="attr_wpn1rof"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_wpn1range"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_wpn1ai"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_wpn1pen"></span></h3>
+            </div>
+            <input type="hidden" name="attr_weapon2flag" class="weapon2-status" value="On">
+            <div class="attr5info">
+                <h3 style="color: darkred;"><span name="attr_wpn2name"></span></h3>                
+                <h3 style="color: darkred;"><span name="attr_wpn2rof"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_wpn2range"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_wpn2ai"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_wpn2pen"></span></h3>
+            </div>
+
+
+            <input type="hidden" name="attr_artflag" class="art-status" value="Off">
+            <div class="attr4info">
+                <h3> </h3>
+                <h3>Range</h3>
+                <h3>Availability</h3>
+                <h3>Size</h3>
+                <h3>Effectiveness</h3>
+                <h3 style="color: darkred;">Indirect Fire</span></h3>
+                <h3 style="color: darkred;"><span name="attr_artrange"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_avail"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_artsize"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_arteffect"></span></h3>
+            </div>
+
+
+
+
+
+          </section>
+        </main>
+      </div>
+    </div>    
+</div>
+
+
+
+<script type="text/worker">
+    const buttonlist = ["input","display"];
+    buttonlist.forEach(button => {
+        on(`clicked:${button}`, function() {
+            setAttrs({
+                sheetTab: button
+            });
+        });
+    });
+
+    on("sheet:opened", function() {
+        getAttrs(["artflag","weaponflag","rof","quality"], function(values) {
+            let art = values.artflag || "Off";
+            let wpn = values.weaponflag || "On";
+            let rofBonus = "";
+            if (values.quality === "Excellent 3+") {
+                rofBonus = "+1";
+            }
+            setAttrs({
+                sheetTab: "display",
+                artflag: art,
+                weaponflag: wpn,
+                rofbonus: rofBonus,
+            });
+        });
+    });
+
+
+</script>
