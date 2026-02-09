@@ -75,8 +75,8 @@
             <br>
             <label for="attr_weapon2flag">Weapon 2</label>
             <select name="attr_weapon2flag">
-                <option selected="selected" value = "On">On</option>
-                <option value = "Off">Off</option>
+                <option selected="selected" value = "Off">Off</option>
+                <option value = "On">On</option>
             </select>
             <h3>Weapon 2</h3>
             <label>Name:</label><input type="text" name="attr_wpn2name">
@@ -215,18 +215,14 @@
     });
 
     on("sheet:opened", function() {
-        getAttrs(["artflag","weaponflag","rof","quality"], function(values) {
+        getAttrs(["artflag","weapon1flag","weapon2flag","rof","quality"], function(values) {
             let art = values.artflag || "Off";
-            let wpn = values.weaponflag || "On";
-            let rofBonus = "";
-            if (values.quality === "Excellent 3+") {
-                rofBonus = "+1";
-            }
+            let wpn1 = values.weapon1flag || "On";
+            let wpn2 = values.weapon2flag || "Off";
             setAttrs({
                 sheetTab: "display",
                 artflag: art,
-                weaponflag: wpn,
-                rofbonus: rofBonus,
+                weapon1flag: wpn,
             });
         });
     });
