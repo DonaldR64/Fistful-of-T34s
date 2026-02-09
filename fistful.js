@@ -678,7 +678,6 @@ const FFT = (() => {
             this.type = aa.type;
             this.movement = parseInt(aa.movement);
             this.moveType = aa.movetype.toLowerCase();
-            this.quality = aa.quality;
             this.armourF = (aa.armourF = "-") ? "NA":parseInt(aa.armourF);
             this.armourSR = (aa.armourSR = "-") ? "NA":parseInt(aa.armourSR);
             this.armour = (this.armourF !== "NA" || this.armourSR !== "NA") ? true:false;
@@ -820,16 +819,16 @@ log("AI: " + this.antiInf)
         }
 
         SetOverwatch = (state) => {
-            let colour = (state === true) ? "#000000":"transparent";
-            this.token.set("aura1_color",colour);
+            let colour = (state === true) ? "#ff00ff":"transparent";
+            this.token.set("aura2_color",colour);
         }
 
         CheckOverwatch = () => {
-            return (this.token.get("aura1_color") === "#000000") ? true:false;
+            return (this.token.get("aura2_color") === "#ff00ff") ? true:false;
         }
 
         CheckCohesion = () => {
-            return (this.token.get("aura2_color") === "#00ff00") ? true:false;
+            return (this.token.get("aura1_color") === "transparent") ? true:false;
         }
 
         TestCohesion = () => {
@@ -848,14 +847,14 @@ log("AI: " + this.antiInf)
                     let dist = this.Distance(unit2);
                     if (dist <= cohRange) {
                         cohesion = true;
-                        unit2.token.set("aura2_color","#00ff00");
+                        unit2.token.set("aura1_color","transparent");
                     }
                 }
             }
             if (cohesion === true) {
-                this.token.set("aura2_color","#00ff00");
+                this.token.set("aura1_color","transparent");
             } else {
-                this.token.set("aura2_color","#ffff00");
+                this.token.set("aura1_color","#000000");
             }
             return cohesion;
         }
@@ -870,7 +869,7 @@ log("AI: " + this.antiInf)
     }
 
     class Formation {
-        constructor(name,uID,fID = stringGen()) {
+        constructor(name,uID,quality,fID = stringGen()) {
             let refUnit = UnitArray[uID];
             refUnit.formationID = fID;
             this.nation = refUnit.nation;
@@ -880,6 +879,7 @@ log("AI: " + this.antiInf)
             this.id = fID;
             this.tokenIDs = [uID];
             this.companyIDs = [];
+            this.quality = quality;
             FormationArray[fID] = this;
             if (!state.FFT.formationInfo[fID]) {
                 let info = {
@@ -888,6 +888,7 @@ log("AI: " + this.antiInf)
                     player: this.player,
                     casualties: 0,
                     tokenIDs: this.tokenIDs,
+                    quality: quality,
                 }
                 state.FFT.formationInfo[fID] = info;
             } else {
@@ -910,6 +911,7 @@ log("AI: " + this.antiInf)
                 this.tokenIDs.push(uID);
             }
             UnitArray[uID].formationID = this.id;
+            UnitArray[uID].quality = this.quality;
         }
 
         Casualty(uID) {
@@ -1402,7 +1404,7 @@ log(vertices)
                 let companyName = state.FFT.companyInfo[cID];
                 if (!formation) {
                     if (formationInfo) {
-                        formation = new Formation(state.FFT.formationInfo[fID].name,unit.id,fID);
+                        formation = new Formation(state.FFT.formationInfo[fID].name,unit.id,state.FFT.formationInfo[fID].quality,fID);
                         if (!company) {
                             company = new Company(companyName,cID);
                             formation.AddCompany(company.id);
@@ -2784,14 +2786,16 @@ log("Not Spotted")
         let Tag = msg.content.split(";");
         let formationName = Tag[1];
         let breakpoint = Tag[2];
+        let quality = Tag[3];
 
         let unit;
         let unit1 = new Unit(msg.selected[0]._id);
-        let formation = new Formation(formationName,unit1.id);
+        let formation = new Formation(formationName,unit1.id,quality);
         formation.breakpoint = breakpoint;
         state.FFT.formationInfo[formation.id].breakpoint = breakpoint;
-        let number = state.FFT.formNum[formation.player];
-        state.FFT.formNum[formation.player]++;
+
+ 
+
 
         for (let i=0;i<msg.selected.length;i++) {
             mID = msg.selected[i]._id;
@@ -2802,7 +2806,7 @@ log("Not Spotted")
                 tint_color: "transparent",
                 aura1_color: "transparent",
                 aura1_radius: 1,
-                aura2_color: "#00ff00",
+                aura2_color: "transparent",
                 aura2_radius: 5,
                 disableTokenMenu: true,
                 showname: true,
@@ -2841,7 +2845,7 @@ log("Not Spotted")
             let token = UnitArray[id].token;
             company.AddUnit(id);
             token.set("gmnotes",gmn);
-            token.set("tooltip",formation.name + " / " + company.name)
+            token.set("tooltip",formation.name + " / " + company.name + " / " + formation.quality + " Quality");
             if (companyName === "HQ Company") {
                 token.set(SM[hqSymbol],true);
             }
