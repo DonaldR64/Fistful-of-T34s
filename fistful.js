@@ -2237,10 +2237,13 @@ qcFormations = []; //temp disabled
             if (unit.armoured === true) {
                 effect = " and Withdraws";
             } else {
-                if (randomInteger(6) > 4) {
+                let r = randomInteger(6);
+                if (r === 6) {
                     effect = " and Surrenders"
+                } else if (r > 2 && r < 6) {
+                    effect = " and Retreats";
                 } else {
-                    effect = " and is Routed";
+                    effect = " and Routs";
                 }
             }
             unit.Destroyed();
