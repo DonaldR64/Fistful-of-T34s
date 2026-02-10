@@ -25,8 +25,6 @@ const FFT = (() => {
         b3: 2/3,
     }
 
-    const ArmourTypes = ["Halftrack","Tank Destroyer","Tank"];
-
     const DefineHexInfo = () => {
         HexSize = (70 * pageInfo.scale)/M.f0;
         if (pageInfo.type === "hex") {
@@ -1667,10 +1665,10 @@ log(unit.name)
             tip += "<br>Cohesion -1";
         } 
         let mods = 0;
-        if (ArmourTypes.includes(unit.type) === false && unit.token.get(SM.qc) > 1) {
+        if (unit.armoured === false && unit.token.get(SM.qc) > 1) {
             mods = unit.token.get(SM.qc) - 1;
         }
-        if (mods > 0 && ArmourTypes.includes(unit.type) === false) {
+        if (mods > 0 && unit.armoured === false) {
             tip += "<br>Extra QC Markers -" + mods;
             qualityRoll = Math.max(qualityRoll - mods,1);
         } 
@@ -2115,10 +2113,10 @@ log(hex)
             if (artEffect === "+1") {
                 bonus ++;
                 bonusText = artEffect + " to Hit";
-            } else if (artEffect === "+1 vs. Armour" && ArmourTypes.includes(unit.type)) {
+            } else if (artEffect === "+1 vs. Armour" && unit.armoured === true) {
                 bonus ++;
                 bonusText = artEffect;
-            } else if (artEffect === "-1 vs. Armour" && ArmourTypes.includes(unit.type)) {
+            } else if (artEffect === "-1 vs. Armour" && unit.armoured === true) {
                 bonus--;
                 bonusText = artEffect;
             } 
@@ -2137,15 +2135,11 @@ log(hex)
                 tip += "<br>-1 Partially Under";
             }
 
-            let arm = (unit.armoured === true && unit.openTopped === false); //open topped treated as unarmoured
-
-
-log(result)
             if (result > 3) {
                 tip = '[Hit](#" class="showtip" title="' + tip + ')';
                 
                 if (result >= 6) {
-                    if (hex.coverArea === true || arm === true) {
+                    if (hex.coverArea === true || unit.armoured === true) {
                         if (unit.artQC === false) {
                             unit.artQC = true;
                             unit.Suppress("A",true);
@@ -2161,7 +2155,7 @@ log(result)
                         unit.Destroyed();
                     }
                 } else {
-                    if ((hex.coverArea === true || arm === true) && unit.artQC === false) {
+                    if ((hex.coverArea === true || unit.armoured === true) && unit.artQC === false) {
                         unit.artQC = true;
                         let qc = QualityCheck(unit);
                         let noun = (qc.pass === true) ? "Suppressed":"Routed";
@@ -2712,9 +2706,7 @@ log("Not Spotted")
         if (shooter.token.get(SM.unavail) === true || shooter.token.get(SM.double) === true) {
             errorMsg.push("[#ff0000]Unit is unable to Fire[/#]");
         }
-        if (shooter.token.get(SM.fired) === true && (weapon.fired === true || shooter.type !== "Infantry")) {
-            errorMsg.push("[#ff0000]Unit has already Fired that Weapon[/#]");
-        }
+
         if (errorMsg.length > 0) {
             _.each(errorMsg,msg => {
                 outputCard.body.push(msg);
@@ -2886,6 +2878,11 @@ log("Not Spotted")
             }
         }
 
+
+        if (shooter.token.get(SM.fired) === true && (weapon.fired === true || shooter.type !== "Infantry")) {
+            errorMsg.push("[#ff0000]Unit has already Fired that Weapon[/#]");
+        }
+
         //range issues
         if (closeCombat === false) {
             if (weapon.range === "C") {
@@ -2916,11 +2913,11 @@ log("Not Spotted")
                 }
             }
             if (weapon.pen.includes("h") === false && weapon.pen.includes("he") === false) {
-                if (losResult.distance > shooter.range[1]) {
+                if (losResult.distance > weapon.range[2]) {
                     pen -= 2;
                     penTip += "<br>-2 Pen for Long Range";
                 }
-                if (losResult.distance <= shooter.range[0]) {
+                if (losResult.distance <= weapon.range[1]) {
                     pen += 2;
                     penTip += "<br>+2 Pen for Short Range";
                 }
@@ -2969,16 +2966,16 @@ log("Not Spotted")
         }
 
         let toHit = 4;
-        let toHitTip = "<br>Base 4+";
+        let toHitTip = "<br>Base 4+ To Hit";
         if (shooter.quality.includes("Good") || shooter.quality.includes("Excellent")) {
             toHitTip += "<br>+1 Quality";
             toHit--;
         }
-        if (losResult.distance <= shooter.range[1]) {
+        if (losResult.distance <= weapon.range[1]) {
             toHit--;
             toHitTip += "<br>+1 Short Range";
         }
-        if (losResult.distance > shooter.range[2]) {
+        if (losResult.distance > weapon.range[2]) {
             toHit++;
             toHitTip += "<br>-1 Long Range";
         }
@@ -2995,7 +2992,7 @@ log("Not Spotted")
             toHitTip += "<br>-1 for Smoke";
         }
         if (type === "AI" && ai !== 0) {
-            toHit += ai;
+            toHit -= ai;
             toHitTip += "<br>" + aiTip;
         }
 
@@ -3004,7 +3001,7 @@ log("Not Spotted")
         let hits = 0;
         let coverSaves = 0; 
         let finalHits = 0;
-        for (let i=0;i<ROF;i++) {
+        for (let i=0;i<rof;i++) {
             let roll = randomInteger(6);
             rolls.push(roll);
             if ((roll >= toHit || roll === 6) && roll !== 1) {
@@ -3058,6 +3055,7 @@ log("Not Spotted")
                 if (type === "Armour") {
                     outputCard.body.push("[hr]");
                     let penDice = (pen > armour) ? (pen - armour):1;
+                    penDice = Math.min(10,penDice);
                     let penMod = (pen <= armour) ? (pen - armour):0; //will always be 0 or a negative #
                     let penTips = "", deflect = 0, qc = false, destroyed = false;
                     for (let i=0;i<finalHits;i++) {
@@ -3119,7 +3117,7 @@ log("Not Spotted")
         //rotate certain units eg tank destroyers, infantry --> basically those without turrets
         let turrets = ["Car","Halftrack","Tank"];
         let angle = Angle(HexMap[shooter.hexLabel].cube.angle(HexMap[target.hexLabel].cube));
-        if (turrets.includes(shooter.type) === false) {
+        if (turrets.includes(shooter.type) === false && shooter.special.includes("Forward Firing") === false) {
             shooter.token.set("rotation",angle);
         }
         if (shooter.special.includes("Flamethrower") && closeCombat === true) {
@@ -3147,6 +3145,7 @@ log("Not Spotted")
             }
         }
         shooter.token.set("tint_color","transparent");
+        shooter.SetOverwatch(false);
         PrintCard();
     }
 
