@@ -2403,6 +2403,7 @@ const DirectFire = (msg) => {
 
 
 log(weapon)
+log(type)
 
 return
     
