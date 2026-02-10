@@ -655,8 +655,6 @@ const FFT = (() => {
 
             let aa = AttributeArray(charID);
   
-
-            this.token = token;
             this.charName = char.get("name");
             let name = token.get("name");
             if (!name || name === "") {
@@ -681,66 +679,48 @@ const FFT = (() => {
             this.movement = parseInt(aa.movement);
             
             this.moveType = aa.movetype ? aa.movetype.toLowerCase(): "NA";
-            this.armourF = (aa.armourF = "-") ? "NA":parseInt(aa.armourF);
-            this.armourSR = (aa.armourSR = "-") ? "NA":parseInt(aa.armourSR);
-            this.armour = (this.armourF !== "NA" || this.armourSR !== "NA") ? true:false;
+
+            this.armourF = (aa.armourF === "S" || aa.armourF === "-") ? aa.armourF:parseInt(aa.armourF);
+            this.armourSR = (aa.armourSR === "S" || aa.armourSR === "-") ? aa.armourSR:parseInt(aa.armourSR);
+            this.armourSpecial = aa.armourSpecial;
+
+
+            this.armour = (isNaN(this.armourF) && isNaN(this.armourSR)) ? false:true;
 
             this.artFlag = aa.artflag === "On" ? true:false;
             this.avail = (aa.avail) ? (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+","")):"NA";
             this.artsize = aa.artsize ? parseInt(aa.artsize.replace(/[^0-9]+/g, '')):0;
-
             this.arteffect = aa.arteffect;
             this.artrange = aa.artrange ? parseInt(aa.artrange):0;
 
+            let weapons = [];
+            for (let i=1;i<3;i++) {
+                let flag = aa["wpn" + i + "flag"];
+                if (flag === "Off") {continue};
+                let name = aa["wpn" + i + "name"];
+                let rof = aa["wpn" + i + "rof"] || 0;
+                let range = aa["wpn" + i + "range"] || "0/0/0";
+                let pen = aa["wpn" + i + "pen"] || "-";
+                let ai = aa["wpn" + i + "ai"] || "-";
 
-            this.rof = aa.rof || 0;
-
-            if (aa.range) {
-                this.range = aa.range.split("/")
-            } else {
-                this.range = [0,0,0];
-            }
-            _.each(this.range, band => {
-                band = parseInt(band);
-            })
-
-            let ai = aa.ai;
-log(this.name)
-log("Original AI: " + ai)
-            if (ai === "-" || ai === "NA" || !ai) {
-                ai = "NA";
-            } else {
-                if (ai.includes("(")) {
-                    ai = ai.split("(");
-                    let ai1;
-                    let ai0 = parseInt(ai[0].replace(/\D/g, ''));
-                    if (ai[1].includes("Close")) {
-                        ai1 = this.range[0];
-                    } else {
-                        ai1 = parseInt(ai[1].replace(/\D/g, ''));
-                    }
-                    ai = [ai0,ai1];
-                } else {
-                    ai = [parseInt(ai),this.range[2]];
-                }
-            }
-            this.antiInf = ai;
-            
-            //index 0 is pen, index 1 is true if only at CC
-            let pen = aa.pen;
-            if (pen === "-" || pen === "NA" || !pen) {
-                pen = "NA";
-            } else {
-                if (pen.includes("C")) {
-                    pen = pen.split("(");
-                    pen = parseInt(pen[0].replace(/\D/g, ''));
-                    pen = [pen,true];
+                if (range.includes("/")) {
+                    range = range.split("/").map((e) => parseInt(e));
+                } else if (range === "C") {
+                    range = "C"
                 } else {    
-                    pen = [parseInt(pen),false];
+                    range = [0,parseInt(range),parseInt(range)]
                 }
+                weapons.push({
+                    name: name,
+                    rof: rof,
+                    range: range,
+                    pen: pen,
+                    ai: ai,
+                    fired: false,
+                })
             }
-            this.pen = pen;
-        
+            this.weapons = weapons;
+
             this.special = aa.special || " ";
 
             this.spotter = false;
@@ -748,13 +728,13 @@ log("Original AI: " + ai)
 
             this.formationID = "";
             this.companyID = "";
+            
 
 
+log(this)
 
+            this.token = token;
 
-
-log("Pen: " + this.pen)
-log("AI: " + this.antiInf)
 
             UnitArray[id] = this;
             HexMap[label].tokenIDs.push(id);
@@ -2292,7 +2272,8 @@ log(unit)
         let Tag = msg.content.split(";");
         let shooter = UnitArray[Tag[1]];
         let target = UnitArray[Tag[2]];
-        let shortRangeFlag = false;
+        let wpnNum = parseInt(Tag[3]);
+        let weapon = shooter.weapons[wpnNum];
 
         SetupCard(shooter.name,target.name,shooter.nation);
 
@@ -2302,14 +2283,17 @@ log(unit)
             errorMsg.push("[#ff0000]No LOS to Target[/#]");
             errorMsg.push(losResult.losReason);
         }
-        if (losResult.distance > shooter.range[2]) {
+
+        if (weapon.range === "C" && losResult.distance > 1) {
+            errorMsg.push("[#ff0000]Weapon only used in Close Combat[/#]");
+        } else if (losResult.distance > weapon.range[2]) {
             errorMsg.push("[#ff0000]Target is Out of Range[/#]");
-        }
-        if (shooter.token.get(SM.fired) === true) {
-            errorMsg.push("[#ff0000]Unit has already Fired[/#]");
         }
         if (shooter.token.get(SM.unavail) === true || shooter.token.get(SM.double) === true) {
             errorMsg.push("[#ff0000]Unit is unable to Fire[/#]");
+        }
+        if (shooter.token.get(SM.fired) === true && (weapon.fired === true || shooter.type !== "Infantry")) {
+            errorMsg.push("[#ff0000]Unit has already Fired[/#]");
         }
 
         let closeCombat = (losResult.distance === 1) ? true:false;
@@ -2317,6 +2301,9 @@ log(unit)
         let targetFacing = losResult.targetFacing;
 
         let armour = (targetFacing === "Front") ? target.armourF:target.armourSR;
+        // -, S or a #
+        
+
 
         if (closeCombat === true && shooter.type === "Infantry" && target.armour === true) {
             //side armour bit, check for friendlies
@@ -2328,6 +2315,7 @@ log(unit)
 
         let pen,ai,penTip,aiTip;
         let type = "Armour";
+        
         if (target.armour === true) {
             if (shooter.pen === "NA") {
                 errorMsg.push("No Anti-Tank Weapons");
