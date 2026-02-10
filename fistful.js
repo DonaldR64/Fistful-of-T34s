@@ -134,7 +134,7 @@ const FFT = (() => {
 
 
     const SM = {
-        suppA: "status_pink",
+        suppA: "status_brown",
         suppB: "status_yellow",
         qc: "status_red",
         fired: "status_Shell::5553215",
@@ -860,7 +860,8 @@ log(this)
 
         Suppress = (type,flag) => {
             let marker = (type === "A") ? SM.suppA:SM.suppB;
-            this.token.set(marker,flag);
+            let otherMarker = (type === "A") ? SM.suppB:SM.suppA;
+            this.token.set(otherMarker,false);
         }
 
 
@@ -1657,25 +1658,31 @@ log(unit.name)
         if (reason === "Movement") {cohesion = true}; //eg when breaking cover
 
         let qualityRoll = randomInteger(6);
-        let target = unit.quality.replace(/[^\d]/g,"");
+        let target = (unit.quality.includes("Fair")) ? 5:(unit.quality.includes("Good")) ? 4:3;
+        let tip = "<br>" + unit.quality + ": " + target + "+";
+        let rollMods = 0;
 
-        let tip = "<br>Roll: " + qualityRoll;
         if (cohesion === false) {
-            qualityRoll = Math.max(qualityRoll - 1, 1);
+            rollMods++;
             tip += "<br>Cohesion -1";
         } 
-        let mods = 0;
-        if (unit.armoured === false && unit.token.get(SM.qc) > 1) {
-            mods = unit.token.get(SM.qc) - 1;
+        let num = unit.token.get(SM.qc) === true ? 1:parseInt(unit.token.get(SM.qc));
+
+        if (unit.armoured === false && num > 1) {
+            num--;
+            rollMods += num;
+            tip += "<br>Extra QC Markers -" + num;
         }
-        if (mods > 0 && unit.armoured === false) {
-            tip += "<br>Extra QC Markers -" + mods;
-            qualityRoll = Math.max(qualityRoll - mods,1);
-        } 
-        if (cohesion === true && mods === 0) {
+
+        target += rollMods;
+
+        if (cohesion === true && rollMods === 0) {
             tip += "<br>No Modifications";
         }
+
+
         tip = "Result: " + qualityRoll + " vs. " + target + "+" + tip;
+
         if ((qualityRoll >= target || qualityRoll === 6) && qualityRoll !== 1) {
             tip = '[Passes](#" class="showtip" title="' + tip + ')';
         } else {
@@ -2198,6 +2205,7 @@ log(unit)
                     qcFormations.push(formation);
                 }
             })
+qcFormations = []; //temp disabled
             if (qcFormations.length === 0) {
                 AdvancePhase();
             } else {
@@ -2206,14 +2214,14 @@ log(unit)
         }
     }
 
-    const RunFormQC = () => {
+    const RunFormQC = () => {            
         let formation = qcFormations.shift();
         if (formation) {
             let leadUnit = UnitArray[formation.tokenIDs[0]];
             if (!leadUnit) {
                 log("No Unit in Formation, formation skipped")
             } else {
-                sendPing(leadUnit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
+                sendPing(leadUnit.token.get("left"),leadUnit.token.get("top"),Campaign().get("playerpageid"),null,true);
                 SetupCard(formation.name,"Formation Check",leadUnit.nation);
                 ButtonInfo("Make Quality Check","!TakeFQC;" + leadUnit.id);
                 PrintCard();
@@ -2418,9 +2426,7 @@ log("Not Spotted")
             moveMarkers: [],
             visibility: 70,
         }
-
-
-
+        BuildMap();
         sendChat("","Cleared State/Arrays");
     }
 
@@ -2446,7 +2452,24 @@ log("Not Spotted")
             if (token.get("status_dead") === true) {
                 token.remove();
             }
+            if (info === "All" && token.get("name") === "Wreck") {
+                token.remove();
+            }
         });
+        if (info === "All") {
+            let tokens = findObjs({
+                _pageid: Campaign().get("playerpageid"),
+                _type: "graphic",
+                _subtype: "token",
+                layer: "foreground",
+            });
+            tokens.forEach((token) => {
+                token.remove();
+            });
+        }
+
+
+
     }
 
     const DefineFormation = (msg) => {
@@ -2980,8 +3003,13 @@ log("Not Spotted")
             toHitTip += "<br>-1 Long Range";
         }
         if (shooter.CheckSuppression() === true) {
-            toHit++;
-            toHitTip += "<br>-1 Suppressed";
+            if (shooter.armoured === true) {
+                toHit++;
+                toHitTip += "<br>-1 Suppressed";
+            } else {
+                toHit+=2;
+                toHitTip += "<br>-2 Suppressed";
+            }
         }
         if (shooter.CheckOverwatch()) {
             toHit++;
