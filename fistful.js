@@ -695,7 +695,7 @@ const FFT = (() => {
 
             let weapons = [];
             for (let i=1;i<3;i++) {
-                let flag = aa["wpn" + i + "flag"];
+                let flag = aa["weapon" + i + "flag"];
                 if (flag === "Off" || !flag) {continue};
                 let name = aa["wpn" + i + "name"];
                 if (!name) {continue};

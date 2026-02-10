@@ -20,7 +20,6 @@
                 <option value="Truck">Truck</option>
                 <option value="Car">Car</option>
                 <option value="Halftrack">Halftrack</option>
-                <option value="Tank Destroyer">Tank Destroyer</option>
                 <option value="Tank">Tank</option>
                 <option value="Aircraft">Aircraft</option>
             </select>
@@ -229,14 +228,17 @@
     });
 
     on("sheet:opened", function() {
-        getAttrs(["artflag"], function(values) {
+        getAttrs(["artflag","weapon1flag","weapon2flag"], function(values) {
             let art = values.artflag || "Off";
-        
+            let w1flag = values.weapon1flag || "On";
+            let w2flag = values.weapon2flag || "Off";
 
 
             setAttrs({
                 sheetTab: "display",
                 artflag: art,
+                weapon1flag: w1flag,
+                weapon2flag: w2flag,
             });
         });
     });
