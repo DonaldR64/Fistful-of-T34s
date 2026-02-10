@@ -676,7 +676,7 @@ const FFT = (() => {
             }
             this.player = (this.nation === "Neutral") ? 2:(state.FFT.nations[0] === this.nation)? 0:1;
             this.type = aa.type;
-            this.movement = parseInt(aa.movement);
+            this.movement = parseInt(aa.movement) || 0;
             this.moveType = aa.movetype ? aa.movetype.toLowerCase(): "NA";
 
             this.special = aa.special || " ";
@@ -684,7 +684,7 @@ const FFT = (() => {
             this.armourF = (aa.armourF === "S" || aa.armourF === "-") ? aa.armourF:parseInt(aa.armourF);
             this.armourSR = (aa.armourSR === "S" || aa.armourSR === "-") ? aa.armourSR:parseInt(aa.armourSR);
             this.armourSpecial = aa.armourSpecial || "-";
-            this.armoured = (armourF !== "S" || armourF !== "-" || armourSR !== "S" || armourSR !== "-") ? true:false;
+            this.armoured = (this.armourF !== "S" || this.armourF !== "-" || this.armourSR !== "S" || this.armourSR !== "-") ? true:false;
             this.openTopped = (this.special.includes("Open-Topped") || this.special.includes("Open Topped")) ? true:false;
 
             this.artFlag = aa.artflag === "On" ? true:false;
@@ -696,8 +696,9 @@ const FFT = (() => {
             let weapons = [];
             for (let i=1;i<3;i++) {
                 let flag = aa["wpn" + i + "flag"];
-                if (flag === "Off") {continue};
+                if (flag === "Off" || !flag) {continue};
                 let name = aa["wpn" + i + "name"];
+                if (!name) {continue};
                 let rof = aa["wpn" + i + "rof"] || 0;
                 let range = aa["wpn" + i + "range"] || "0/0/0/0";
                 let pen = aa["wpn" + i + "pen"] || "-";
@@ -1575,6 +1576,7 @@ log(vertices)
             }
             if (unit.player === activePlayer) {
                 unit.SetOverwatch(false);
+                unit.token.set("bar1_value",unit.movement);
             }
 
             unit.startRotation = unit.token.get("rotation");
@@ -1582,8 +1584,6 @@ log(vertices)
             unit.spotter = false;
             unit.artQC = false;
 
-
-            unit.token.set("bar1_value",unit.movement);
             if (unit.player === activePlayer) {
                 unit.TestCohesion();
             }
@@ -3161,13 +3161,17 @@ log("Not Spotted")
             let prevLabel = (new Point(prev.left,prev.top)).label();
             if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
                 RemoveMoveMarkers();   
-                
+                let move = parseInt(tok.get("bar1_value")) || 0;
                 if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
-                    if (HexMap[label].moveCosts[unit.moveType] === -1) {
+                    if (HexMap[label].moveCosts[unit.moveType] === -1 || move <= 0) {
                         tok.set("left",prev.left);
                         tok.set("top",prev.top);
                         tok.set("rotation",prev.rotation);
-                        sendChat("","Not Able to Move to that Hex");
+                        if (move <= 0) {
+                            sendChat("","No Movement Points");
+                        } else {
+                            sendChat("","Hex is Impassable to this Unit");
+                        }
                         return;
                     }
                     if (prevLabel !== label && HexMap[unit.startHexLabel].offboard === false) {
@@ -3175,9 +3179,6 @@ log("Not Spotted")
                         label = results.finalHexLabel;
                         let cost = results.cost;
                         let marker = (cost <= unit.movement/2) ? SM["move"]:SM["double"];
-    log(cost)
-    log(unit.movement)
-    log(marker)
                         tok.set({
                             left: HexMap[label].centre.x,
                             top: HexMap[label].centre.y,
@@ -3187,7 +3188,10 @@ log("Not Spotted")
                         tok.set(marker,true);
 
                         let angle = Angle(HexMap[unit.startHexLabel].cube.angle(HexMap[label].cube));
-                        tok.set("rotation",angle);
+                        tok.set({
+                            rotation: angle,
+                            bar1_value: unit.movement - cost,
+                        })
                     } else if (prevLabel === label && tok.get("rotation") === unit.startRotation) {
                         tok.set(SM.move,false);
                         tok.set(SM.double,false);
