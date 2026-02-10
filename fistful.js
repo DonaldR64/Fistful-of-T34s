@@ -677,7 +677,7 @@ const FFT = (() => {
             this.armourF = (aa.armourF === "S" || aa.armourF === "-") ? aa.armourF:parseInt(aa.armourF);
             this.armourSR = (aa.armourSR === "S" || aa.armourSR === "-") ? aa.armourSR:parseInt(aa.armourSR);
             this.armourSpecial = aa.armourSpecial || "-";
-            this.armoured = (this.armourF !== "S" || this.armourF !== "-" || this.armourSR !== "S" || this.armourSR !== "-") ? true:false;
+            this.armoured = (this.armourF !== "S" && this.armourF !== "-" && this.armourSR !== "S" && this.armourSR !== "-") ? true:false;
             this.openTopped = (this.special.includes("Open-Topped") || this.special.includes("Open Topped")) ? true:false;
 
             this.artFlag = aa.artflag === "On" ? true:false;
