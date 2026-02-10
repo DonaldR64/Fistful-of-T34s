@@ -3,7 +3,7 @@ const DirectFire = (msg) => {
     let shooter = UnitArray[Tag[1]];
     let target = UnitArray[Tag[2]];
     let weapons = DeepCopy(shooter.weapons);
-    let type, pen, ai, penTip, aiTip, rof, rofTip;
+    let type, pen, ai, penTip = "", aiTip = "", rof, rofTip = "";
     let errorMsg = [];
 
 
@@ -229,12 +229,80 @@ const DirectFire = (msg) => {
                 penTip += "<br>+2 Pen for Short Range";
             }
         } 
+    } else if (type === "AI") {
+        ai = parseInt(weapon.ai);
+        aiTip = (ai >= 0) ? "+" + ai:ai.toString();
+        aiTip = "Anti-Infantry: " + aiTip;
     }
 
 
+    rof = weapon.rof;
+    let flag = false;
+    if (rof.includes("(")) {
+        rof = rof.replace("(","");
+        rof = rof.replace(")","");
+        if (shooter.token.get(SM.move)) {
+            flag = true;
+        }
+    }
+    rof = rof.split("/");
+    if (closeCombat === true && rof.length > 1) {
+        rof = rof[1];
+    } else {
+        rof = rof[0];
+    }
+    rof = parseInt(rof);
+    if (flag === true) {
+        rof--;
+        rofTip += "-1 ROF due to movement";
+    };
+    if (shooter.quality.includes("Excellent")) {
+        rof++;
+        rofTip += "+1 ROF due to Excellent";
+    }
+    if (rof === 0) {
+        errorMsg.push("Target has no ROF due to movement");
+    }
 
+    if (errorMsg.length > 0) {
+        _.each(errorMsg,msg => {
+            outputCard.body.push(msg);
+        })
+        PrintCard();
+        return;
+    }
 
-
+    let toHit = 4;
+    let toHitTip = "<br>Base 4+";
+    if (shooter.quality.includes("Good") || shooter.quality.includes("Excellent")) {
+        toHitTip += "<br>+1 Quality";
+        toHit--;
+    }
+    if (losResult.distance <= shooter.range[0]) {
+        toHit--;
+        toHitTip += "<br>+1 Short Range";
+        shortRangeFlag = true;
+    }
+    if (losResult.distance > shooter.range[1]) {
+        toHit++;
+        toHitTip += "<br>-1 Long Range";
+    }
+    if (shooter.CheckSuppression() === true) {
+        toHit++;
+        toHitTip += "<br>-1 Suppressed";
+    }
+    if (shooter.CheckOverwatch()) {
+        toHit++;
+        toHitTip += "<br>-1 Overwatch";
+    }
+    if (losResult.inSmoke === true) {
+        toHit++;
+        toHitTip += "<br>-1 for Smoke";
+    }
+    if (type === "AntiInfantry" && ai !== 0) {
+        toHit += ai;
+        toHitTip += "<br>" + aiTip;
+    }
 
 
 

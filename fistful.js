@@ -2140,7 +2140,7 @@ log(result)
                 tip = '[Hit](#" class="showtip" title="' + tip + ')';
                 
                 if (result >= 6) {
-                    if (hex.coverArea === true || ArmourTypes.includes(unit.type)) {
+                    if (unit.special.includes("Open Topped") === false && (hex.coverArea === true || ArmourTypes.includes(unit.type))) {
                         if (unit.artQC === false) {
                             unit.artQC = true;
                             unit.Suppress("A",true);
@@ -2156,7 +2156,7 @@ log(result)
                         unit.Destroyed();
                     }
                 } else {
-                    if (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.artQC === false) {
+                    if (unit.special.includes("Open Topped") === false && (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.artQC === false)) {
                         unit.artQC = true;
                         let qc = QualityCheck(unit);
                         let noun = (qc.pass === true) ? "Suppressed":"Routed";
