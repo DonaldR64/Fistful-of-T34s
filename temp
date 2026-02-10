@@ -281,7 +281,6 @@ const DirectFire = (msg) => {
     if (losResult.distance <= shooter.range[0]) {
         toHit--;
         toHitTip += "<br>+1 Short Range";
-        shortRangeFlag = true;
     }
     if (losResult.distance > shooter.range[1]) {
         toHit++;

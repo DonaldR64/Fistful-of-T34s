@@ -677,12 +677,15 @@ const FFT = (() => {
             this.player = (this.nation === "Neutral") ? 2:(state.FFT.nations[0] === this.nation)? 0:1;
             this.type = aa.type;
             this.movement = parseInt(aa.movement);
-            
             this.moveType = aa.movetype ? aa.movetype.toLowerCase(): "NA";
+
+            this.special = aa.special || " ";
 
             this.armourF = (aa.armourF === "S" || aa.armourF === "-") ? aa.armourF:parseInt(aa.armourF);
             this.armourSR = (aa.armourSR === "S" || aa.armourSR === "-") ? aa.armourSR:parseInt(aa.armourSR);
             this.armourSpecial = aa.armourSpecial || "-";
+            this.armoured = (armourF !== "S" || armourF !== "-" || armourSR !== "S" || armourSR !== "-") ? true:false;
+            this.openTopped = (this.special.includes("Open-Topped") || this.special.includes("Open Topped")) ? true:false;
 
             this.artFlag = aa.artflag === "On" ? true:false;
             this.avail = (aa.avail) ? (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+","")):"NA";
@@ -2134,13 +2137,15 @@ log(hex)
                 tip += "<br>-1 Partially Under";
             }
 
+            let arm = (unit.armoured === true && unit.openTopped === false); //open topped treated as unarmoured
+
 
 log(result)
             if (result > 3) {
                 tip = '[Hit](#" class="showtip" title="' + tip + ')';
                 
                 if (result >= 6) {
-                    if (unit.special.includes("Open Topped") === false && (hex.coverArea === true || ArmourTypes.includes(unit.type))) {
+                    if (hex.coverArea === true || arm === true) {
                         if (unit.artQC === false) {
                             unit.artQC = true;
                             unit.Suppress("A",true);
@@ -2156,7 +2161,7 @@ log(result)
                         unit.Destroyed();
                     }
                 } else {
-                    if (unit.special.includes("Open Topped") === false && (hex.coverArea === false && ArmourTypes.includes(unit.type) === false && unit.artQC === false)) {
+                    if ((hex.coverArea === true || arm === true) && unit.artQC === false) {
                         unit.artQC = true;
                         let qc = QualityCheck(unit);
                         let noun = (qc.pass === true) ? "Suppressed":"Routed";
