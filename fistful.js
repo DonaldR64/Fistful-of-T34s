@@ -2228,8 +2228,25 @@ qcFormations = []; //temp disabled
         SetupCard(unit.name,"Quality Check",unit.nation);
         qc = QualityCheck(unit);
         let i = randomInteger(6);
-        let noun = (qc.pass === true) ? "Suppressed":(i>3) ? "Destroyed":"Routed";
-        outputCard.body.push(unit.name + " " + qc.tip + ' its QC and is ' + noun);
+        let effect;
+        if (qc.pass === true) {
+            if (unit.armoured === false) {
+                effect = " and is Suppressed";
+            }
+        } else {
+            if (unit.armoured === true) {
+                effect = " and Withdraws";
+            } else {
+                if (randomInteger(6) > 4) {
+                    effect = " and Surrenders"
+                } else {
+                    effect = " and is Routed";
+                }
+            }
+            unit.Destroyed();
+        }
+        outputCard.body.push(unit.name + " " + qc.tip + ' its QC' + effect);
+
         let phrase = "Next Unit";
         if (qcUnits.length === 0) {
             phrase = "Continue";
@@ -2741,8 +2758,11 @@ log(symbol)
             errorMsg.push("[#ff0000]No LOS to Target[/#]");
             errorMsg.push(losResult.losReason);
         }
-        if (shooter.token.get(SM.unavail) === true || shooter.token.get(SM.double) === true) {
-            errorMsg.push("[#ff0000]Unit is unable to Fire[/#]");
+        if (shooter.token.get(SM.unavail) === true) {
+            errorMsg.push("[#ff0000]Unit is Unable to Fire[/#]");
+        }
+        if ((shooter.moveType === "Towed" && (shooter.token.get(SM.move) || shooter.token.get(SM.double))) || shooter.token.get(SM.double)) {
+            errorMsg.push("[#ff0000]Unit is unable to Fire due to Movement[/#]");
         }
 
         if (errorMsg.length > 0) {
@@ -2934,6 +2954,7 @@ log(symbol)
         }
 
         if (type === "Armour") {
+            if (armour === "S") {armour = 0};
             pen = parseInt(weapon.pen);
             penTip = "Base Pen: " + pen;
             if (weapon.pen.includes("h")) {
@@ -3180,7 +3201,7 @@ log(symbol)
             let qc = QualityCheck(target);
             let noun = (qc.pass === true) ? "is Suppressed":"Surrenders or Routs";
             outputCard.body.push(target.name + " " + qc.tip + ' its QC and ' + noun);
-            if (qc.pass === true) {
+            if (qc.pass === true && target.armoured === false) {
                 target.Suppress("B",true);
             } else if (qc.pass === false && m > 0) {
                 outputCard.body.push("[hr]");
