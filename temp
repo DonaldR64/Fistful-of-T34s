@@ -205,7 +205,23 @@ const DirectFire = (msg) => {
     if (type === "Armour") {
         pen = parseInt(weapon.pen);
         penTip = "Base Pen: " + pen;
-        //no
+        if (weapon.pen.includes("h")) {
+            let spec = target.armourSpecial;
+            let add = "";
+            if (spec === "A") {add = 1};
+            if (spec === "B") {add = 2};
+            if (spec === "C") {add = 3};
+            if (spec === "D") {add = 4};
+            if (spec === "E") {add = 5};
+            if (spec === "F") {add = 6};
+
+
+
+
+            
+
+
+        }
         if (weapon.pen.includes("h") === false && weapon.pen.includes("he") === false) {
             if (losResult.distance > shooter.range[1]) {
                 pen -= 2;

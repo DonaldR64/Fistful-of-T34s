@@ -682,7 +682,7 @@ const FFT = (() => {
 
             this.armourF = (aa.armourF === "S" || aa.armourF === "-") ? aa.armourF:parseInt(aa.armourF);
             this.armourSR = (aa.armourSR === "S" || aa.armourSR === "-") ? aa.armourSR:parseInt(aa.armourSR);
-            this.armourSpecial = aa.armourSpecial;
+            this.armourSpecial = aa.armourSpecial || "-";
 
             this.artFlag = aa.artflag === "On" ? true:false;
             this.avail = (aa.avail) ? (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+","")):"NA";
