@@ -207,20 +207,17 @@ const DirectFire = (msg) => {
         penTip = "Base Pen: " + pen;
         if (weapon.pen.includes("h")) {
             let spec = target.armourSpecial;
-            let add = "";
+            let add;
             if (spec === "A") {add = 1};
             if (spec === "B") {add = 2};
             if (spec === "C") {add = 3};
             if (spec === "D") {add = 4};
             if (spec === "E") {add = 5};
             if (spec === "F") {add = 6};
-
-
-
-
-            
-
-
+            armour += add;
+            if (spec !== "-") {
+                penTip += "<br>Special Armour +" + add;
+            }
         }
         if (weapon.pen.includes("h") === false && weapon.pen.includes("he") === false) {
             if (losResult.distance > shooter.range[1]) {
@@ -232,9 +229,6 @@ const DirectFire = (msg) => {
                 penTip += "<br>+2 Pen for Short Range";
             }
         } 
-
-
-
     }
 
 
