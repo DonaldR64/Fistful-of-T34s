@@ -696,16 +696,21 @@ const FFT = (() => {
                 if (flag === "Off") {continue};
                 let name = aa["wpn" + i + "name"];
                 let rof = aa["wpn" + i + "rof"] || 0;
-                let range = aa["wpn" + i + "range"] || "0/0/0";
+                let range = aa["wpn" + i + "range"] || "0/0/0/0";
                 let pen = aa["wpn" + i + "pen"] || "-";
                 let ai = aa["wpn" + i + "ai"] || "-";
-
+                //range is array of [minimum,close,effective,long]
                 if (range.includes("/")) {
                     range = range.split("/").map((e) => parseInt(e));
+                    range.unshift(0); 
                 } else if (range === "C") {
                     range = "C"
+                } else if (range.includes("-")) {
+                    //missiles will be eg. 1-40, so 40 is effective and long range, 1 is min which is in pos 3 of array
+                    range = range.split("-").map((e) => parseInt(e));
+                    range = [range[0],range[0],range[1],range[1]];
                 } else {    
-                    range = [0,parseInt(range),parseInt(range)]
+                    range = [0,0,parseInt(range),parseInt(range)]
                 }
                 weapons.push({
                     name: name,

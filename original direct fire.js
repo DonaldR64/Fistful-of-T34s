@@ -1,5 +1,5 @@
 
-
+const a = () => {
 
     const DirectFire = (msg) => {
         let Tag = msg.content.split(";");
@@ -15,8 +15,7 @@
         SetupCard(shooter.name,target.name,shooter.nation);
 
         let losResult = LOS(shooter,target);
-        let errorMsg = [];
-        if (losResult.los === false) {
+        let errorMsg = [];=== false) {
             errorMsg.push("[#ff0000]No LOS to Target[/#]");
             errorMsg.push(losResult.losReason);
         }

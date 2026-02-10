@@ -2,21 +2,42 @@ const DirectFire = (msg) => {
     let Tag = msg.content.split(";");
     let shooter = UnitArray[Tag[1]];
     let target = UnitArray[Tag[2]];
-    let weapons = shooter.weapons;
+    let weapons = DeepCopy(shooter.weapons);
+    let type, pen, ai, penTip, aiTip, rof, rofTip;
+    let errorMsg = [];
+
 
     SetupCard(shooter.name,target.name,shooter.nation);
     let losResult = LOS(shooter,target);
-    let errorMsg = [];
+    if (losResult.los === false) {
+        errorMsg.push("[#ff0000]No LOS to Target[/#]");
+        errorMsg.push(losResult.losReason);
+    }
+    if (shooter.token.get(SM.unavail) === true || shooter.token.get(SM.double) === true) {
+        errorMsg.push("[#ff0000]Unit is unable to Fire[/#]");
+    }
+    if (shooter.token.get(SM.fired) === true && (weapon.fired === true || shooter.type !== "Infantry")) {
+        errorMsg.push("[#ff0000]Unit has already Fired that Weapon[/#]");
+    }
+    if (errorMsg.length > 0) {
+        _.each(errorMsg,msg => {
+            outputCard.body.push(msg);
+        })
+        PrintCard();
+        return;
+    }
+
 
     let closeCombat = (losResult.distance === 1) ? true:false;
-
     let targetFacing = losResult.targetFacing;
-
     let armour = (targetFacing === "Front") ? target.armourF:target.armourSR;
-    // -, S or a #
-
-    let weapon = weapons[0];
-
+    if (closeCombat === true && shooter.type === "Infantry" && target.armour === true) {
+        //side armour bit, check for friendlies
+        if (Friendlies(target) === false) {
+            armour = target.armourSR;
+        }
+    }
+    //Armour will be  -, S or a #
     if (armour === "-") {
         type = "AI";
     } else if (armour === "S") {
@@ -25,56 +46,81 @@ const DirectFire = (msg) => {
         type = "Armour"
     }
 
+
+
+
+
+    //Weapon selecton, defaults to weapon 0
+    let weapon = weapons[0];
     //if multiple weapons, pick the most appropriate
     //if S type, pick best weapon and if AI or Anti-armour
-    if (type === "AI" && weapons.length > 1) {
-        if (weapon.ai === "-" && weapons[1].ai !== "-") {
-            weapon = weapons[1];
-        }
-        if (weapon.ai !== "-" && weapons[1].ai !== "-") {
-            let ai1 = parseInt(weapon.ai);
-            let ai2 = parseInt(weapons[1].ai);
-            if (closeCombat === false && weapon.range === "C") {
-                ai1 = -100;
-            }
-            if (closeCombat === false && weapons[1].range === "C") {
-                ai2 = -100;
-            }
-            if (ai2 > ai1) {
+    if (type === "AI") {
+        if (weapons.length === 1 && weapon.ai === "-") {
+            errorMsg.push("No Anti-Infantry Weapons");
+        } else if (weapons.length > 1) {
+            if (weapon.ai === "-" && weapons[1].ai === "-") {
+                errorMsg.push("No Anti-Infantry Weapons");
+            } else if (weapon.ai === "-" && weapons[1].ai !== "-") {
                 weapon = weapons[1];
+            } else if (weapon.ai !== "-" && weapons[1].ai !== "-") {
+                let ai1 = parseInt(weapon.ai);
+                let ai2 = parseInt(weapons[1].ai);
+                if (closeCombat === true && weapon.range[0] > 1) {
+                    ai1 = -100;
+                }
+                if (closeCombat === false && (weapon.range === "C" || losResult.distance > weapon.range[3] || losResult.distance < weapon.range[0])) {
+                    ai1 = -100;
+                }
+                if (closeCombat === false && (weapons[1].range === "C" || losResult.distance > weapon.range[3] || losResult.distance < weapon.range[0])) {
+                    ai2 = -100;
+                }
+                if (ai2 > ai1) {
+                    weapon = weapons[1];
+                }
             }
         }
-    }
-    if (type === "Armour" && weapons.length > 1) {
-        if (weapon.pen === "-" && weapons[1].pen !== "-") {
-            weapon = weapons[1];
-        }
-        if (weapon.pen !== "-" && weapons[1].ai !== "-") {
-            let p1 = parseInt(weapon.pen);
-            let p2 = parseInt(weapons[1].pen);
-            if (closeCombat === false && weapon.range === "C") {
-                p1 = -100;
-            }
-            if (closeCombat === false && weapons[1].range === "C") {
-                p2 = -100;
-            }
-            if (p2 > p1) {
+    } else if (type === "Armour") {
+        if (weapons.length === 1 && weapon.pen === "-") {
+            errorMsg.push("No Anti-Tank Weapons");
+        } else if (weapons.length > 1) {
+            if (weapon.pen === "-" && weapons[1].pen === "-") {
+                errorMsg.push("No Anti-Tank Weapons");
+            } else if (weapon.pen === "-" && weapons[1].pen !== "-") {
                 weapon = weapons[1];
+            } else if (weapon.pen !== "-" && weapons[1].ai !== "-") {
+                let p1 = parseInt(weapon.pen);
+                let p2 = parseInt(weapons[1].pen);
+                if (closeCombat === true && weapon.range[0] > 1) {
+                    p1 = -100;
+                }
+                if (closeCombat === false && (weapon.range === "C" || losResult.distance > weapon.range[3] || losResult.distance < weapon.range[0])) {
+                    p1 = -100;
+                }
+                if (closeCombat === false && (weapons[1].range === "C" || losResult.distance > weapon.range[3] || losResult.distance < weapon.range[0])) {
+                    p2 = -100;
+                }
+                if (p2 > p1) {
+                    weapon = weapons[1];
+                }
             }
         }
-    }
-    if (type === "S") {
+    } else if (type === "S") {
         let r1,r2,d1,d2,p1,p2,max,pos,numbers = [];
         //rof
         if (closeCombat === true) {
             r1 = weapon.rof.includes("/") ? parseInt(weapon.rof.split("/")[1]) : parseInt(weapon.rof);
+            if (weapon.range !== "C" && (weapon.range[0] > 1 || losResult.distance > weapon.range[3])) {r1 = 0};
             if (weapons.length > 1) {
                 r2 = weapons[1].rof.includes("/") ? parseInt(weapons[1].rof.split("/")[1]) : parseInt(weapons[1].rof);
+                if (weapons[1].range !== "C" && (weapons[1].range[0] > 1 || losResult.distance > weapons[1].range[3])) {
+                    r2 = 0;
+                }
             } else {
                 r2 = 0;
             }
         } else {
             r1 = weapon.rof.includes("/") ? parseInt(weapon.rof.split("/")[0]) : parseInt(weapon.rof);
+            if (weapon.range !== "C" && (weapon.range[0] > 1 || losResult.distance > weapon.range[3])) {r1 = 0};
             if (weapons.length > 1) {
                 r2 = weapons[1].rof.includes("/") ? parseInt(weapons[1].rof.split("/")[0]) : parseInt(weapons[1].rof);
                 if (weapon.range === "C") {
@@ -83,10 +129,16 @@ const DirectFire = (msg) => {
                 if (weapons[1].range === "C") {
                     r2 = 0;
                 }
+                if (weapons[1].range !== "C" && (weapons[1].range[0] > 1 || losResult.distance > weapons[1].range[3])) {
+                    r2 = 0;
+                }
             } else {
                 r2 = 0;
             }
         }
+
+
+
         //chance of 4+ 
         d1 = weapon.ai === "-" ? 0:(3+parseInt(weapon.ai))/6;
         if (weapons.length > 1) {
@@ -104,17 +156,17 @@ const DirectFire = (msg) => {
             p2 = 0;
         }
 
-        if (weapon.pen.includes(h) === false && weapon.includes("he") === false) {
+        if (weapon.pen.includes("h") === false && weapon.includes("he") === false) {
             if (losResult.distance < weapon.range[1]) {
                 p1 += 2;
             }
             if (weapons.length > 1 && losResult.distance < weapons[1].range[1]) {
                 p2 += 2;
             }
-            if (losResult.distance > weapon.range[1]) {
+            if (losResult.distance > weapon.range[2]) {
                 p1 -= 2;
             }
-            if (weapons.length > 1 && losResult.distance > weapons[1].range[1]) {
+            if (weapons.length > 1 && losResult.distance > weapons[1].range[2]) {
                 p2 += 2;
             }
         }
@@ -138,14 +190,47 @@ const DirectFire = (msg) => {
         }
     }
 
+    //range issues
+    if (closeCombat === false) {
+        if (weapon.range === "C") {
+            errorMsg.push("[#ff0000]Weapon only used in Close Combat[/#]");
+        } else if (losResult.distance > weapon.range[2]) {
+            errorMsg.push("[#ff0000]Target is Out of Range[/#]");
+        } 
+    } 
+    if (losResult.distance < weapon.range[0]) {
+        errorMsg.push("[#ff0000]Target is Under Minimum Range[/#]")
+    }
+
+    if (type === "Armour") {
+        pen = parseInt(weapon.pen);
+        penTip = "Base Pen: " + pen;
+        //no
+        if (weapon.pen.includes("h") === false && weapon.pen.includes("he") === false) {
+            if (losResult.distance > shooter.range[1]) {
+                pen -= 2;
+                penTip += "<br>-2 Pen for Long Range";
+            }
+            if (losResult.distance <= shooter.range[0]) {
+                pen += 2;
+                penTip += "<br>+2 Pen for Short Range";
+            }
+        } 
 
 
-log(weapon)
-log(type)
+
+    }
 
 
 
-return
+
+
+
+
+
+
+
+
     
 
 
