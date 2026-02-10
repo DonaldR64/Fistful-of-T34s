@@ -5,9 +5,6 @@ const FFT = (() => {
     const pageInfo = {};
     const rowLabels = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","AA","AB","AC","AD","AE","AF","AG","AH","AI","AJ","AK","AL","AM","AN","AO","AP","AQ","AR","AS","AT","AU","AV","AW","AX","AY","AZ","BA","BB","BC","BD","BE","BF","BG","BH","BI"];
 
-    const UnitMarkers = ["A::6001458","B::6001459","C::6001460","D::6001461","E::6001462","F::6001463","G::6001464","H::6001465","I::6001466","J::6001467","L::6001468","M::6001469","O::6001471","P::6001472","Q::6001473","R::6001474","S::6001475"];
-
-    const TurnMarkers = ["","https://s3.amazonaws.com/files.d20.io/images/361055772/zDURNn_0bbTWmOVrwJc6YQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055766/UZPeb6ZiiUImrZoAS58gvQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055764/yXwGQcriDAP8FpzxvjqzTg/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055768/7GFjIsnNuIBLrW_p65bjNQ/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055770/2WlTnUslDk0hpwr8zpZIOg/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055771/P9DmGozXmdPuv4SWq6uDvw/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055765/V5oPsriRTHJQ7w3hHRBA3A/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055767/EOXU3ujXJz-NleWX33rcgA/thumb.png?1695998303","https://s3.amazonaws.com/files.d20.io/images/361055769/925-C7XAEcQCOUVN1m1uvQ/thumb.png?1695998303"];
 
     const MoveMarkers = ["https://files.d20.io/images/344441274/R0eEVMFzhYmwv6rigIA7GA/thumb.png?1685718541","https://s3.amazonaws.com/files.d20.io/images/435360245/m3tKJi3Pqb_40g75O6ouSg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360246/pXI3HBrGMZ05ldDfH-zYCQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360229/JKMY922qxhf0E3z1l10jQg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360228/YDGEQNR_qVFprdHJSjYNPg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360232/1TysQcieJ5zbgYvXV4pqiA/thumb.png?1743563857","https://s3.amazonaws.com/files.d20.io/images/435360240/KfCmoF5WyWTStCWOTPrkJg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360230/zjvzMFGWotZUORDeIVXrEw/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360226/-TXBFvMfahwOIjXEuS0mTQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360237/gEr7oP4z0ByUKTXpvSHYQQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360241/2HAnTYlC0uVR6mqyMoaACA/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360244/CDOLr8RkQ-pPhwjaOHTbEA/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360243/023KSjjB8QHtrMNbuO3ENQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360242/xx2msq4HjqRN5dUaPl0vfA/thumb.png?1743563857","https://s3.amazonaws.com/files.d20.io/images/435360236/L-iuGURhzreq2t2mKOj3Qg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360247/v2Y15K10F2qZK268wPzYyw/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360239/SXny1fVCh5PeYxLGtnoPTA/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360233/EdB3z27csNyykkc2lWTefw/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360227/JpFvEVLKlKV6n6JsE8zrVg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360234/5b2XrhzPgfgjdoI5y97LnQ/thumb.png?174356385","https://s3.amazonaws.com/files.d20.io/images/435360238/_sWU7YtYJsWT1NZC-wb80Q/thumb.png?1743563857","https://s3.amazonaws.com/files.d20.io/images/435360231/n7HVTuMwWch59Aofq1v96w/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360235/yVtSNUPJOkxq0n2_FknMcA/thumb.png?1743563856"];
 
@@ -98,12 +95,12 @@ const FFT = (() => {
             "fontColour": "#000000",
             "borderColour": "#ff0000",
             "borderStyle": "5px groove",
-            "hq": "soviet",
+            "hq": "Soviet::6433738",
             "excellent": "status_letters_and_numbers0005::5982122",
             "fair": "status_letters_and_numbers0006::5982123",
             "good": "status_letters_and_numbers0007::5982124",
-
-
+            "markerName": 1,
+            "markerNumber": 5982118,
 
         },
         "Wermacht": {
@@ -113,12 +110,12 @@ const FFT = (() => {
             "fontColour": "#000000",
             "borderColour": "#000000",
             "borderStyle": "5px double",
-            "hq": "german",
+            "hq": "Iron-Cross::7650254",
             "excellent": "status_letters_and_numbers0205::5982324",
             "fair": "status_letters_and_numbers0206::5982325",
             "good": "status_letters_and_numbers0207::5982326",
-
-
+            "markerName": 201,
+            "markerNumber": 5982320
         },
 
         "Neutral": {
@@ -141,8 +138,6 @@ const FFT = (() => {
         move: "status_Advantage-or-Up::2006462",
         double: "status_Fast::5868456",
         unavail: "status_oneshot::5503748",
-        soviet: "status_Soviet::6433738",
-        german: "status_Iron-Cross::7650254",
 
 
 
@@ -820,18 +815,13 @@ log(this)
         }
 
         CheckCohesion = () => {
-            return (this.token.get("aura1_color") === "transparent") ? true:false;
-        }
-
-        TestCohesion = () => {
-            if (this.name.includes("Target")) {return}
             //tests and sets - done during movement, beg. of turn
             let cohesion = false;
-            let hqSymbol = SM[Nations[this.nation].hq];
+            let hqSymbol = "status_" + Nations[this.nation].hq;
             if (this.special.toLowerCase().includes("recon") || this.token.get(hqSymbol)) {
                 cohesion = true;
             } else {
-                let cohRange = (this.quality.includes("Fair")) ? 2:(this.quality.includes("Good")) ? 4:6;
+                let cohRange = (this.quality.includes("Fair")) ? 3:(this.quality.includes("Good")) ? 5:7;
                 let company = CompanyArray[this.companyID];
                 for (let i=0;i<company.tokenIDs.length;i++) {
                     let unit2 = UnitArray[company.tokenIDs[i]];
@@ -840,14 +830,8 @@ log(this)
                     let dist = this.Distance(unit2);
                     if (dist <= cohRange) {
                         cohesion = true;
-                        unit2.token.set("aura1_color","transparent");
                     }
                 }
-            }
-            if (cohesion === true) {
-                this.token.set("aura1_color","transparent");
-            } else {
-                this.token.set("aura1_color","#000000");
             }
             return cohesion;
         }
@@ -1583,9 +1567,6 @@ log(vertices)
             unit.spotter = false;
             unit.artQC = false;
 
-            if (unit.player === activePlayer) {
-                unit.TestCohesion();
-            }
 
 
 
@@ -1645,6 +1626,12 @@ log(unit.moveType)
                 outputCard.body.push(edge.name + " on " + DIRECTIONS[i] + " Edge");
             }
         }
+
+        outputCard.body.push("[hr]")
+        let result = unit.CheckCohesion();
+        result = (result === true) ? " In ":" Not In ";
+        outputCard.body.push("Unit is " + result + " Cohesion");
+
 
         
         PrintCard();
@@ -2529,25 +2516,53 @@ log("Not Spotted")
             return
         }
         let Tag = msg.content.split(";");
-        let companyName = Tag[1];
+        let coNumber = Tag[1];
         let ids = msg.selected.map((e) => e._id);
-        let company = new Company(companyName);
         let unitI = UnitArray[ids[0]];
-
         let nation = unitI.nation;
 
+        let companyName = coNumber + " Co";
+        let company = new Company(companyName);
+
+        let symbol;
         let formation = FormationArray[unitI.formationID];
-        let hqSymbol = Nations[nation].hq;
-        let gmn = formation.id + ";" + company.id;
-        _.each(ids,id => {
-            let token = UnitArray[id].token;
-            company.AddUnit(id);
-            token.set("gmnotes",gmn);
-            token.set("tooltip",formation.name + " / " + company.name + " / " + formation.quality + " Quality");
-            if (companyName === "HQ Company") {
-                token.set(SM[hqSymbol],true);
+        if (coNumber === "HQ") {
+            symbol = Nations[nation].hq;
+        } else {
+            let num = coNumber.toLowerCase().charCodeAt(0) - 97; //a will be 0
+            let markerName = Nations[nation].markerName + num;
+            markerName = markerName.toString().padStart(4,'0');
+            let markerNumber = Nations[nation].markerNumber + num;
+            if (nation === "Red Army" && num > 5) {
+                markerNumber++;
             }
-        })
+            symbol = "letters_and_numbers" + markerName + "::" + markerNumber;
+        }
+        symbol = "status_" + symbol;
+log(symbol)
+        let gmn = formation.id + ";" + company.id;
+
+        let nameArray = {};
+
+        for (let i=0;i<ids.length;i++) {
+            let id = ids[i];
+            let unit = UnitArray[id];
+            company.AddUnit(id);
+            let charName = unit.charName;
+            if (!nameArray[charName]) {
+                nameArray[charName] = 1;
+            } else {
+                nameArray[charName]++;
+            }
+            let name = charName + " Plt " + nameArray[charName];
+
+            unit.token.set("gmnotes",gmn);
+            unit.token.set("name",name);
+            unit.token.set("tooltip",formation.name + " / " + companyName + " / " + formation.quality + " Quality");
+            unit.token.set(symbol,true);
+            unit.name = name;
+        }
+
         formation.AddCompany(company.id);
         state.FFT.companyInfo[company.id] = companyName;
         sendChat("",companyName + " Added")
@@ -3236,7 +3251,6 @@ log("Not Spotted")
                     left: HexMap[label].centre.x,
                     top: HexMap[label].centre.y,
                 })
-                unit.TestCohesion();
             }
         }
     }
