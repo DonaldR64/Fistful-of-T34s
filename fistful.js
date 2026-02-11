@@ -1500,32 +1500,7 @@ log(vertices)
     }
 
 
-    const EndTurn = () => {
-        let turn = state.FFT.turn;
-        if (turn > 0) {
-            //qchecks, spotting, overwatch
-            qcUnits = [];
-            _.each(UnitArray,unit => {
-                if (unit.token.get(SM.qc)) {
-                    qcUnits.push(unit);
-                }
-                if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false && unit.player === activePlayer) {
-                    //sets overwatch
-                    unit.SetOverwatch(true);
-                }
-                CheckSpotting(unit,"End")
-            })
-            if (qcUnits.length > 0) {
-                SetupCard("End Turn","Quality Checks",state.FFT.nations[activePlayer]);
-                ButtonInfo("Start Quality Checks","!RunQC");
-                PrintCard();
-            } else {
-                NextPlayersTurn();
-            }
-        } else {
-            NextPlayersTurn();
-        }
-    }
+ 
  
 
 

@@ -132,8 +132,14 @@ const DirectFirePhase = () => {
 const SecondQC = () => {
     //qc from Direct Fire
     QCCheck(); //builds array qcUnits
-    nextPhase = "FormQCPhase";
+    nextPhase = "FormQC";
     RunQC(); //checks it, when 'empty' feed to nextPhase
+}
+
+const RunFormQC = () => {
+    //check formations for their quality checks if warranted
+
+
 }
 
 const EndPhase = () => {
@@ -146,8 +152,6 @@ const EndPhase = () => {
     })
     //spotting for end phase
     CheckSpotting(unit,"End")
-    
-
 }
 
 const RunQC = () => {
@@ -159,9 +163,11 @@ const RunQC = () => {
         PrintCard();
     } else {
         if (nextPhase === "CloseCombat") {
-            CloseCombatPhase();
+                CloseCombatPhase();
         } else if (nextPhase === "EndPhase") {
             EndPhase();
+        } else if (nextPhase === "FormQC") {
+            RunFormQC();
         } else {
             sendChat("","??")
         }
