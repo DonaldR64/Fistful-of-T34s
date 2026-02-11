@@ -81,8 +81,9 @@ const FFT = (() => {
     let qcFormations = [];
     let artUnits = [];
     let activePlayer = state.FFT.activePlayer || 0;
-    let currentPhase = state.FFT.currentPhase || "";
+    let currentPhase = state.FFT.phase || "Deployment";
     let nextPhase = "";
+
 
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
@@ -842,7 +843,13 @@ log(this)
         Suppress = (type,flag) => {
             let marker = (type === "A") ? SM.suppA:SM.suppB;
             let otherMarker = (type === "A") ? SM.suppB:SM.suppA;
-            this.token.set(otherMarker,false);
+            if (flag === true) {
+                //can only have one, set the other to false
+                this.token.set(marker,true);
+                this.token.set(otherMarker,false);
+            } else {
+                this.token.set(marker,false);
+            }
         }
 
 
@@ -1562,6 +1569,8 @@ log(unit.name)
         }
 
         target += rollMods;
+        target = Math.min(target,6);
+
 
         if (cohesion === true && rollMods === 0) {
             tip += "<br>No Modifications";
@@ -2092,7 +2101,7 @@ log(hex)
         SetupCard(unit.name,"Quality Check",unit.nation);
         qc = QualityCheck(unit);
         let i = randomInteger(6);
-        let effect;
+        let effect = "";
         if (qc.pass === true) {
             if (unit.armoured === false) {
                 effect = " and is Suppressed";
@@ -2290,7 +2299,7 @@ log("Not Spotted")
             companyInfo: {},
             lines: [],
             turn: 0,
-            phase: "",
+            phase: "Deployment",
             activePlayer: 0,
             firstPlayer: 0,
             roads: true,
@@ -3085,6 +3094,7 @@ const AdvancePhase = () => {
     let phases = ["Deployment","Airstrikes & Area Fire","Movement","Close Combat","Direct Fire","End Phase"];
     if (turn === 0) {
         currentPhase = "Deployment";
+        turn = 1;
         _.each(UnitArray,unit => {
             if (HexMap[unit.hexLabel].offboard === false) {
                 unit.token.set("tint_color","#000000");
@@ -3103,9 +3113,9 @@ const AdvancePhase = () => {
 
     state.FFT.turn = turn;
     state.FFT.activePlayer = activePlayer;
-    state.FFT.currentPhase = currentPhase;
+    state.FFT.phase = currentPhase;
 
-    SetupCard(currentPhase,"Turn " + turn,state.FFT.nations[currentPlayer]);
+    SetupCard(currentPhase,"Turn " + turn,state.FFT.nations[activePlayer]);
 
     switch(currentPhase) {
         case "Deployment":
@@ -3128,13 +3138,13 @@ const AdvancePhase = () => {
             break;
     }
     
-    PrintCard();
 
 }
 
 const DeploymentPhase = () => {
     outputCard.body.push("Deploy any Available Reinforcements");
     outputCard.body.push("No Overwatch Fire is allowed");
+    PrintCard();
 }
 
 const AreaFirePhase = () => {
@@ -3176,14 +3186,18 @@ const AreaFirePhase = () => {
     outputCard.body.push("[hr]");
     outputCard.body.push("Place and resolve any Area Fire attacks");
     outputCard.body.push("No Overwatch Fire is allowed");
+    PrintCard();
 }
 
 const MovementPhase = () => {
+    RemoveDead();
     outputCard.body.push("Overwatch Fire can occur at any time");
     outputCard.body.push("Quality Checks will be done at the end of the Phase");
+    PrintCard();
 }
 
 const FirstQC = () => {
+    RemoveMoveMarkers();   
     //qc from overwatch, note on unit somewhere has passed, ? a green dot
     QCCheck(); //builds array qcUnits
     nextPhase = "CloseCombat";
@@ -3191,12 +3205,16 @@ const FirstQC = () => {
 }
 
 const CloseCombatPhase = () => {
+    RemoveDead();
     //qc from overwatch, note on unit somewhere has passed, ? a green dot
     outputCard.body.push("Resolve Close Combats");
     outputCard.body.push("The Active Player determines the order of the Close Combats");
+    PrintCard();
 }
 
 const DirectFirePhase = () => {
+    RemoveMoveMarkers();   
+    RemoveDead();
     //spotting from movement phase
     _.each(UnitArray,unit => {
         if (unit.player !== activePlayer) {
@@ -3205,6 +3223,7 @@ const DirectFirePhase = () => {
     })
     outputCard.body.push("Overwatch Fire must take place BEFORE the Active Player begins their own fire");
     outputCard.body.push("Quality Checks will be done at the end of the Phase");
+    PrintCard();
 }
 
 const SecondQC = () => {
@@ -3215,6 +3234,7 @@ const SecondQC = () => {
 }
 
 const StartFormQC = () => {
+    RemoveDead();
     //check formations for their quality checks if warranted
     let qcFormations = [];
     _.each(FormationArray, formation => {
@@ -3226,15 +3246,18 @@ const StartFormQC = () => {
 }
 
 const EndPhase = () => {
+    RemoveDead();
     //place any unit of active players that didnt move or fire on overwatch
     _.each(UnitArray,unit => {
-        if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false && unit.player === activePlayer && unit.token.get(SM.unavail) === false) {
+        if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false && unit.player === activePlayer && unit.token.get(SM.unavail) === false && unit.weapons.length > 0) {
             //sets overwatch
             unit.SetOverwatch(true);
         }
+        //spotting for end phase
+        CheckSpotting(unit,"End")
     })
-    //spotting for end phase
-    CheckSpotting(unit,"End")
+    ButtonInfo("Next Turn ?","!AdvancePhase");
+    PrintCard();
 }
 
 const RunQC = () => {
@@ -3295,7 +3318,11 @@ const RunFormQC = () => {
                 RemoveMoveMarkers();   
                 let move = parseInt(tok.get("bar1_value")) || 0;
                 if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false && currentPhase !== "Deployment") {
-                    if (HexMap[label].moveCosts[unit.moveType] === -1 || move <= 0 || unit.token.get(SM.down)) {
+
+
+
+
+                    if (HexMap[label].moveCosts[unit.moveType] === -1 || (move <= 0 && prevLabel !== label) || unit.token.get(SM.down)) {
                         tok.set("left",prev.left);
                         tok.set("top",prev.top);
                         tok.set("rotation",prev.rotation);
@@ -3589,8 +3616,8 @@ log("Final Hex Label: " + finalHexLabel)
             case '!AddAbilities':
                 AddAbilities(msg);
                 break;
-            case '!EndTurn':
-                EndTurn();
+            case '!AdvancePhase':
+                AdvancePhase();
                 break;
             case '!SetupGame':
                 SetupGame(msg);
