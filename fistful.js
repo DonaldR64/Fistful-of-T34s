@@ -2362,7 +2362,7 @@ log("Not Spotted")
         formation.breakpoint = breakpoint;
         state.FFT.formationInfo[formation.id].breakpoint = breakpoint;
 
-        if (formationName.includes("Corps") || formationName.includes("Brigade")) {
+        if (formationName.includes("Corps") || formationName.includes("Division")) {
             state.FFT.formNum[formation.player]++;
         } 
 
@@ -2418,7 +2418,7 @@ log("Not Spotted")
         if (formNum > 5) {
             formNum -= 6;
         }
-        if (coNumber === "HQ" || coNumber === "Corps" || coNumber === "Brigade") {
+        if (coNumber === "HQ" || coNumber === "Corps" || coNumber === "Divisional") {
             symbol = Nations[nation].hq;
         } else {
             let num = coNumber.toLowerCase().charCodeAt(0) - 97; //a will be 0
