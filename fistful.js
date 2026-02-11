@@ -88,6 +88,10 @@ const FFT = (() => {
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
 
+    let companyMarkers = [1,51,101,151,201,251];
+    let companyMarkerNumbers = [5982118,5982169,5982220,5982270,5982320,5982371];
+
+
 
     const Nations = {
         "Red Army": {
@@ -98,12 +102,6 @@ const FFT = (() => {
             "borderColour": "#ff0000",
             "borderStyle": "5px groove",
             "hq": "Soviet::6433738",
-            "excellent": "status_letters_and_numbers0005::5982122",
-            "fair": "status_letters_and_numbers0006::5982123",
-            "good": "status_letters_and_numbers0007::5982124",
-            "markerName": 1,
-            "markerNumber": 5982118,
-
         },
         "Wermacht": {
             "image": "",
@@ -113,11 +111,6 @@ const FFT = (() => {
             "borderColour": "#000000",
             "borderStyle": "5px double",
             "hq": "Iron-Cross::7650254",
-            "excellent": "status_letters_and_numbers0205::5982324",
-            "fair": "status_letters_and_numbers0206::5982325",
-            "good": "status_letters_and_numbers0207::5982326",
-            "markerName": 201,
-            "markerNumber": 5982320
         },
 
         "Neutral": {
@@ -2369,8 +2362,9 @@ log("Not Spotted")
         formation.breakpoint = breakpoint;
         state.FFT.formationInfo[formation.id].breakpoint = breakpoint;
 
- 
-
+        if (formationName !== "Corps" || formationName !== "Brigade") {
+            state.FFT.formNum[formation.player]++;
+        } 
 
         for (let i=0;i<msg.selected.length;i++) {
             mID = msg.selected[i]._id;
@@ -2420,14 +2414,18 @@ log("Not Spotted")
 
         let symbol;
         let formation = FormationArray[unitI.formationID];
+        let formNum = state.FFT.formNum[unitI.player] - 1;
+        if (formNum > 5) {
+            formNum -= 6;
+        }
         if (coNumber === "HQ") {
             symbol = Nations[nation].hq;
         } else {
             let num = coNumber.toLowerCase().charCodeAt(0) - 97; //a will be 0
-            let markerName = Nations[nation].markerName + num;
+            let markerName = companyMarkers[formNum] + num;
             markerName = markerName.toString().padStart(4,'0');
-            let markerNumber = Nations[nation].markerNumber + num;
-            if (nation === "Red Army" && num > 5) {
+            let markerNumber = companyMarkerNumbers[formNum] + num;
+            if (nation === "Red Army" && coNumber === "A" && num > 5) {
                 markerNumber++;
             }
             symbol = "letters_and_numbers" + markerName + "::" + markerNumber;
