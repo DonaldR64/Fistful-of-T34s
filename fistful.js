@@ -81,7 +81,7 @@ const FFT = (() => {
     let qcFormations = [];
     let artUnits = [];
     let activePlayer = state.FFT.activePlayer || 0;
-    let currentPhase = "Start";
+    let currentPhase = state.FFT.currentPhase || "";
 
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
@@ -138,8 +138,8 @@ const FFT = (() => {
         move: "status_Advantage-or-Up::2006462",
         double: "status_Fast::5868456",
         unavail: "status_oneshot::5503748",
-
-
+        down: "status_Disadvantage-or-Down::2006464",
+        passed: "status_green",
 
 
 
@@ -727,7 +727,7 @@ const FFT = (() => {
 
             this.formationID = "";
             this.companyID = "";
-            
+            this.coverTest = false;
 
 
 log(this)
@@ -1528,75 +1528,6 @@ log(vertices)
  
 
 
-
-    const NextPlayersTurn = () => {
-        let turn = state.FFT.turn;
-        activePlayer = state.FFT.activePlayer;
-        RemoveDead();
-        if (activePlayer !== state.FFT.firstPlayer || turn === 0) {
-            turn += 1;
-            activePlayer = state.FFT.firstPlayer;
-        } else {
-            activePlayer = (state.FFT.firstPlayer === 0) ? 1:0;
-        }
-        
-        state.FFT.turn = turn;
-        state.FFT.activePlayer = activePlayer;
-
-        SetupCard(state.FFT.nations[activePlayer] + " Turn","Turn " + turn,state.FFT.nations[activePlayer]);
-
-        _.each(UnitArray,unit => {
-            if (turn === 0 && HexMap[unit.hexLabel].offboard === false) {
-                unit.token.set("tint_color","#000000");
-            }
-            unit.token.set(SM.fired,false);
-            unit.token.set(SM.unavail,false);
-            unit.token.set(SM.move,false);
-            unit.token.set(SM.double,false);
-
-            if (unit.player !== activePlayer) {
-                unit.Suppress("A",false);
-            }
-            if (unit.player === activePlayer) {
-                unit.SetOverwatch(false);
-                unit.token.set("bar1_value",unit.movement);
-            }
-
-            unit.startRotation = unit.token.get("rotation");
-            unit.startHexLabel = unit.hexLabel;
-            unit.spotter = false;
-            unit.artQC = false;
-
-
-
-
-
-
-        })
-
-        //remove smoke
-        _.each(HexMap,hex => {
-            if (hex.smokePlayer === activePlayer) {
-                let smokeID = hex.smoke;
-                let smoke = findObjs({_type:"graphic", id: smokeID})[0];
-                smoke.remove();
-                hex.smoke = "";
-                hex.smokePlayer = "";
-            }
-        })
-
-        outputCard.body.push("[U]Available Artillery[/u]");
-        ArtilleryAvailability(activePlayer);
-
-        outputCard.body.push("[hr]");
-        outputCard.body.push("[U]Phases[/u]");
-        let phases = ["Reinforcements","Artillery","Movement","Close Combat","Direct Fire","End"];
-        _.each(phases,phase => {
-            outputCard.body.push(phase);
-        })
-
-        PrintCard();
-    }
 
     const TokenInfo = (msg) => {
         if (!msg.selected) {return};
@@ -3228,13 +3159,15 @@ log(symbol)
             if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
                 RemoveMoveMarkers();   
                 let move = parseInt(tok.get("bar1_value")) || 0;
-                if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false) {
-                    if (HexMap[label].moveCosts[unit.moveType] === -1 || move <= 0) {
+                if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false && currentPhase !== "Deployment") {
+                    if (HexMap[label].moveCosts[unit.moveType] === -1 || move <= 0 || unit.token.get(SM.down)) {
                         tok.set("left",prev.left);
                         tok.set("top",prev.top);
                         tok.set("rotation",prev.rotation);
                         if (move <= 0) {
                             sendChat("","No Movement Points");
+                        } else if (unit.token.get(SM.down)) {
+                            sendChat("","Unit has Gone to Ground for the remainder of the turn");
                         } else {
                             sendChat("","Hex is Impassable to this Unit");
                         }
@@ -3251,7 +3184,9 @@ log(symbol)
                         });
                         tok.set(SM.move,false);
                         tok.set(SM.double,false);
-                        tok.set(marker,true);
+                        if (cost > 0) {
+                            tok.set(marker,true);
+                        }
 
                         let angle = Angle(HexMap[unit.startHexLabel].cube.angle(HexMap[label].cube));
                         tok.set({
@@ -3391,7 +3326,7 @@ log(explored)
 
 
 
-            let coverStart = startHex.cover > 0 ? true:false;
+            let coverStart = startHex.coverDirect > 0 ? true:false;
             let final = explored.length - 1;
             for (let i=1;i<explored.length;i++) {
                 totalCost += explored[i].cost;
@@ -3402,15 +3337,17 @@ log(explored)
                     sendChat("","Stopped at limit of movement")
                     break;
                 }
-                if (unit.quality.includes("Fair") && coverStart === true && hexCover === false && unit.token.get(SM.brave) === false) {
+                if (unit.quality.includes("Fair") && coverStart === true && hexCover === false && unit.coverTest === false) {
                     //quality check to leave cover, only needs to do once
-                    unit.token.set(SM.brave,true);
-                    let qc = QualityCheck(unit,"Movement");
-                    if (qc.pass === false) {
+                    unit.coverTest = true;
+                    let responseRoll = randomInteger(6);
+log("Response Roll: " + responseRoll)
+                    if (responseRoll < 4) {
                         SetupCard(unit.name,"Breaking Cover",unit.nation);
-                        outputCard.body.push("The Unit " + qc.tip + " its QC and remains in cover and can move no further");
+                        outputCard.body.push("The Unit Goes to Ground in Cover");
                         PrintCard();
                         totalCost -= explored[i].cost;
+                        unit.token.set(SM.down,true);
                         final = i - 1; //prev hex
                         break;
                     }
