@@ -147,7 +147,6 @@ const FFT = (() => {
 
 
 
-
     }
 
 
@@ -2103,12 +2102,14 @@ log(hex)
         let i = randomInteger(6);
         let effect = "";
         if (qc.pass === true) {
+            unit.token.set(SM.passed,true);
             if (unit.armoured === false) {
                 effect = " and is Suppressed";
+                unit.Suppress("B",true);
             }
         } else {
             if (unit.armoured === true) {
-                effect = " and Withdraws";
+                effect = " and Withdraws from the Battle";
             } else {
                 let r = randomInteger(6);
                 if (r === 6) {
@@ -3019,17 +3020,25 @@ log(symbol)
                         tip = ' is [Destroyed](#" class="showtip" title="' + tip + ')';
                         target.Destroyed("Wreck");
                     } else if (qc === true) {
-                        tip = ' [Takes Damage](#" class="showtip" title="' + tip + ')';
-                        target.token.set(SM.qc,true);
+                        if (target.token.get(SM.passed)) {
+                            tip = ' [Takes Minor Damage](#" class="showtip" title="' + tip + ')';
+                        } else {
+                            tip = ' [Takes Damage](#" class="showtip" title="' + tip + ')';
+                            target.token.set(SM.qc,true);
+                        }
                     } else {
                         tip = ' [Deflects all Shots](#" class="showtip" title="' + tip + ')';
                     }
                     outputCard.body.push(target.name + tip);
                 } else {
-                    let oldQC = (target.token.get(SM.qc) === false) ? 0:(target.token.get(SM.qc) === true) ? 1:parseInt(target.token.get(SM.qc));
-                    finalHits += oldQC;
-                    if (finalHits > 0) {
-                        target.token.set(SM.qc,finalHits);
+                    if (target.token.get(SM.passed)) {
+                        outputCard.body.push("The Unit weathers the fire");
+                    } else {
+                        let oldQC = (target.token.get(SM.qc) === false) ? 0:(target.token.get(SM.qc) === true) ? 1:parseInt(target.token.get(SM.qc));
+                        finalHits += oldQC;
+                        if (finalHits > 0) {
+                            target.token.set(SM.qc,finalHits);
+                        }
                     }
                 }
             }
