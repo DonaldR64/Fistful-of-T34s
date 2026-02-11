@@ -152,9 +152,7 @@ const FFT = (() => {
 
     //height is height of terrain element
     //movecosts
-    //coverDirect, coverArea, coverSpot is now using coverDirect
-    //cover for direct fire - 0 = None, 1 = Light (5+), 2 = Heavy (4+)
-    //cover for area fire is true, false
+    //cover for  fire - 0 = None, 1 = Light (5+), 2 = Heavy (4+)
 
     const LinearTerrain = {
 
@@ -170,12 +168,12 @@ const FFT = (() => {
     const RoadCosts = {leg: 1,tracked: .5, wheeled: .25, halftrack: .5};
 
     const TerrainInfo = {
-        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
-        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2}, coverDirect: 2,coverArea: true},
-        "River": {name: "River",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
-        "Craters": {name: "Craters",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
-        "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 2, halftrack: 2}, coverDirect: 1, coverArea: true},
-        "Water": {name: "Water",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1}, coverDirect: 0,coverArea: false,},
+        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2}, cover: 1},
+        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2}, cover: 2},
+        "River": {name: "River",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1}, cover: 0,},
+        "Craters": {name: "Craters",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 3, halftrack: 3}, cover: 0,},
+        "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 3, halftrack: 3}, cover: 0,},
+        "Water": {name: "Water",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1}, cover: 0,},
 
 
 
@@ -627,8 +625,7 @@ const FFT = (() => {
             this.terrain = "Open";
             this.offboard = false;
             this.moveCosts = {leg: 1, tracked: 1, wheeled: 1, halftrack: 1}
-            this.coverDirect = 0;
-            this.coverArea = false;
+            this.cover = 0;
             this.road = false;
             this.smoke = "";
             this.smokePlayer = "";
@@ -723,7 +720,7 @@ const FFT = (() => {
 
             this.special = aa.special || " ";
 
-            this.spotter = false;
+            this.spotter = 0;
             this.artQC = false;
 
             this.formationID = "";
@@ -779,8 +776,7 @@ log(this)
                             //impasssable
                         }
                     })
-                    hex.coverDirect = Math.max(hex.coverDirect,terrain.coverDirect);
-                    hex.coverArea = (terrain.coverArea === true) ? true:hex.coverArea;
+                    hex.cover = Math.max(hex.cover,terrain.cover);
                     HexMap[this.hexLabel] = hex;
                 } else {
                     token.set("statusmarkers","");
@@ -1297,8 +1293,7 @@ log(this)
                         //impasssable
                     }
                 })
-                hex.coverDirect = Math.max(hex.coverDirect,terrain.coverDirect);
-                hex.coverArea = (terrain.coverArea === true) ? true:hex.coverArea;
+                hex.cover = Math.max(hex.cover,terrain.cover);
             }
             if (name === "Map") {
                 DefineOffboard(token);
@@ -1522,10 +1517,8 @@ log(unit.moveType)
         if (hex.road === true) {
             outputCard.body.push("Road in Hex");
         }
-        let areaCover = (hex.coverArea === true) ? "Cover":"No Cover";
-        let directCover = (hex.coverDirect === 0) ? "No Cover":(hex.coverDirect === 1) ? "Cover Save 5+":"Cover Save 4+";
-        outputCard.body.push("Indirect Fire: " + areaCover);
-        outputCard.body.push("Direct Fire: " + directCover);
+        let cover = (hex.cover === 0) ? "No Cover":(hex.cover === 1) ? "Cover Save 5+":"Cover Save 4+";
+        outputCard.body.push("Cover: " + cover);
 
         for (let i=0;i<6;i++) {
             let edge = hex.edges[DIRECTIONS[i]];
@@ -1604,7 +1597,7 @@ log(unit.name)
         let unavail = [];
         _.each(UnitArray,unit => {
             if (unit.player === player) {
-                if (unit.artFlag === true) {
+                if (unit.artFlag === true && unit.CheckSuppression() === false) {
                     let availRoll = randomInteger(6);
                     let target = unit.avail;
                     let tipmods = "";
@@ -1612,11 +1605,7 @@ log(unit.name)
                     if (offboard === false && target > 1) {
                         target--;
                         tipmods += "<br>On Board Artillery +1";
-                    }
-                    if (unit.CheckSuppression() === true) {
-                        target++
-                        tipmods += "<br>Suppressed -1";
-                    }            
+                    }         
                     
                     tip = "Roll: " + availRoll + " vs. " + target + "+" + tipmods;
 
@@ -1667,8 +1656,9 @@ log(unit.name)
         let spotterID = msg.selected[0]._id;
         let spotter = UnitArray[spotterID];
         SetupCard(spotter.name,"Call Artillery",spotter.nation);
-        if (spotter.spotter === true) {
-            outputCard.body.push("Unit has already Spotted this Turn");
+
+        if (((spotter.special.includes("Recon") || spotter.special.includes("Forward Observer")) && spotter.spotter >= 2) ||  (spotter.special.includes("Recon") === false && spotter.special.includes("Forward Observer") === false && spotter.spotter >= 1)) {
+            outputCard.body.push("Unit unable to Spot for any more Barrages");
         } else if (artUnits.length === 0) {
             outputCard.body.push("There is no Available Artillery or Airstrikes");
         } else {
@@ -1924,7 +1914,10 @@ log(target)
         //check LOS and Range
         let losResult = LOS(spotter,target);
         let distance = artillery.Distance(target);
-        if (distance > artillery.artrange) {
+        let targetHex = HexMap[target.hexLabel];
+        if (targetHex.terrain.includes("Water") || targetHex.terrain.includes("River") && type === "Smoke") {
+            outputCard.body.push("Unable to place Target on Water");
+        } else if (distance > artillery.artrange) {
             outputCard.body.push("Out of Range of Artillery Unit");
         } else if (losResult.los === false) {
             outputCard.body.push("No LOS to Target"); 
@@ -1972,7 +1965,7 @@ log(target)
             target.token.remove();
             delete UnitArray[target.id];
 
-            spotter.spotter = true;
+            spotter.spotter++;
             artillery.token.set(SM.fired,true);
             artillery.token.set("tint_color","transparent");
 
@@ -2036,11 +2029,18 @@ log(hex)
                 tip += "<br>-1 Partially Under";
             }
 
+            if (unit.token.get("tint_color") === "#000000") {
+                let hiddenRoll = randomInteger(6);
+                if (hiddenRoll > 3) {
+                    result = 1;
+                    tip = "Unspotted Unit Missed<br>Roll: " + hiddenRoll + " vs. 4+";
+                }
+            }
             if (result > 3) {
                 tip = '[Hit](#" class="showtip" title="' + tip + ')';
                 
                 if (result >= 6) {
-                    if (hex.coverArea === true || unit.armoured === true) {
+                    if (hex.cover > 0 || unit.armoured === true) {
                         if (unit.artQC === false) {
                             unit.artQC = true;
                             unit.Suppress("A",true);
@@ -2056,7 +2056,7 @@ log(hex)
                         unit.Destroyed();
                     }
                 } else {
-                    if ((hex.coverArea === true || unit.armoured === true) && unit.artQC === false) {
+                    if ((hex.cover > 0 || unit.armoured === true) && unit.artQC === false) {
                         unit.artQC = true;
                         let qc = QualityCheck(unit);
                         let noun = (qc.pass === true) ? "Suppressed":"Routed";
@@ -2558,11 +2558,10 @@ log(symbol)
             outputCard.body.push(losResult.losReason);
         } else {
             outputCard.body.push("Shooter has LOS to Target");
-            outputCard.body.push("Target has " + coverLevels[losResult.coverDirect] + " Cover vs. Direct Fire");
+            outputCard.body.push("Target has " + coverLevels[losResult.cover] + " Cover");
             if (losResult.inSmoke === true) {
                 outputCard.body.push("Target is in Smoke");
             }
-            let areaCover = (losResult.coverArea === true) ? "Cover":"No Cover";
             outputCard.body.push("Target has " + areaCover + " vs. Indirect Fire");
             outputCard.body.push("Target is in the " + losResult.shooterFacing + " Arc");
             outputCard.body.push("Target is being hit on the " + losResult.targetFacing + " Arc");
@@ -2619,7 +2618,7 @@ log(symbol)
                 losReason = "Blocked by Smoke at " + label;
                 break;
             }
-            if (interHex.coverDirect === 0) {continue};
+            if (interHex.cover === 0) {continue};
             let teH = interHex.height; //terrain in hex
             let edH = 0; //height of any terrain on edge crossed
             let iH = Math.max(teH,edH);
@@ -2640,8 +2639,7 @@ log(symbol)
             losReason: losReason,
             losBlock: losBlock,
             distance: distance,
-            coverDirect: targetHex.coverDirect,
-            coverArea: targetHex.coverArea,
+            cover: targetHex.cover,
             shooterFacing: shooterFacing,
             targetFacing: targetFacing,
             inSmoke: (targetHex.smoke !== "") ? true:false,
@@ -2983,7 +2981,7 @@ log(symbol)
             }
         }
         //cover saves
-        let cover = HexMap[target.hexLabel].coverDirect;
+        let cover = HexMap[target.hexLabel].cover;
         let coverRolls = [];
         let coverTip = "";
         if (cover > 0) {
@@ -3302,7 +3300,7 @@ log(explored)
 
 
 
-            let coverStart = startHex.coverDirect > 0 ? true:false;
+            let coverStart = startHex.cover > 0 ? true:false;
             let final = explored.length - 1;
             for (let i=1;i<explored.length;i++) {
                 totalCost += explored[i].cost;
