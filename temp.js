@@ -51,7 +51,6 @@ const AdvancePhase = () => {
 
 }
 
-
 const DeploymentPhase = () => {
     outputCard.body.push("Deploy any Available Reinforcements");
     outputCard.body.push("No Overwatch Fire is allowed");
@@ -116,8 +115,6 @@ const CloseCombatPhase = () => {
     outputCard.body.push("The Active Player determines the order of the Close Combats");
 }
 
-
-
 const DirectFirePhase = () => {
     //spotting from movement phase
     _.each(UnitArray,unit => {
@@ -136,10 +133,15 @@ const SecondQC = () => {
     RunQC(); //checks it, when 'empty' feed to nextPhase
 }
 
-const RunFormQC = () => {
+const StartFormQC = () => {
     //check formations for their quality checks if warranted
-
-
+    let qcFormations = [];
+    _.each(FormationArray, formation => {
+        if (formation.casualties >= formation.breakpoint) {
+            qcFormations.push(formation);
+        }
+    })
+    RunFormQC();
 }
 
 const EndPhase = () => {
@@ -167,7 +169,7 @@ const RunQC = () => {
         } else if (nextPhase === "EndPhase") {
             EndPhase();
         } else if (nextPhase === "FormQC") {
-            RunFormQC();
+            StartFormQC();
         } else {
             sendChat("","??")
         }
@@ -181,4 +183,19 @@ const QCCheck = () => {
             qcUnits.push(unit);
         }
     })
+}
+
+const RunFormQC = () => {
+    let formation = qcFormations.shift();
+    if (formation) {
+        let unit = UnitArray[formation.tokenIDs[0]];
+        if (unit) {
+            sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
+            SetupCard(formation.name,"Formation QC",unit.nation);
+            ButtonInfo("Make Quality Check","!TakeFQC;" + unit.id);
+            PrintCard();
+        }
+    } else {
+       EndPhase();
+    }
 }
