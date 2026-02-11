@@ -82,6 +82,7 @@ const FFT = (() => {
     let artUnits = [];
     let activePlayer = state.FFT.activePlayer || 0;
     let currentPhase = state.FFT.currentPhase || "";
+    let nextPhase = "";
 
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};

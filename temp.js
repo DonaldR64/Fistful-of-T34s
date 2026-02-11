@@ -1,7 +1,7 @@
 const AdvancePhase = () => {
     let turn = state.FFT.turn;
     let phase = state.FFT.phase;
-    let phases = ["Deployment","Airstrikes & Area Fire","Movement & Close Combat","Direct Fire","End Phase"];
+    let phases = ["Deployment","Airstrikes & Area Fire","Movement","Close Combat","Direct Fire","End Phase"];
     if (turn === 0) {
         currentPhase = "Deployment";
         _.each(UnitArray,unit => {
@@ -12,7 +12,7 @@ const AdvancePhase = () => {
         })
     } else {
         phaseNum = phases.indexOf(phase) + 1;
-        if (phaseNum > 4) {
+        if (phaseNum >= phases.length) {
             phaseNum = 0
             activePlayer = activePlayer === 0 ? 1:0;
             turn++;
@@ -33,14 +33,17 @@ const AdvancePhase = () => {
         case "Airstrikes & Area Fire":
             AreaFirePhase();
             break;
-        case "Movement & Close Combat":
+        case "Movement":
             MovementPhase();
+            break;
+        case "Close Combat":
+            FirstQC();
             break;
         case "Direct Fire":
             DirectFirePhase();
             break;
         case "End Phase":
-            EndPhase();
+            SecondQC();
             break;
     }
     
@@ -91,34 +94,85 @@ const AreaFirePhase = () => {
     outputCard.body.push("[U]Available Artillery[/u]");
     ArtilleryAvailability(activePlayer);
     outputCard.body.push("[hr]");
-    outputCard.body.push("Place and resolve any Area FIre attacks");
+    outputCard.body.push("Place and resolve any Area Fire attacks");
     outputCard.body.push("No Overwatch Fire is allowed");
 }
 
 const MovementPhase = () => {
-    outputCard.body.push("Overwatch Fire can occur before, during or after any movement");
-    outputCard.body.push("When all movement and Overwatch Fire is done, resolve Close Combats");
+    outputCard.body.push("Overwatch Fire can occur at any time");
+    outputCard.body.push("Quality Checks will be done at the end of the Phase");
+}
+
+const FirstQC = () => {
+    //qc from overwatch, note on unit somewhere has passed, ? a green dot
+    QCCheck(); //builds array qcUnits
+    nextPhase = "CloseCombat";
+    RunQC(); //checks it, when 'empty' feed to nextPhase
+}
+
+const CloseCombatPhase = () => {
+    //qc from overwatch, note on unit somewhere has passed, ? a green dot
+    outputCard.body.push("Resolve Close Combats");
     outputCard.body.push("The Active Player determines the order of the Close Combats");
 }
 
+
+
 const DirectFirePhase = () => {
     //spotting from movement phase
-    //qc to be done, note which units have already taken one by placing a SM.passed
-
     _.each(UnitArray,unit => {
         if (unit.player !== activePlayer) {
             unit.Suppress("B",false);
         }
     })
-    outputCard.body.push("Overwatch Fire must take place before the Active Player begins their own fire");
+    outputCard.body.push("Overwatch Fire must take place BEFORE the Active Player begins their own fire");
+    outputCard.body.push("Quality Checks will be done at the end of the Phase");
+}
+
+const SecondQC = () => {
+    //qc from Direct Fire
+    QCCheck(); //builds array qcUnits
+    nextPhase = "FormQCPhase";
+    RunQC(); //checks it, when 'empty' feed to nextPhase
 }
 
 const EndPhase = () => {
-    //qcs to be done
-
     //place any unit of active players that didnt move or fire on overwatch
-
+    _.each(UnitArray,unit => {
+        if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false && unit.player === activePlayer && unit.token.get(SM.unavail) === false) {
+            //sets overwatch
+            unit.SetOverwatch(true);
+        }
+    })
     //spotting for end phase
+    CheckSpotting(unit,"End")
+    
 
+}
 
+const RunQC = () => {
+    let unit = qcUnits.shift();
+    if (unit) {
+        sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
+        SetupCard(unit.name,"Quality Check",unit.nation);
+        ButtonInfo("Make Quality Check","!TakeQC;" + unit.id);
+        PrintCard();
+    } else {
+        if (nextPhase === "CloseCombat") {
+            CloseCombatPhase();
+        } else if (nextPhase === "EndPhase") {
+            EndPhase();
+        } else {
+            sendChat("","??")
+        }
+    }
+}
+
+const QCCheck = () => {
+    qcUnits = [];
+        _.each(UnitArray,unit => {
+        if (unit.token.get(SM.qc)) {
+            qcUnits.push(unit);
+        }
+    })
 }
