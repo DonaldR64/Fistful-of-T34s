@@ -814,36 +814,6 @@ log(this)
             } else {
                 return true;
             }
-
-
-
-
-            //tests and sets - done during movement, beg. of turn
-            let cohesion = false;
-            let hqSymbol = "status_" + Nations[this.nation].hq;
-            if (this.special.toLowerCase().includes("recon") || this.token.get(hqSymbol)) {
-                cohesion = true;
-            } else {
-                let cohRange = (this.quality.includes("Fair")) ? 3:(this.quality.includes("Good")) ? 5:7;
-                let company = CompanyArray[this.companyID];
-                for (let i=0;i<company.tokenIDs.length;i++) {
-                    let unit2 = UnitArray[company.tokenIDs[i]];
-                    if (!unit2 || unit2.id === this.id) {continue};
-                    if (!unit2.token) {continue};
-                    let dist = this.Distance(unit2);
-                    if (dist <= cohRange) {
-                        cohesion = true;
-                    }
-                }
-            }
-            return cohesion;
-        }
-
-        Cohesion = () => {
-            //test for cohesion at start of movement
-
-
-
         }
 
 
@@ -947,6 +917,14 @@ log(this)
                 this.tokenIDs.push(uID);
             }
             UnitArray[uID].companyID = this.id;
+        }
+        Cohesion() {
+            let units = this.tokenIDs.map((e) => UnitArray[e]);                        
+            
+
+
+
+
         }
     }
 
@@ -3246,6 +3224,13 @@ const AreaFirePhase = () => {
 
 const MovementPhase = () => {
     RemoveDead();
+    _.each(CompanyArray,company => {
+        if (company.player === activePlayer) {
+            company.Cohesion();
+        }
+    })
+
+
     outputCard.body.push("Overwatch Fire can occur at any time");
     outputCard.body.push("Quality Checks will be done at the end of the Phase");
     PrintCard();
