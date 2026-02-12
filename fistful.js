@@ -102,6 +102,8 @@ const FFT = (() => {
             "borderColour": "#ff0000",
             "borderStyle": "5px groove",
             "hq": "Soviet::6433738",
+            "response": 3,
+            "artAccuracy": 5.
         },
         "Wermacht": {
             "image": "",
@@ -111,6 +113,8 @@ const FFT = (() => {
             "borderColour": "#000000",
             "borderStyle": "5px double",
             "hq": "Iron-Cross::7650254",
+            "response": 3,
+            "artAccuracy": 5,
         },
 
         "Neutral": {
@@ -719,7 +723,7 @@ const FFT = (() => {
             this.formationID = "";
             this.companyID = "";
             this.coverTest = false;
-
+            this.CC = false;
 
 log(this)
 
@@ -1541,8 +1545,10 @@ log(unit.moveType)
 log(unit.name)
         let passed = true;
         let cohesion = unit.CheckCohesion();
-        if (reason === "Movement") {cohesion = true}; //eg when breaking cover
+        if (reason === "CC") {
+            
 
+        }
         let qualityRoll = randomInteger(6);
         let target = (unit.quality.includes("Fair")) ? 5:(unit.quality.includes("Good")) ? 4:3;
         let tip = "<br>" + unit.quality + ": " + target + "+";
@@ -1552,12 +1558,16 @@ log(unit.name)
             rollMods++;
             tip += "<br>Cohesion -1";
         } 
-        let num = unit.token.get(SM.qc) === true ? 1:parseInt(unit.token.get(SM.qc));
-
-        if (unit.armoured === false && num > 1) {
-            num--;
-            rollMods += num;
-            tip += "<br>Extra QC Markers -" + num;
+        if (reason === "CC") {
+            rollMods -= 2;
+            tip += "<br>Tank Fear +2";
+        } else {
+            let num = unit.token.get(SM.qc) === true ? 1:parseInt(unit.token.get(SM.qc));
+            if (unit.armoured === false && num > 1) {
+                num--;
+                rollMods += num;
+                tip += "<br>Extra QC Markers -" + num;
+            }
         }
 
         target += rollMods;
@@ -2638,6 +2648,17 @@ log(symbol)
             errorMsg.push("[#ff0000]Unit is unable to Fire due to Movement[/#]");
         }
 
+        let closeCombat = (losResult.distance === 1) ? true:false;
+
+        if (closeCombat === true && shooter.player !== activePlayer && HexMap[shooter.hexLabel].cover === 0 && target.moveType === "Tracked" && shooter.CC === false) {
+            let qcResult = QualityCheck(shooter,"CC");
+            if (qcResult.pass === false) {
+                errorMsg.push("Unit " + qcResult.tip + " its QC for Tank Fear");
+                errorMsg.push("It does not fire this first round of combat");
+            }
+        }
+
+
         if (errorMsg.length > 0) {
             _.each(errorMsg,msg => {
                 outputCard.body.push(msg);
@@ -2646,8 +2667,6 @@ log(symbol)
             return;
         }
 
-
-        let closeCombat = (losResult.distance === 1) ? true:false;
         let targetFacing = losResult.targetFacing;
         let armour = (targetFacing === "Front") ? target.armourF:target.armourSR;
         if (closeCombat === true && shooter.type === "Infantry" && target.armour === true) {
@@ -2970,6 +2989,7 @@ log(symbol)
             coverTip = "Rolls: " + coverRolls.toString() + " vs. " + coverTip;
         }
 
+        outputCard.body.push(shooter.name + " fires " + weapon.name);
         if (hits === 0) {
             tip = '[Missed](#" class="showtip" title="' + tip + ')';
             outputCard.body.push(target.name + " is " + tip);
@@ -3072,6 +3092,8 @@ log(symbol)
         if (closeCombat === false) {
             shooter.token.set(SM.fired,true);
         } else {
+            shooter.CC = true;
+            target.CC = true;
             //deprecate movement, do quality check on target
             let m = 0;
             if (shooter.player === activePlayer) {
@@ -3080,8 +3102,14 @@ log(symbol)
                 shooter.token.set("bar1_value",m);
             }
             let qc = QualityCheck(target);
-            let noun = (qc.pass === true) ? "is Suppressed":"Surrenders or Routs";
-            outputCard.body.push(target.name + " " + qc.tip + ' its QC and ' + noun);
+            let noun;
+            if (target.armoured === true) {
+                noun = (qc.pass === true) ? "":"and Surrenders or Routs";
+            } else {
+                noun = (qc.pass === true) ? "but is Suppressed":"and Surrenders or Routs";
+            }
+
+            outputCard.body.push(target.name + " " + qc.tip + ' its QC ' + noun);
             if (qc.pass === true && target.armoured === false) {
                 target.Suppress("B",true);
             } else if (qc.pass === false && m > 0) {
@@ -3176,6 +3204,7 @@ const AreaFirePhase = () => {
         unit.spotter = false;
         unit.artQC = false;
         unit.coverTest = false;
+        unit.CC = false;
     })
     //remove smoke
     _.each(HexMap,hex => {
@@ -3311,7 +3340,18 @@ const RunFormQC = () => {
     }
 }
 
-
+    const UnitQC = (msg) => {
+        if (!msg.selected) {
+            sendChat("","No Token Selected");
+            return;
+        }
+        let id = msg.selected[0]._id;
+        let unit = UnitArray[id];
+        let qcResult = QualityCheck(unit);
+        SetupCard(unit.name,"Quality Check",unit.nation);
+        outputCard.body.push("Unit " + qcResult.tip + " its Quality Check");
+        PrintCard();
+    }
 
 
 
@@ -3507,13 +3547,15 @@ log(explored)
                     break;
                 }
                 if (unit.quality.includes("Fair") && coverStart === true && hexCover === false && unit.coverTest === false) {
-                    //quality check to leave cover, only needs to do once
+                    //response check to leave cover, only needs to do once
                     unit.coverTest = true;
                     let responseRoll = randomInteger(6);
-log("Response Roll: " + responseRoll)
-                    if (responseRoll < 4) {
+                    let target = Nations[unit.nation].response;
+                    let tip = "Response Roll: " + responseRoll + " vs. " + target + "+";
+                    tip = '[Unit](#" class="showtip" title="' + tip + ')';
+                    if ((responseRoll < target && responseRoll !== 6) || responseRoll === 1) {
                         SetupCard(unit.name,"Breaking Cover",unit.nation);
-                        outputCard.body.push("The Unit Goes to Ground in Cover");
+                        outputCard.body.push("The " + tip + " Goes to Ground in Cover");
                         PrintCard();
                         totalCost -= explored[i].cost;
                         unit.token.set(SM.down,true);
@@ -3648,7 +3690,9 @@ log("Final Hex Label: " + finalHexLabel)
             case '!Roll':
                 RollDice(msg);
                 break;
-
+            case '!UnitQC':
+                UnitQC(msg);
+                break;
             case '!CallArtillery':
                 CallArtillery(msg);
                 break;
