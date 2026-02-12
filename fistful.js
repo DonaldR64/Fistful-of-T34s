@@ -882,6 +882,7 @@ log(this)
                 this.companyIDs.push(cID);
             }
             CompanyArray[cID].formationID = this.id;
+            CompanyArray[cID].quality = this.quality;
         }
 
 
@@ -910,6 +911,7 @@ log(this)
             this.tokenIDs = [];
             this.formationID = "";
             this.name = name;
+            this.quality = "";
             CompanyArray[cID] = this;
         }
         AddUnit(uID) {
@@ -919,14 +921,134 @@ log(this)
             UnitArray[uID].companyID = this.id;
         }
         Cohesion() {
-            let units = this.tokenIDs.map((e) => UnitArray[e]);                        
-            
+            //place units into groups, based on distance
+            let groups = [];
+            let units = this.tokenIDs.map((e) => UnitArray[e]);
+            let cohDistance = (this.quality.includes("Fair")) ? 3:(this.quality.includes("Good")) ? 5:7;
 
+            for (let u=0;u<units.length;u++) {
+                let unit1 = units[u];
+                //is unit close to a unit in an existing group, if so add to that group, if none, add as a group on own
+                let flag = false;
+                loop1:
+                for (let i=0;i<groups.length;i++) {
+                    let group = groups[i];
+                    for (let j=0;j<group.length;j++) {
+                        let unit2 = group[j];
+                        let dist = unit1.Distance(unit2);
+                        if (dist <= cohDistance) {
+                            groups[i].push(unit1);
+                            flag = true;
+                            break loop1;
+                        }
+                    }
+                }
+                if (flag === false) {
+                    groups.push([unit]);
+                }
+            }
 
+            //now condense groups
+            let condensedGroups = [groups[0]];
+            for (let i=1;i<groups.length;i++) {
+                let group = groups[i];
+                let flag = false;
+                loop2:
+                for (let i=0;i<condensedGroups.length;i++) {
+                    let group2 = condensedGroups[i];
+                    for (let j=0;j<group2.length;j++) {
+                        let unit1 = group2[j];
+                        for (let k=0;k<group.length;k++) {
+                            let unit2 = group[k];
+                            let dist = unit2.Distance(unit1);
+                            if (dist <= cohDistance) {
+                                //add group to the condensedGroup
+                                condensedGroups[i] = condensedGroups[i].concat(group);
+                                flag = true;
+                                break loop2;
+                            }
+                        }
+                    }
+                }
+                if (flag === false) {
+                    condensedGroups.push(group);
+                }
+            }
 
-
+            if (condensedGroups.length > 1) {
+                let mainGroupNum = 0;
+                let max = 0;
+                for (let i=0;i<condensedGroups.length;i++) {
+                    if (condensedGroups[i].length > max) {
+                        max = condensedGroups[i].length;
+                        mainGroupNum = i;
+                    }
+                }
+                for (let i=0;i<condensedGroups.length;i++) {
+                    if (i===mainGroupNum) {continue};
+                    let group=condensedGroups[i];
+                    for (let j=0;j<group.length;j++) {
+                        let unit = group[j];
+                        unit.token.set("aura1_color","#ff0000");
+                    }
+                }
+            }
         }
+
+        
     }
+
+
+
+
+
+
+    const squaredPolar = (point, centre) => {
+        return [
+            Math.atan2(point.y-centre.y, point.x-centre.x),
+            (point.x-centre.x)**2 + (point.y-centre.y)**2 // Square of distance
+        ];
+    }
+
+    // sort points into a polygon
+    const polySort = (points,request) => {
+        // Get "centre of mass"
+        let centre = [points.reduce((sum, p) => sum + p.x, 0) / points.length,
+                      points.reduce((sum, p) => sum + p.y, 0) / points.length];
+        if (request && request == "Centre") {
+            return centre
+        }
+        // Sort by polar angle and distance, centered at this centre of mass.
+        for (let point of points) point.push(...squaredPolar(point, centre));
+        points.sort((a,b) => a[2] - b[2] || a[3] - b[3]);
+        // Throw away the temporary polar coordinates
+        for (let point of points) point.length -= 2; 
+    }
+
+
+/*
+            let points = [];
+            _.each(this.tokenIDs,id => {
+                let unit = UnitArray[id];
+                points.push(HexMap[unit.hexLabel].centre);
+            })
+            let centre = polySort(points,"Centre");
+            let centreHex = HexMap[centre.label()];
+            let centreUnit;
+            let closestD = Infinity;
+            _.each(this.tokenIDs,id => {
+                let unit = UnitArray[id];
+                let dist = HexMap[unit.hexLabel].cube.distance(centreHex.cube);
+                if (dist < closestD) {
+                    closestD = dist;
+                    centreUnit = unit;
+                }
+            })
+            if (!centreUnit) {centreUnit = UnitArray[this.tokenIDs[0]]};
+*/
+
+
+
 
 
 
