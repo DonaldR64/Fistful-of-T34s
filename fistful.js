@@ -724,10 +724,11 @@ const FFT = (() => {
             this.companyID = "";
             this.coverTest = false;
             this.CC = false;
-
+            this.cohesion = (token.get("aura1_color") === "#ff0000") ? false:true;
 log(this)
 
             this.token = token;
+            
 
 
             UnitArray[id] = this;
@@ -915,8 +916,8 @@ log(this)
             this.tokenIDs = [];
             this.formationID = "";
             this.name = name;
-            this.quality = "";
-            this.hq = "";
+            this.quality = "-";
+            this.hq = false;
             CompanyArray[cID] = this;
         }
         AddUnit(uID) {
@@ -924,16 +925,45 @@ log(this)
                 this.tokenIDs.push(uID);
             }
             UnitArray[uID].companyID = this.id;
+            this.player = UnitArray[uID].player;
         }
         Cohesion() {
             //checks cohesion, marks units not in cohesion
+log("HQ: " + this.hq)
             if (this.hq === true) {return};
+            let cohDistance = (this.quality.includes("Fair")) ? 3:(this.quality.includes("Good")) ? 5:7;
+log("Coh Distance: " + cohDistance)
             //order units by distance from flag unit
-            
-
-
-
-
+            let units = this.tokenIDs.map((e) => UnitArray[e]);
+            let ldr = units[0];
+log("Leader: " + ldr.name);
+            units.sort((a,b) => {
+                return a.Distance(ldr) - b.Distance(ldr);
+            })
+            //set cohesion to false to start with, except leader
+            _.each(units,unit => {unit.cohesion === false});
+            ldr.inCohesion = true;
+            //run though units, if within distacne of another cohesion true unit, make them true
+            loop1:
+            for (let i=0;i<units.length;i++) {
+                let unit1 = units[i];
+log("Testing " + unit1.name);
+                for (let j=0;j<units.length;j++) {
+                    let unit2 = units[j];
+                    let d = unit2.Distance(unit1);
+                    if (d <= cohDistance && unit2.cohesion === true) {
+log("In cohesion")
+                        unit1.cohesion = true;
+                        break loop1;
+                    }
+                }
+            }
+            for (let i=0;i<units.length;i++) {
+                let unit = units[i];
+                if (unit.cohesion === false) {
+                    unit.token.set("aura1_color","#ff0000");
+                }
+            }
         }
 
         Casualty(uID) {
@@ -950,6 +980,21 @@ log(this)
                 let units = this.tokenIDs.map((e) => UnitArray[e]);
                 units.sort((a,b) => {
                     return a.Distance(unit) - b.Distance(unit);
+                })
+                let flag = false;
+                let ldr;
+                for (let i=0;i<units.length;i++) {
+                    if (units[i].weapons.length > 0) {
+                        ldr = units[i];
+                        flag = true;
+                        break;
+                    }
+                }
+                if (flag === false) {
+                    ldr = units[0];
+                }
+                units.sort((a,b) => {
+                    return a.Distance(ldr) - b.Distance(ldr);
                 })
                 this.tokenIDs = units.map((e) => e.id);
                 units[0].token.set(SM.flag,true);
@@ -3314,13 +3359,15 @@ const AreaFirePhase = () => {
 
 const MovementPhase = () => {
     RemoveDead();
+log("Movement Phase")
+log(activePlayer)
     _.each(CompanyArray,company => {
+log(company.name)
+log(company.player)
         if (company.player === activePlayer) {
             company.Cohesion();
         }
     })
-
-
     outputCard.body.push("Overwatch Fire can occur at any time");
     outputCard.body.push("Quality Checks will be done at the end of the Phase");
     PrintCard();
