@@ -929,7 +929,7 @@ log(this)
             //checks cohesion, marks units not in cohesion
             if (this.hq === true) {return};
             //order units by distance from flag unit
-
+            
 
 
 
