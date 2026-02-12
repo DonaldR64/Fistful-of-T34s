@@ -929,41 +929,44 @@ log(this)
         }
         Cohesion() {
             //checks cohesion, marks units not in cohesion
-log("HQ: " + this.hq)
             if (this.hq === true) {return};
             let cohDistance = (this.quality.includes("Fair")) ? 3:(this.quality.includes("Good")) ? 5:7;
-log("Coh Distance: " + cohDistance)
             //order units by distance from flag unit
             let units = this.tokenIDs.map((e) => UnitArray[e]);
-            let ldr = units[0];
+            let ldr = units.find((e) => e.token.get(SM.flag));
+            if (!ldr) {
+                ldr = this.LeaderUnit();
+            }
 log("Leader: " + ldr.name);
-            units.sort((a,b) => {
+            units = units.sort((a,b) => {
                 return a.Distance(ldr) - b.Distance(ldr);
             })
-            //set cohesion to false to start with, except leader
-            _.each(units,unit => {unit.cohesion === false});
-            ldr.inCohesion = true;
-            //run though units, if within distacne of another cohesion true unit, make them true
-            loop1:
+for (let i=0;i<units.length;i++) {
+    log(units[i].name);
+}
+return;
             for (let i=0;i<units.length;i++) {
-                let unit1 = units[i];
-log("Testing " + unit1.name);
+                let unit1 = units[i]; //unit being tested, should be ldr to start with
+                if (unit1.cohesion === true) {continue};
                 for (let j=0;j<units.length;j++) {
-                    let unit2 = units[j];
-                    let d = unit2.Distance(unit1);
-                    if (d <= cohDistance && unit2.cohesion === true) {
-log("In cohesion")
-                        unit1.cohesion = true;
-                        break loop1;
+                    if (j===i) {continue};
+                    let unit2 = units[i]; //unit being compared to
+                    if (unit2.cohesion === true) {
+                        let dist = unit1.Distance(unit2);
+                        if (dist <= cohDistance) {
+                            unit1.cohesion = true;
+                            break;
+                        }
                     }
                 }
             }
             for (let i=0;i<units.length;i++) {
                 let unit = units[i];
                 if (unit.cohesion === false) {
-                    unit.token.set("aura1_color","#ff0000");
+                    unit.token.set("#ff0000");
                 }
             }
+            this.tokenIDs = units.map((e) => e.id);
         }
 
         Casualty(uID) {
@@ -977,29 +980,33 @@ log("In cohesion")
             if (this.hq === true) {return};
             let unit = UnitArray[uID];
             if (unit.token.get(SM.flag) === true) {
-                let units = this.tokenIDs.map((e) => UnitArray[e]);
-                units.sort((a,b) => {
-                    return a.Distance(unit) - b.Distance(unit);
-                })
-                let flag = false;
-                let ldr;
-                for (let i=0;i<units.length;i++) {
-                    if (units[i].weapons.length > 0) {
-                        ldr = units[i];
-                        flag = true;
-                        break;
-                    }
-                }
-                if (flag === false) {
-                    ldr = units[0];
-                }
-                units.sort((a,b) => {
-                    return a.Distance(ldr) - b.Distance(ldr);
-                })
-                this.tokenIDs = units.map((e) => e.id);
-                units[0].token.set(SM.flag,true);
+                ldr = this.LeaderUnit();
             }
         }
+
+        LeaderUnit() {
+            //pick centre of units in co that have weapons
+            let units = this.tokenIDs.map((e) => UnitArray[e]);
+            units = units.filter((e) => e.weapons.length > 0);
+            let points = [];
+            _.each(units,unit => {
+                points.push(HexMap[unit.hexLabel].centre);
+            })
+            let centre = polySort(points,"Centre");
+log("Centre Hex: " + centreHex.label())
+            let centreHex = HexMap[centre.label()];
+            let centreUnit;
+            let closestD = Infinity;
+            _.each(units,unit => {
+                let dist = HexMap[unit.hexLabel].cube.distance(centreHex.cube);
+                if (dist < closestD) {
+                    closestD = dist;
+                    centreUnit = unit;
+                }
+            })
+            centreUnit.token.set(SM.flag,true);
+        }
+
 
 
     }
@@ -1032,26 +1039,7 @@ log("In cohesion")
     }
 
 
-/*
-            let points = [];
-            _.each(this.tokenIDs,id => {
-                let unit = UnitArray[id];
-                points.push(HexMap[unit.hexLabel].centre);
-            })
-            let centre = polySort(points,"Centre");
-            let centreHex = HexMap[centre.label()];
-            let centreUnit;
-            let closestD = Infinity;
-            _.each(this.tokenIDs,id => {
-                let unit = UnitArray[id];
-                let dist = HexMap[unit.hexLabel].cube.distance(centreHex.cube);
-                if (dist < closestD) {
-                    closestD = dist;
-                    centreUnit = unit;
-                }
-            })
-            if (!centreUnit) {centreUnit = UnitArray[this.tokenIDs[0]]};
-*/
+
 
 
 
