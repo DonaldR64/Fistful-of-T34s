@@ -139,7 +139,7 @@ const FFT = (() => {
         unavail: "status_oneshot::5503748",
         down: "status_Disadvantage-or-Down::2006464",
         passed: "status_green",
-
+        flag: "status_Red_Flag::5610550",
 
 
 
@@ -789,6 +789,10 @@ log(this)
             if (formation) {
                 formation.Casualty(this.id);
             }
+            let company = CompanyArray[this.companyID];
+            if (company) {
+                company.Casualty(this.id);
+            }
             delete UnitArray[this.id]
         }
 
@@ -912,6 +916,7 @@ log(this)
             this.formationID = "";
             this.name = name;
             this.quality = "";
+            this.hq = "";
             CompanyArray[cID] = this;
         }
         AddUnit(uID) {
@@ -921,77 +926,33 @@ log(this)
             UnitArray[uID].companyID = this.id;
         }
         Cohesion() {
-            //place units into groups, based on distance
-            let groups = [];
-            let units = this.tokenIDs.map((e) => UnitArray[e]);
-            let cohDistance = (this.quality.includes("Fair")) ? 3:(this.quality.includes("Good")) ? 5:7;
+            //checks cohesion, marks units not in cohesion
+            if (this.hq === true) {return};
+            //order units by distance from flag unit
 
-            for (let u=0;u<units.length;u++) {
-                let unit1 = units[u];
-                //is unit close to a unit in an existing group, if so add to that group, if none, add as a group on own
-                let flag = false;
-                loop1:
-                for (let i=0;i<groups.length;i++) {
-                    let group = groups[i];
-                    for (let j=0;j<group.length;j++) {
-                        let unit2 = group[j];
-                        let dist = unit1.Distance(unit2);
-                        if (dist <= cohDistance) {
-                            groups[i].push(unit1);
-                            flag = true;
-                            break loop1;
-                        }
-                    }
-                }
-                if (flag === false) {
-                    groups.push([unit]);
-                }
+
+
+
+
+        }
+
+        Casualty(uID) {
+            let index = this.tokenIDs.indexOf(uID);
+            if (index > -1) {
+                this.tokenIDs.splice(index,1);
+            } 
+            if (this.tokenIDs.length === 0) {
+                return;
             }
-
-            //now condense groups
-            let condensedGroups = [groups[0]];
-            for (let i=1;i<groups.length;i++) {
-                let group = groups[i];
-                let flag = false;
-                loop2:
-                for (let i=0;i<condensedGroups.length;i++) {
-                    let group2 = condensedGroups[i];
-                    for (let j=0;j<group2.length;j++) {
-                        let unit1 = group2[j];
-                        for (let k=0;k<group.length;k++) {
-                            let unit2 = group[k];
-                            let dist = unit2.Distance(unit1);
-                            if (dist <= cohDistance) {
-                                //add group to the condensedGroup
-                                condensedGroups[i] = condensedGroups[i].concat(group);
-                                flag = true;
-                                break loop2;
-                            }
-                        }
-                    }
-                }
-                if (flag === false) {
-                    condensedGroups.push(group);
-                }
-            }
-
-            if (condensedGroups.length > 1) {
-                let mainGroupNum = 0;
-                let max = 0;
-                for (let i=0;i<condensedGroups.length;i++) {
-                    if (condensedGroups[i].length > max) {
-                        max = condensedGroups[i].length;
-                        mainGroupNum = i;
-                    }
-                }
-                for (let i=0;i<condensedGroups.length;i++) {
-                    if (i===mainGroupNum) {continue};
-                    let group=condensedGroups[i];
-                    for (let j=0;j<group.length;j++) {
-                        let unit = group[j];
-                        unit.token.set("aura1_color","#ff0000");
-                    }
-                }
+            if (this.hq === true) {return};
+            let unit = UnitArray[uID];
+            if (unit.token.get(SM.flag) === true) {
+                let units = this.tokenIDs.map((e) => UnitArray[e]);
+                units.sort((a,b) => {
+                    return a.Distance(unit) - b.Distance(unit);
+                })
+                this.tokenIDs = units.map((e) => e.id);
+                units[0].token.set(SM.flag,true);
             }
         }
 
@@ -2541,6 +2502,7 @@ log("Not Spotted")
         let companyName = coNumber + " Co";
         let company = new Company(companyName);
 
+        let noFlag = false;
         let symbol;
         let formation = FormationArray[unitI.formationID];
         let formNum = state.FFT.formNum[unitI.player] - 1;
@@ -2548,7 +2510,9 @@ log("Not Spotted")
             formNum -= 6;
         }
         if (coNumber === "HQ" || coNumber === "Corps" || coNumber === "Divisional") {
+            company.hq = true;
             symbol = Nations[nation].hq;
+            noFlag = true;
         } else {
             let num = coNumber.toLowerCase().charCodeAt(0) - 97; //a will be 0
             let markerName = companyMarkers[formNum] + num;
@@ -2564,7 +2528,7 @@ log(symbol)
         let gmn = formation.id + ";" + company.id;
 
         let nameArray = {};
-
+        let assigned = false;
         for (let i=0;i<ids.length;i++) {
             let id = ids[i];
             let unit = UnitArray[id];
@@ -2582,6 +2546,10 @@ log(symbol)
             unit.token.set("tooltip",formation.name + " / " + companyName + " / " + formation.quality + " Quality");
             unit.token.set(symbol,true);
             unit.name = name;
+            if (assigned === false && noFlag === false && unit.weapons.length > 0) {
+                unit.token.set(SM.flag,true);
+                assigned = true;
+            }
         }
 
         formation.AddCompany(company.id);
