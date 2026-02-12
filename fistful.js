@@ -809,6 +809,15 @@ log(this)
         }
 
         CheckCohesion = () => {
+            if (this.token.get("aura1_color") === "#ff0000") {
+                return false;
+            } else {
+                return true;
+            }
+
+
+
+
             //tests and sets - done during movement, beg. of turn
             let cohesion = false;
             let hqSymbol = "status_" + Nations[this.nation].hq;
@@ -829,6 +838,16 @@ log(this)
             }
             return cohesion;
         }
+
+        Cohesion = () => {
+            //test for cohesion at start of movement
+
+
+
+        }
+
+
+
 
         CheckSuppression = () => {
             if (this.token.get(SM.suppA) || this.token.get(SM.suppB)) {
