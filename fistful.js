@@ -177,7 +177,7 @@ const FFT = (() => {
     }
 
     const HillHeights = {
-        "#000000": 1,
+        "#434343": 1,
         "#666666": 2,
         
     }
@@ -948,7 +948,6 @@ log("Leader: " + ldr.name);
             units = units.sort((a,b) => {
                 return a.Distance(ldr) - b.Distance(ldr);
             })
-log(currentPhase)
             if (currentPhase === "Movement") {
                 //resets at start of movement
                 _.each(units,unit => {
@@ -1346,12 +1345,22 @@ log("Centre Hex: " + centreHex.label())
         AddTerrain();    
         //AddEdges();
         AddTokens();
+        AddStorageAreas();
+
         let elapsed = Date.now()-startTime;
         log("Hex Map Built in " + elapsed/1000 + " seconds");
     };
 
 
+    const AddStorageAreas = () => {
+        
 
+
+
+
+
+
+    }
 
 
 
@@ -3884,6 +3893,11 @@ log("Final Hex Label: " + finalHexLabel)
             case '!ResetMove':
                 ResetMove(msg);
                 break;
+            case 'Transport':
+                Transport(msg);
+                break;
+
+
         }
     };
 
