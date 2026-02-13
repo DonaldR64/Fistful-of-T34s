@@ -83,7 +83,7 @@ const FFT = (() => {
     let activePlayer = state.FFT.activePlayer || 0;
     let currentPhase = state.FFT.phase || "Deployment";
     let nextPhase = "";
-
+    let MapAreas = {};
 
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
@@ -145,6 +145,14 @@ const FFT = (() => {
 
 
     }
+
+    const areaColours = {
+        "#000000": "Wermacht",
+        "#ff0000": "Red Army"
+
+
+    }
+
 
 
     //height is height of terrain element
@@ -1318,6 +1326,20 @@ log("Centre Hex: " + centreHex.label())
     const BuildMap = () => {
         let startTime = Date.now();
         HexMap = {};
+
+        //define areas with lines
+        let paths = findObjs({_pageid: Campaign().get("playerpageid"),_type: "pathv2",layer: "map",});
+        _.each(paths,path => {
+            let colour = path.get("stroke").toLowerCase();
+            let type = areaColours[colour];
+            if (type) {
+                let centre = new Point(Math.round(path.get("x")), Math.round(path.get("y")));
+                let vertices = translatePoly(path);
+                MapAreas[type] = {'vertices': vertices, 'centre': centre};
+            }
+        });
+
+
         let startX = HexInfo.pixelStart.x;
         let startY = HexInfo.pixelStart.y;
         let halfToggleX = HexInfo.halfToggleX;
@@ -1345,22 +1367,13 @@ log("Centre Hex: " + centreHex.label())
         AddTerrain();    
         //AddEdges();
         AddTokens();
-        AddStorageAreas();
 
         let elapsed = Date.now()-startTime;
         log("Hex Map Built in " + elapsed/1000 + " seconds");
     };
 
 
-    const AddStorageAreas = () => {
-        
 
-
-
-
-
-
-    }
 
 
 
@@ -3822,6 +3835,8 @@ log("Final Hex Label: " + finalHexLabel)
             case '!Dump':
                 log("State");
                 log(state.FFT);
+                log("Map Areas");
+                log(MapAreas);
                 log("Units");
                 log(UnitArray);
                 log("Formations");
