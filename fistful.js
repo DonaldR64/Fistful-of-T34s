@@ -927,30 +927,42 @@ log(this)
             UnitArray[uID].companyID = this.id;
             this.player = UnitArray[uID].player;
         }
-        Cohesion() {
+        Cohesion(phase) {
             //checks cohesion, marks units not in cohesion
             if (this.hq === true) {return};
-            let cohDistance = (this.quality.includes("Fair")) ? 3:(this.quality.includes("Good")) ? 5:7;
             //order units by distance from flag unit
             let units = this.tokenIDs.map((e) => UnitArray[e]);
-            let ldr = units.find((e) => e.token.get(SM.flag));
+            let ldr;
+            _.each(units,unit => {
+                let tok = unit.token;
+                if (tok && tok.get(SM.flag) === true) {
+                    ldr = unit;
+                }
+            })
             if (!ldr) {
                 ldr = this.LeaderUnit();
             }
+            let cohDistance = (this.quality.includes("Fair")) ? 3:(this.quality.includes("Good")) ? 5:7;
+
 log("Leader: " + ldr.name);
             units = units.sort((a,b) => {
                 return a.Distance(ldr) - b.Distance(ldr);
             })
-for (let i=0;i<units.length;i++) {
-    log(units[i].name);
-}
-return;
+log(currentPhase)
+            if (currentPhase === "Movement") {
+                //resets at start of movement
+                _.each(units,unit => {
+                    unit.cohesion = false;
+                })
+                ldr.cohesion = true;
+            }
+            //test the unit
             for (let i=0;i<units.length;i++) {
                 let unit1 = units[i]; //unit being tested, should be ldr to start with
                 if (unit1.cohesion === true) {continue};
                 for (let j=0;j<units.length;j++) {
                     if (j===i) {continue};
-                    let unit2 = units[i]; //unit being compared to
+                    let unit2 = units[j]; //unit being compared to
                     if (unit2.cohesion === true) {
                         let dist = unit1.Distance(unit2);
                         if (dist <= cohDistance) {
@@ -962,26 +974,29 @@ return;
             }
             for (let i=0;i<units.length;i++) {
                 let unit = units[i];
+                if (unit.special.includes("Recon") || unit.special.includes("HQ") || unit.special.includes("Forward Observer")) {
+                    unit.cohesion = true;
+                }
                 if (unit.cohesion === false) {
-                    unit.token.set("#ff0000");
+                    unit.token.set("aura1_color","#ff0000");
+                } else {
+                    unit.token.set("aura1_color","transparent");
                 }
             }
             this.tokenIDs = units.map((e) => e.id);
         }
+
+
+
+
+
+
 
         Casualty(uID) {
             let index = this.tokenIDs.indexOf(uID);
             if (index > -1) {
                 this.tokenIDs.splice(index,1);
             } 
-            if (this.tokenIDs.length === 0) {
-                return;
-            }
-            if (this.hq === true) {return};
-            let unit = UnitArray[uID];
-            if (unit.token.get(SM.flag) === true) {
-                ldr = this.LeaderUnit();
-            }
         }
 
         LeaderUnit() {
@@ -2452,6 +2467,9 @@ log("Not Spotted")
             if (info === "All" && token.get("name") === "Wreck") {
                 token.remove();
             }
+            if (token.get("name") === "Map Marker") {
+                token.remove();
+            }
         });
         if (info === "All") {
             let tokens = findObjs({
@@ -2463,6 +2481,9 @@ log("Not Spotted")
             tokens.forEach((token) => {
                 token.remove();
             });
+
+
+
         }
 
 
@@ -2485,7 +2506,7 @@ log("Not Spotted")
         formation.breakpoint = breakpoint;
         state.FFT.formationInfo[formation.id].breakpoint = breakpoint;
 
-        if (formationName.includes("Corps") || formationName.includes("Division")) {
+        if (formationName.includes("Corps") === false && formationName.includes("Division") === false) {
             state.FFT.formNum[formation.player]++;
         } 
 
@@ -2753,6 +2774,8 @@ log(symbol)
         let aiTip = ""; 
         let rofTip = "";
         let errorMsg = [];
+        let destroyed = false;
+
 
 
         SetupCard(shooter.name,target.name,shooter.nation);
@@ -2766,6 +2789,9 @@ log(symbol)
         }
         if ((shooter.moveType === "Towed" && (shooter.token.get(SM.move) || shooter.token.get(SM.double))) || shooter.token.get(SM.double)) {
             errorMsg.push("[#ff0000]Unit is unable to Fire due to Movement[/#]");
+        }
+        if (shooter.nation === target.nation) {
+            errorMsg.push("[#ff0000]Friendly Fire[/#]");
         }
 
         let closeCombat = (losResult.distance === 1) ? true:false;
@@ -3134,7 +3160,7 @@ log(symbol)
                     let penDice = (pen > armour) ? (pen - armour):1;
                     penDice = Math.min(10,penDice);
                     let penMod = (pen <= armour) ? (pen - armour):0; //will always be 0 or a negative #
-                    let penTips = "", deflect = 0, qc = false, destroyed = false;
+                    let penTips = "", deflect = 0, qc = false;
                     for (let i=0;i<finalHits;i++) {
                         let penRolls = [];
                         for (let j=0;j<penDice;j++) {
@@ -3222,15 +3248,17 @@ log(symbol)
                 shooter.token.set("bar1_value",m);
             }
             let qc = QualityCheck(target);
-            let noun;
-            if (target.armoured === true) {
-                noun = (qc.pass === true) ? "":"and Surrenders or Routs";
-            } else {
-                noun = (qc.pass === true) ? "but is Suppressed":"and Surrenders or Routs";
+            if (destroyed === false) {
+                let noun;
+                if (target.armoured === true) {
+                    noun = (qc.pass === true) ? "":"and Surrenders or Routs";
+                } else {
+                    noun = (qc.pass === true) ? "but is Suppressed":"and Surrenders or Routs";
+                }
+                outputCard.body.push(target.name + " " + qc.tip + ' its QC ' + noun);
             }
 
-            outputCard.body.push(target.name + " " + qc.tip + ' its QC ' + noun);
-            if (qc.pass === true && target.armoured === false) {
+            if (qc.pass === true && target.armoured === false && destroyed === false) {
                 target.Suppress("B",true);
             } else if (qc.pass === false && m > 0) {
                 outputCard.body.push("[hr]");
@@ -3347,12 +3375,11 @@ const AreaFirePhase = () => {
 
 const MovementPhase = () => {
     RemoveDead();
-log("Movement Phase")
-log(activePlayer)
+log(currentPhase)
+
     _.each(CompanyArray,company => {
-log(company.name)
-log(company.player)
         if (company.player === activePlayer) {
+log(company.player)
             company.Cohesion();
         }
     })
@@ -3362,6 +3389,11 @@ log(company.player)
 }
 
 const FirstQC = () => {
+    _.each(CompanyArray,company => {
+        if (company.player === activePlayer) {
+            company.Cohesion();
+        }
+    })
     RemoveMoveMarkers();   
     //qc from overwatch, note on unit somewhere has passed, ? a green dot
     QCCheck(); //builds array qcUnits
