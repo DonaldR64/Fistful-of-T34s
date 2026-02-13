@@ -1547,7 +1547,7 @@ log(vertices)
             dist = (type === "Embark") ? transport.Distance(passenger):0;
             pMove = parseInt(passenger.token.get("bar1_value")) - 2;
             tMove = parseInt(transport.token.get("bar1_value")) - 2;
-            if (dist > 1) {
+            if (dist > 1 && turn > 0 && HexMap[passenger.hexLabel].offboard === false) {
                 errorMsg.push("Need to be Adjacent");
             }
             if (pMove < 0 && passenger.moveType === "Leg") {
@@ -1583,6 +1583,10 @@ log(vertices)
                 bar1_value: pMove,
             })
             passenger.hexLabel = label;
+            if (passenger.token.get(SM.flag)) {
+                passenger.token.set(SM.flag,false);
+                transport.token.set(SM.flag,true);
+            }
         } else if (type === "Disembark") {
             pMove++;
             delete state.FFT.transportInfo[transportID];
@@ -1594,6 +1598,10 @@ log(vertices)
                 bar1_value: pMove, //has to have 1 to be able to move off
             })
             passenger.hexLabel = transport.hexLabel;
+            if (transport.token.get(SM.flag)) {
+                transport.token.set(SM.flag,false);
+                passenger.token.set(SM.flag,true);
+            }
         }
         outputCard.body.push(passenger.name + " " + type + "s");
         if (type === "Disembark") {
