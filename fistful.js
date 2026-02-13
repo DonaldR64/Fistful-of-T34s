@@ -970,7 +970,7 @@ log(this)
             if (!ldr) {
                 ldr = this.LeaderUnit();
             }
-            let cohDistance = (this.quality.includes("Fair")) ? 3:(this.quality.includes("Good")) ? 5:7;
+            let cohDistance = (this.quality.includes("Fair")) ? 2:(this.quality.includes("Good")) ? 4:6;
 
 log("Leader: " + ldr.name);
             units = units.sort((a,b) => {
@@ -2671,11 +2671,13 @@ log("Not Spotted")
         }
         let Tag = msg.content.split(";");
         let coNumber = Tag[1];
+        let coType = Tag[2]; //Co or Battalion
+
         let ids = msg.selected.map((e) => e._id);
         let unitI = UnitArray[ids[0]];
         let nation = unitI.nation;
 
-        let companyName = coNumber + " Co";
+        let companyName = coNumber + " " + coType;
         let company = new Company(companyName);
 
         let noFlag = false;
@@ -2715,7 +2717,7 @@ log(symbol)
             } else {
                 nameArray[charName]++;
             }
-            let name = charName + " Plt " + nameArray[charName];
+            let name = charName + " Plt. " + nameArray[charName];
 
             unit.token.set("gmnotes",gmn);
             unit.token.set("name",name);
