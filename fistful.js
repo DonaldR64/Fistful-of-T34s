@@ -140,7 +140,7 @@ const FFT = (() => {
         down: "status_Disadvantage-or-Down::2006464",
         passed: "status_green",
         flag: "status_Red_Flag::5610550",
-
+        full: "status_Cover-Full::2006474",
 
 
 
@@ -1508,6 +1508,58 @@ log(vertices)
             }
         });
     }
+
+    const Transport = (msg) => {
+        let Tag = msg.content.split(";");
+        let type = Tag[1];
+        let transport = UnitArray[Tag[2]];
+        let passenger = UnitArray[Tag[3]];
+        let errorMsg = [];
+        let dist = (type === "Embark") ? transport.Distance(passenger):0;
+        let pMove = parseInt(passenger.token.get("bar1_value")) || 0;
+        let tMove = parseInt(transport.token.get("bar1_value")) || 0;
+
+        SetupCard(type,"",passenger.nation);
+
+        if (dist > 1) {
+            errorMsg.push("Need to be Adjacent");
+        }
+        if (pMove < 2 && passenger.moveType === "Leg") {
+            errorMsg.push("Need 2 move points to Embark");
+        }
+        if (tMove < 2) {
+            errorMsg.push("Transport need 2 move points");
+        }
+        if (passenger.moveType === "Leg" && transport.special.includes("Limber")) {
+            errorMsg.push("Limber cannot transport Infantry");
+        }
+
+        if (errorMsg.length > 0) {
+            _.each(errorMsg,msg => {
+                outputCard.body.push(msg);
+            })
+            PrintCard();
+            return;
+        }
+
+        if (type === "Embark") {
+            info = {
+                passengerID: Tag[2],
+                transportID: Tag[3],
+            }
+            state.FFT.transportInfo.push(info);
+            transport.token.set(SM.full,true);
+        }
+
+
+
+
+
+
+
+
+    }
+
 
 
 
