@@ -523,6 +523,26 @@ const FFT = (() => {
             let label = offset.label();
             return label;
         }
+
+        spiralToCube(index) {
+            if (index === 0) {
+                return this;
+            } else {
+                let radius = (index === 0) ? 0:Math.floor((Math.sqrt(12 * index - 3) + 3) / 6);
+    log("Radius: " + radius)
+                let startIndex = (radius === 0) ? 0: 1 + 3 * radius * (radius - 1);
+    log("startIndex: " + startIndex)
+                let ring = this.ring(radius);
+    log(ring)
+                let pos = index - startIndex;
+    log(pos)
+                return ring[pos];
+            }
+        }
+
+
+
+
         radius(rad) {
             //returns array of hexes in radius rad
             //Not only is x + y + z = 0, but the absolute values of x, y and z are equal to twice the radius of the ring
@@ -1512,27 +1532,35 @@ log(vertices)
     const Transport = (msg) => {
         let Tag = msg.content.split(";");
         let type = Tag[1];
-        let transport = UnitArray[Tag[2]];
-        let passenger = UnitArray[Tag[3]];
+        let transportID = Tag[2];
+        let transport = UnitArray[transportID];
         let errorMsg = [];
-        let dist = (type === "Embark") ? transport.Distance(passenger):0;
-        let pMove = parseInt(passenger.token.get("bar1_value")) || 0;
-        let tMove = parseInt(transport.token.get("bar1_value")) || 0;
+        let passengerID = (type === "Disembark") ? state.FFT.transportInfo[transportID]:Tag[3];
+        let passenger = UnitArray[passengerID];
+        let pMove,tMove,dist;
 
-        SetupCard(type,"",passenger.nation);
+        SetupCard(type,"",transport.nation);
 
-        if (dist > 1) {
-            errorMsg.push("Need to be Adjacent");
+        if (!passenger) {
+            errorMsg.push("No Passenger");
+        } else {
+            dist = (type === "Embark") ? transport.Distance(passenger):0;
+            pMove = parseInt(passenger.token.get("bar1_value")) - 2;
+            tMove = parseInt(transport.token.get("bar1_value")) - 2;
+            if (dist > 1) {
+                errorMsg.push("Need to be Adjacent");
+            }
+            if (pMove < 0 && passenger.moveType === "Leg") {
+                errorMsg.push("Need 2 move points to Embark");
+            }
+            if (tMove < 0) {
+                errorMsg.push("Transport need 2 move points");
+            }
+            if (passenger.moveType === "Leg" && transport.special.includes("Limber")) {
+                errorMsg.push("Limber cannot transport Infantry");
+            }
         }
-        if (pMove < 2 && passenger.moveType === "Leg") {
-            errorMsg.push("Need 2 move points to Embark");
-        }
-        if (tMove < 2) {
-            errorMsg.push("Transport need 2 move points");
-        }
-        if (passenger.moveType === "Leg" && transport.special.includes("Limber")) {
-            errorMsg.push("Limber cannot transport Infantry");
-        }
+
 
         if (errorMsg.length > 0) {
             _.each(errorMsg,msg => {
@@ -1543,27 +1571,38 @@ log(vertices)
         }
 
         if (type === "Embark") {
-            info = {
-                passengerID: Tag[2],
-                transportID: Tag[3],
-            }
-            state.FFT.transportInfo.push(info);
+            state.FFT.transportInfo[transportID] = passengerID;
             transport.token.set(SM.full,true);
+            transport.token.set("bar1_value",tMove);
+            let area = MapAreas[transport.nation];
+            let label = area.centre.label();
+            let centre = HexMap[label].centre;
+            passenger.token.set({
+                left: centre.x,
+                top: centre.y,
+                bar1_value: pMove,
+            })
+            passenger.hexLabel = label;
+        } else if (type === "Disembark") {
+            pMove++;
+            delete state.FFT.transportInfo[transportID];
+            transport.token.set(SM.full,false);
+            transport.token.set("bar1_value",tMove);
+            passenger.token.set({
+                top: transport.token.get("top"),
+                left: transport.token.get("left"),
+                bar1_value: pMove, //has to have 1 to be able to move off
+            })
+            passenger.hexLabel = transport.hexLabel;
         }
-
-
-
-
-
-
-
-
+        outputCard.body.push(passenger.name + " " + type + "s");
+        if (type === "Disembark") {
+            outputCard.body.push(passenger.name + " has " + pMove + " Move Points left");
+        } else {
+            outputCard.body.push(transport.name + " has " + tMove + " Move Points left");
+        }
+        PrintCard();
     }
-
-
-
-
-
 
      
     const AddTokens = () => {
@@ -2511,6 +2550,7 @@ log("Not Spotted")
             roads: true,
             moveMarkers: [],
             visibility: 70,
+            transportInfo: {},
         }
         BuildMap();
         sendChat("","Cleared State/Arrays");
@@ -3600,10 +3640,6 @@ const RunFormQC = () => {
                 RemoveMoveMarkers();   
                 let move = parseInt(tok.get("bar1_value")) || 0;
                 if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false && currentPhase !== "Deployment") {
-
-
-
-
                     if (HexMap[label].moveCosts[unit.moveType] === -1 || (move <= 0 && prevLabel !== label) || unit.token.get(SM.down)) {
                         tok.set("left",prev.left);
                         tok.set("top",prev.top);
@@ -3617,7 +3653,7 @@ const RunFormQC = () => {
                         }
                         return;
                     }
-                    if (prevLabel !== label && HexMap[unit.startHexLabel].offboard === false) {
+                    if (prevLabel !== label && HexMap[unit.startHexLabel].offboard === false && HexMap[label].offboard === false) {
                         let results = aStar(unit,label);
                         label = results.finalHexLabel;
                         let cost = results.cost;
@@ -3960,7 +3996,7 @@ log("Final Hex Label: " + finalHexLabel)
             case '!ResetMove':
                 ResetMove(msg);
                 break;
-            case 'Transport':
+            case '!Transport':
                 Transport(msg);
                 break;
 
