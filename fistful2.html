@@ -110,13 +110,35 @@
                 <option value = "On">On</option>
             </select>
             <br>
+            <label for="attr_arttype">Type:</label>
+            <select name="attr_arttype">
+                <option value="" selected disabled hidden>Choose here</option>
+                <option value="Self-Propelled Artillery">Self-Propelled</option>
+                <option value="Towed Artillery">Towed</option>
+            </select>
+            <br>
+
+            <label>Name</label><input type="text" name="attr_artname">
+            <br>
             <label>Range</label><input type="text" name="attr_artrange">
             <br>
             <label>Availability</label><input type="text" name="attr_avail">
             <br>
-            <label>Size</label><input type="text" name="attr_artsize">
+            <label for="attr_calibre">Calibre:</label>
+            <select name="attr_calibre">
+                <option value="" selected disabled hidden>Choose here</option>
+                <option value="HE 30-69">HE 30-69</option>
+                <option value="HE 70-89">HE 70-89</option>
+                <option value="HE 90-119">HE 90-119</option>
+                <option value="HE 120-139">HE 120-139</option>
+                <option value="HE 140-169">HE 140-169</option>
+                <option value="HE 170+">HE 170+</option>
+                <option value="Light HE">Light HE</option>
+                <option value="Medium HE">Medium HE</option>
+                <option value="Heavy HE">Heavy HE</option>
+                <option value="Very Heavy HE">Very Heavy HE</option>
+            </select>
             <br>
-            <label>Effectiveness</label><input type="text" name="attr_arteffect">
         </div>
 
 
@@ -193,16 +215,14 @@
 
             <input type="hidden" name="attr_artflag" class="art-status" value="Off">
             <div class="attr4info">
-                <h3> </h3>
+                <h3>Name</h3>
                 <h3>Range</h3>
                 <h3>Availability</h3>
-                <h3>Size</h3>
-                <h3>Effectiveness</h3>
-                <h3 style="color: darkred;">Indirect Fire</span></h3>
+                <h3>Calibre</h3>
+                <h3 style="color: darkred;"><span name="attr_artname"></span></h3>
                 <h3 style="color: darkred;"><span name="attr_artrange"></span></h3>
                 <h3 style="color: darkred;"><span name="attr_avail"></span></h3>
-                <h3 style="color: darkred;"><span name="attr_artsize"></span></h3>
-                <h3 style="color: darkred;"><span name="attr_arteffect"></span></h3>
+                <h3 style="color: darkred;"><span name="attr_artcalibre"></span></h3>
             </div>
 
 

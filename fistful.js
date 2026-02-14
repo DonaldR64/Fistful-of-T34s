@@ -705,11 +705,21 @@ const FFT = (() => {
 
             this.artFlag = aa.artflag === "On" ? true:false;
             this.avail = (aa.avail) ? (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+","")):"NA";
-            this.artsize = aa.artsize ? parseInt(aa.artsize.replace(/[^0-9]+/g, '')):0;
-            this.arteffect = aa.arteffect;
-            this.artrange = aa.artrange ? parseInt(aa.artrange):0;
+            //this.artsize = aa.artsize ? parseInt(aa.artsize.replace(/[^0-9]+/g, '')):0;
+            //this.arteffect = aa.arteffect;
+            this.artName = aa.artname;
+            let artRange = aa.artrange; //min - max or just max
+            if (artRange.includes("-")) {
+                artRange = artRange.split("-").map((e) => parseInt(e));
+            } else {
+                artRange = [0,parseInt(artRange)];
+            }
+            this.artrange = artRange;
 
-            this.artType = aa.arttype;
+            let artType = aa.arttype;
+            if (artType) {artType = artType.replace(" Artillery","")};
+            this.artType = artType;
+
             this.calibre = aa.calibre;
             this.mrls = (aa.special.includes("MRLS")) ? true:false;
 
