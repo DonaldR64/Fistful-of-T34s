@@ -720,7 +720,7 @@ const FFT = (() => {
             if (artType) {artType = artType.replace(" Artillery","")};
             this.artType = artType;
 
-            this.calibre = aa.calibre;
+            this.artCalibre = aa.artcalibre;
             this.mrls = (aa.special.includes("MRLS")) ? true:false;
 
             let weapons = [];
