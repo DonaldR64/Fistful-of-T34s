@@ -88,8 +88,8 @@ const FFT = (() => {
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
 
-    let companyMarkers = [1,51,101,151,201,251];
-    let companyMarkerNumbers = [5982118,5982169,5982220,5982270,5982320,5982371];
+    const companyMarkers = [1,51,101,151,201,251];
+    const companyMarkerNumbers = [5982118,5982169,5982220,5982270,5982320,5982371];
 
 
 
@@ -173,12 +173,12 @@ const FFT = (() => {
     const RoadCosts = {leg: 1,tracked: .5, wheeled: .25, halftrack: .5};
 
     const TerrainInfo = {
-        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2}, cover: 1},
-        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2}, cover: 2},
-        "River": {name: "River",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1}, cover: 0,},
-        "Craters": {name: "Craters",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 3, halftrack: 3}, cover: 0,},
-        "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 3, halftrack: 3}, cover: 0,},
-        "Water": {name: "Water",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1}, cover: 0,},
+        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2, towed: 2}, cover: 1},
+        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2, towed: 2}, cover: 2},
+        "River": {name: "River",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1, towed: -1}, cover: 0,},
+        "Craters": {name: "Craters",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 3, halftrack: 3,towed: 2}, cover: 0,},
+        "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 3, halftrack: 3,towed: 2}, cover: 0,},
+        "Water": {name: "Water",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1,towed: -1}, cover: 0,},
 
 
 
@@ -649,7 +649,7 @@ const FFT = (() => {
             this.elevation = 0;
             this.terrain = "Open";
             this.offboard = false;
-            this.moveCosts = {leg: 1, tracked: 1, wheeled: 1, halftrack: 1}
+            this.moveCosts = {leg: 1, tracked: 1, wheeled: 1, halftrack: 1, towed: 1};
             this.cover = 0;
             this.road = false;
             this.smoke = "";
@@ -716,7 +716,7 @@ const FFT = (() => {
 
             let artType = aa.arttype;
             if (artType) {artType = artType.replace(" Artillery","")};
-            this.artType = artType;
+            this.artType = artType; //will be changed to Battalion if added to combat formation
 
             this.artCalibre = aa.artcalibre;
             this.mrls = (this.special.includes("MRLS")) ? true:false;
@@ -863,7 +863,7 @@ log(this)
 
 
         CheckSuppression = () => {
-            if (this.token.get(SM.suppA) || this.token.get(SM.suppB)) {
+            if (this.token.get(SM.suppA) === true || this.token.get(SM.suppB) === true) {
                 return true;
             } else {return false};
         }
@@ -971,7 +971,7 @@ log(this)
             UnitArray[uID].companyID = this.id;
             this.player = UnitArray[uID].player;
         }
-        Cohesion(phase) {
+        Cohesion() {
             //checks cohesion, marks units not in cohesion
             if (this.hq === true) {return};
             //order units by distance from flag unit
@@ -984,6 +984,7 @@ log(this)
                 }
             })
             if (!ldr) {
+                log(this.name + " has no leader")
                 ldr = this.LeaderUnit();
             }
             let cohDistance = (this.quality.includes("Fair")) ? 2:(this.quality.includes("Good")) ? 4:6;
@@ -1003,6 +1004,10 @@ log("Leader: " + ldr.name);
             for (let i=0;i<units.length;i++) {
                 let unit1 = units[i]; //unit being tested, should be ldr to start with
                 if (unit1.cohesion === true) {continue};
+                if (HexMap[unit1.hexLabel].offboard === true) {
+                    unit1.cohesion = true;
+                    continue;
+                };
                 for (let j=0;j<units.length;j++) {
                     if (j===i) {continue};
                     let unit2 = units[j]; //unit being compared to
@@ -1051,7 +1056,6 @@ log("Leader: " + ldr.name);
                 points.push(HexMap[unit.hexLabel].centre);
             })
             let centre = polySort(points,"Centre");
-log("Centre Hex: " + centreHex.label())
             let centreHex = HexMap[centre.label()];
             let centreUnit;
             let closestD = Infinity;
@@ -1563,7 +1567,7 @@ log(vertices)
             dist = (type === "Embark") ? transport.Distance(passenger):0;
             pMove = parseInt(passenger.token.get("bar1_value")) - 2;
             tMove = parseInt(transport.token.get("bar1_value")) - 2;
-            if (dist > 1 && turn > 0 && HexMap[passenger.hexLabel].offboard === false) {
+            if (dist > 1 && state.FFT.turn > 0 && HexMap[passenger.hexLabel].offboard === false) {
                 errorMsg.push("Need to be Adjacent");
             }
             if (pMove < 0 && passenger.moveType === "Leg") {
@@ -1655,13 +1659,14 @@ log(vertices)
                 let formation = FormationArray[fID];
                 let formationInfo = state.FFT.formationInfo[fID];
                 let company = CompanyArray[cID];
-                let companyName = state.FFT.companyInfo[cID];
+                let companyInfo = state.FFT.companyInfo[cID];
                 if (!formation) {
                     if (formationInfo) {
                         formation = new Formation(state.FFT.formationInfo[fID].name,unit.id,state.FFT.formationInfo[fID].quality,fID);
                         if (!company) {
-                            company = new Company(companyName,cID);
+                            company = new Company(companyInfo.name,cID);
                             formation.AddCompany(company.id);
+                            company.hq = companyInfo.hq;
                         }
                         company.AddUnit(unit.id)
                         formation.AddUnit(unit.id);
@@ -1670,7 +1675,9 @@ log(vertices)
                     }
                 } else {
                     if (!company) {
-                        company = new Company(companyName,cID);
+                        company = new Company(companyInfo.name,cID);
+                        formation.AddCompany(company.id);
+                        company.hq = companyInfo.hq;
                         formation.AddCompany(company.id);
                     }
                     company.AddUnit(unit.id)
@@ -1936,44 +1943,61 @@ log(unit.name)
     }
 
     const ArtilleryAvailability2 = (player) => {
+log("In art availability")
         artUnits = [];
         let avail = [];
         let unavail = [];
         _.each(UnitArray,unit => {
+            let passenger = false;
             if (unit.player === player) {
                 if (unit.artFlag === true && unit.CheckSuppression() === false) {
-                    let availMod = unit.avail;
+log(unit.name)
+                    let formation = FormationArray[unit.formationID];
+                    let availMod = parseInt(formation.artAvail) || 0;
                     let tipmods = "";
                     if (availMod !== 0) {
                         tipmods += "<br>Availability: " + availMod;
                     }
                     let offboard = HexMap[unit.hexLabel].offboard;
-                    if (offboard === false && target > 1) {
+                    if (offboard === true) {
+                        let area = MapAreas[unit.nation];
+                        let pt = HexMap[unit.hexLabel].centre;
+                        if (pt.x >= area.vertices[0].x && pt.x <= area.vertices[1].x && pt.y >= area.vertices[0].y && pt.y <= area.vertices[1].y) {
+                            //is a passenger and cannot fire
+                            passenger = true;
+                        }
+                    } else if (offboard === false) {
                         availMod++;
                         tipmods += "<br>On Board Artillery +1";
                     }         
-                    let result = ArtAvailTable[unit.nation,unit.artType,availMod];
+                    let result = ArtAvailTable(unit.nation,unit.artType,availMod);
 
                     tip = "Final Result: " + result.result;
                     tip = "Roll: " + result.roll + tipmods;
 
 
                     tip = '[🎲 ](#" class="showtip" title="' + tip + ')';
-                    if (result.FU > 0) {
+                    if (result.FU > 0 && passenger === false) {
                         unit.FU = result.FU;
                         artUnits.push(unit);
                         avail.push(tip + unit.name + " is Available with " + result.FU + " FU");
+                        if (unit.artType === "Battalion") {
+                            avail.push("This is Battalion Artillery");
+                        }
                     } else {
                         if (unit.type === "Aircraft") {
                             unavail.push(tip + unit.name + " is Refuelling/Reloading");
                         }
-                        if (unit.type === "Artillery" && offboard === true) {
+                        if (unit.type === "Artillery" && offboard === true && passenger === false) {
                             let roll = randomInteger(6);
                             if (roll < 4) {
                                 unavail.push(tip + unit.name + " is Unavailable");
                             } else {
                                 unavail.push(tip + unit.name + " is Reloading");
                             }
+                        }
+                        if (unit.type === "Artillery" && offboard === true && passenger === true) {
+                            unavail.push(unit.name + " is being Transported");
                         }
                         if (offboard === false) {
                             unavail.push(tip + unit.name + " is Reloading and Unavailable");
@@ -2005,11 +2029,16 @@ log(unit.name)
 
 
     const ArtAvailTable = (nation,type,availMod) => {
+log("In art availtable")
+log(nation)
+log(type)
+log(availMod)
         let side = {
             "Wermacht": "Western",
             "Red Army": "Soviet",
         }
-
+        side = side[nation];
+log(side)
         let FUTable = {
             "Western": {
                 "Self-Propelled": [0,1,1,2,2,3],
@@ -2024,13 +2053,14 @@ log(unit.name)
         }
         let artRoll = randomInteger(6);
         let artResult = artRoll + availMod;
-        artResult = Math.min(Math.max(0,artResult),6);
-        let FU = FUTable[side[nation]][type][artResult - 1];
+        artResult = Math.min(Math.max(1,artResult),6);
+        let FU = FUTable[side][type][artResult - 1];
         let result = {
             roll: artRoll,
             result: artResult,
             FU: FU,
         }
+log(result)
         return result;
     }
 
@@ -2782,7 +2812,7 @@ log("Not Spotted")
         state.FFT.formationInfo[formation.id].artAvail = artAvail;
 
 
-        if (formationType === "Combat Formation") {
+        if (formationType === "Combat") {
             state.FFT.formNum[formation.player]++;
         } 
 
@@ -2838,34 +2868,36 @@ log("Not Spotted")
             return
         }
         let Tag = msg.content.split(";");
-        let coNumber = Tag[1];
+        let coLetter = Tag[1];
         let coType = Tag[2]; //Co or Battalion
         let unitType = " Plt. ";
 
         let ids = msg.selected.map((e) => e._id);
         let unitI = UnitArray[ids[0]];
         let nation = unitI.nation;
+        let player = unitI.player;
 
-        let companyName = coNumber + " " + coType;
+        let companyName = coLetter + " " + coType;
         let company = new Company(companyName);
 
         let noFlag = false;
         let symbol;
         let formation = FormationArray[unitI.formationID];
-        let formNum = state.FFT.formNum[unitI.player] - 1;
+        let formNum = state.FFT.formNum[player] - 1;
         if (formNum > 5) {
             formNum -= 6;
         }
-        if (coNumber === "HQ" || coNumber === "Corps" || coNumber === "Divisional") {
+        formNum = Math.min(Math.max(0,formNum),5);
+        if (coLetter === "HQ" || coLetter === "Corps" || coLetter === "Divisional") {
             company.hq = true;
             symbol = Nations[nation].hq;
             noFlag = true;
         } else {
-            let num = coNumber.toLowerCase().charCodeAt(0) - 97; //a will be 0
+            let num = coLetter.toLowerCase().charCodeAt(0) - 97; //a will be 0
             let markerName = companyMarkers[formNum] + num;
             markerName = markerName.toString().padStart(4,'0');
             let markerNumber = companyMarkerNumbers[formNum] + num;
-            if (nation === "Red Army" && coNumber === "A" && num > 5) {
+            if (nation === "Red Army" && formNum === 0 && num > 5) {
                 markerNumber++;
             }
             symbol = "letters_and_numbers" + markerName + "::" + markerNumber;
@@ -2904,8 +2936,15 @@ log(symbol)
                 assigned = true;
             }
         }
+        if (assigned === false) {
+            UnitArray[ids[0]].token.set(SM.flag,true);
+        }
         formation.AddCompany(company.id);
-        state.FFT.companyInfo[company.id] = companyName;
+        let info = {
+            name: companyName,
+            hq: company.hq,
+        }
+        state.FFT.companyInfo[company.id] = info;
         sendChat("",companyName + " Added")
     }
 
@@ -3622,7 +3661,7 @@ const AdvancePhase = () => {
     state.FFT.phase = currentPhase;
 
     SetupCard(currentPhase,"Turn " + turn,state.FFT.nations[activePlayer]);
-
+log("Phase" + currentPhase)
     switch(currentPhase) {
         case "Deployment":
             DeploymentPhase();
@@ -3689,7 +3728,7 @@ const AreaFirePhase = () => {
     })
 
     outputCard.body.push("[U]Available Artillery[/u]");
-    ArtilleryAvailability(activePlayer);
+    ArtilleryAvailability2(activePlayer);
     outputCard.body.push("[hr]");
     outputCard.body.push("Place and resolve any Area Fire attacks");
     outputCard.body.push("No Overwatch Fire is allowed");
