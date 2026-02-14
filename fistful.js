@@ -683,6 +683,7 @@ const FFT = (() => {
             this.hexLabel = label;
             this.startHexLabel = label;
             this.startRotation = token.get("rotation");
+            this.special = aa.special || " ";
 
             this.nation = aa.nation || "Neutral";
             if (state.FFT.nations[0] === "") {
@@ -704,12 +705,9 @@ const FFT = (() => {
             this.openTopped = (this.special.includes("Open-Topped") || this.special.includes("Open Topped")) ? true:false;
 
             this.artFlag = aa.artflag === "On" ? true:false;
-            this.avail = (aa.avail) ? (aa.avail === "Auto") ? 1:parseInt(aa.avail.replace("+","")):"NA";
-            //this.artsize = aa.artsize ? parseInt(aa.artsize.replace(/[^0-9]+/g, '')):0;
-            //this.arteffect = aa.arteffect;
             this.artName = aa.artname;
             let artRange = aa.artrange; //min - max or just max
-            if (artRange.includes("-")) {
+            if (artRange && artRange.includes("-")) {
                 artRange = artRange.split("-").map((e) => parseInt(e));
             } else {
                 artRange = [0,parseInt(artRange)];
@@ -721,7 +719,7 @@ const FFT = (() => {
             this.artType = artType;
 
             this.artCalibre = aa.artcalibre;
-            this.mrls = (aa.special.includes("MRLS")) ? true:false;
+            this.mrls = (this.special.includes("MRLS")) ? true:false;
 
             let weapons = [];
             for (let i=1;i<3;i++) {
@@ -756,8 +754,6 @@ const FFT = (() => {
                 })
             }
             this.weapons = weapons;
-
-            this.special = aa.special || " ";
 
             this.spotter = 0;
             this.artQC = false;
@@ -921,6 +917,8 @@ log(this)
                 let info = state.FFT.formationInfo[fID]
                 this.casualties = info.casualties;
                 this.breakpoint = info.breakpoint;
+                this.type = info.type;
+                this.artAvail = info.artAvail;
             }
         }
 
@@ -2771,13 +2769,18 @@ log("Not Spotted")
         let formationType = Tag[2];
         let breakpoint = Tag[3];
         let quality = Tag[4];
+        let artAvail = Tag[5] || 0;
 
         let unit;
         let unit1 = new Unit(msg.selected[0]._id);
         let formation = new Formation(formationName,unit1.id,quality);
         formation.breakpoint = breakpoint;
         formation.type = formationType;
+        formation.artAvail = artAvail;
         state.FFT.formationInfo[formation.id].breakpoint = breakpoint;
+        state.FFT.formationInfo[formation.id].type = formationType;
+        state.FFT.formationInfo[formation.id].artAvail = artAvail;
+
 
         if (formationType === "Combat Formation") {
             state.FFT.formNum[formation.player]++;
@@ -2794,7 +2797,7 @@ log("Not Spotted")
                 aura1_radius: 1,
                 aura2_color: "transparent",
                 aura2_radius: 5,
-                disableTokenMenu: true,
+                disableTokenMenu: false,
                 bar1_value: unit.movement,
                 showplayers_bar1: true,
                 showplayers_bar2: false,
@@ -2805,6 +2808,25 @@ log("Not Spotted")
                 statusmarkers: "",
                 show_tooltip: true,
             })
+            if (unit.artFlag === true) {
+                unit.token.set({
+                    bar2_value: 3, //used for artillery
+                    showplayers_bar2: true,
+                    showplayers_bar3: true,
+                })
+                if (unit.special.includes("Fire Units")) {
+                    let sp = unit.special.split(",");
+                    let fu = 0;
+                    _.each(sp,sub => {
+                        if (sub.includes("Fire Units")) {
+                            fu = sub.replace(/[^\d]/g,"");
+                        }
+                    })
+                    unit.token.set("bar3_value",fu);
+                }
+
+
+            }
         }
 
         sendChat("",formation.name + " Added")
@@ -2818,6 +2840,7 @@ log("Not Spotted")
         let Tag = msg.content.split(";");
         let coNumber = Tag[1];
         let coType = Tag[2]; //Co or Battalion
+        let unitType = " Plt. ";
 
         let ids = msg.selected.map((e) => e._id);
         let unitI = UnitArray[ids[0]];
@@ -2863,11 +2886,17 @@ log(symbol)
             } else {
                 nameArray[charName]++;
             }
-            let name = charName + " Plt. " + nameArray[charName];
-
+            if (unit.artFlag === true && formation.type !== "Combat") {
+                unitType = " Battery "
+            }
+            let name = charName + unitType + nameArray[charName];
+            let tooltip = formation.name + " / " + companyName;
+            if (formation.type === "Combat") {
+                tooltip += " / " + formation.quality + " Quality";
+            }
             unit.token.set("gmnotes",gmn);
             unit.token.set("name",name);
-            unit.token.set("tooltip",formation.name + " / " + companyName + " / " + formation.quality + " Quality");
+            unit.token.set("tooltip",tooltip);
             unit.token.set(symbol,true);
             unit.name = name;
             if (assigned === false && noFlag === false && unit.weapons.length > 0) {
