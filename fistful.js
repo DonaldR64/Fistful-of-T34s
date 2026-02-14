@@ -2729,7 +2729,6 @@ log(symbol)
                 assigned = true;
             }
         }
-
         formation.AddCompany(company.id);
         state.FFT.companyInfo[company.id] = companyName;
         sendChat("",companyName + " Added")
@@ -3306,6 +3305,29 @@ log(symbol)
 
                     if (destroyed === true) {
                         tip = ' is [Destroyed](#" class="showtip" title="' + tip + ')';
+                        let passengerID = state.FTT.transportInfo[target.id];
+                        let passenger = UnitArray[passengerID];
+                        if (passenger) {
+                            outputCard.body.push("[U]Passenger[/u]");
+                            let qcResult = QualityCheck(passengerID);
+                            let line = passenger.name + " " + qcResult.tip + " its Quality Check";
+                            if (qcResult.pass === true) {
+                                passenger.token.set({
+                                    top: target.token.get("top"),
+                                    left: target.token.get("left"),
+                                    bar1_value: 0,
+                                })
+                                passenger.hexLabel = target.hexLabel;
+                                if (target.token.get(SM.flag)) {
+                                    passenger.token.set(SM.flag,true);
+                                }
+                                passenger.token.set(SM.suppB,true);
+                                line += " and Dismounts;"
+                            } else {
+                                line += " and is Destroyed";
+                            }
+                            outputCard.body.push(line);
+                        }
                         target.Destroyed("Wreck");
                     } else if (qc === true) {
                         if (target.token.get(SM.passed)) {
@@ -3313,6 +3335,7 @@ log(symbol)
                         } else {
                             tip = ' [Takes Damage](#" class="showtip" title="' + tip + ')';
                             target.token.set(SM.qc,true);
+                            //passengers will be dealt with in runqc
                         }
                     } else {
                         tip = ' [Deflects all Shots](#" class="showtip" title="' + tip + ')';
@@ -3327,6 +3350,7 @@ log(symbol)
                         if (finalHits > 0) {
                             target.token.set(SM.qc,finalHits);
                         }
+                        //passengers dealth with in runqc
                     }
                 }
             }
