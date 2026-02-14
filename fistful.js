@@ -1793,6 +1793,7 @@ log(unit.moveType)
     const QualityCheck = (unit,reason = "Fire") => {
 log(unit.name)
         let passed = true;
+        let extra = ""
         let cohesion = unit.CheckCohesion();
         if (reason === "CC") {
             
@@ -1836,16 +1837,22 @@ log(unit.name)
             tip = '[Fails](#" class="showtip" title="' + tip + ')';
             passed = false;
             if (reason === "Fire") {
+                let passengerID = state.FTT.transportInfo[target.id];
+                let passenger = UnitArray[passengerID];
+                if (passenger) {                
+                    extra = passenger.name + " Routs with the Transport";
+                    passenger.Destroyed();
+                }
                 unit.Destroyed();
             }
         }
-
         if (unit && unit.token) {
             unit.token.set(SM.qc,false);
         }
         let result = {
             pass: passed,
             tip: tip,
+            extra: extra,
         }
         return result;
     }
@@ -3614,7 +3621,7 @@ const RunQC = () => {
         PrintCard();
     } else {
         if (nextPhase === "CloseCombat") {
-                CloseCombatPhase();
+            CloseCombatPhase();
         } else if (nextPhase === "EndPhase") {
             EndPhase();
         } else if (nextPhase === "FormQC") {
@@ -3659,6 +3666,9 @@ const RunFormQC = () => {
         let qcResult = QualityCheck(unit);
         SetupCard(unit.name,"Quality Check",unit.nation);
         outputCard.body.push("Unit " + qcResult.tip + " its Quality Check");
+        if (qcResult.extra !== "") {
+            outputCard.body.push(qcResult.extra);
+        }
         PrintCard();
     }
 
