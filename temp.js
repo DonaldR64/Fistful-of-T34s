@@ -97,20 +97,24 @@
         return result;
     }
 
-    const AreaFireIndexTable = (fu,calibre) => {
 
 
+    const AreaFireIndexTable = {
+        //ref by calibre first, then FU to get fire index #
+        //this only goes up to FU 10, and no ICM or Helo yet
+        "HE 30-69": [0,1,2,3,4,5,6,6,8,8,8],
+        "HE 70-89": [0,3,4,7,8,9,10,10,15,15,15],
+        "HE 90-119": [0,3,5,8,9,11,14,14,15,15,15],
+        "HE 120-139": [0,8,10,14,15,16,18,18,19,19,19],
+        "HE 140-169": [0,8,12,14,16,17,18,18,20,20,20],
+        "HE 170+": [0,14,16,18,19,21,21,21,22,22,22],
+    };
 
-
-
-
-    }
-
-    const MRLSAreaFireIndexTable = (fu,size) => {
-
-
-
-
-
-        
+    const MRLSAreaFireIndexTable = {
+        //ref by size, and maxes at 10 FU
+        //ICM not in yet
+        "Light HE": [0,1,1,1,1,1,1,2,2,3,3],
+        "Medium HE": [0,1,1,2,4,5,6,8,8,9,10],
+        "Heavy HE": [0,8,12,15,16,18,19,19,21,21,21],
+        "Very Heavy HE": [0,12,15,17,18,19,21,21,22,22,22],
     }
