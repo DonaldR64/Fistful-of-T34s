@@ -2042,7 +2042,7 @@ log(unit.name)
         _.each(artUnits,unit => {
             outputCard.body.push(unit.name);
         })
-        if (artUnitInfo.length === 0) {
+        if (artUnits.length === 0) {
             outputCard.body.push("No Artillery/Air Available");
         }
         PrintCard();
@@ -4175,6 +4175,16 @@ log("Final Hex Label: " + finalHexLabel)
         }
     };
 
+    function displayCurrentTime() {
+        let now = new Date();
+        let hours = String(now.getHours()).padStart(2, '0');
+        let minutes = String(now.getMinutes()).padStart(2, '0');
+        hours -= 5; //GMT to EST
+        ampm = hours > 12 ? " PM":" AM";
+        hours = hours > 12 ? hours-12:hours;
+        let time = hours + ":" + minutes + ampm
+        return time
+    }
 
 
 
@@ -4191,7 +4201,7 @@ log("Final Hex Label: " + finalHexLabel)
         DefineHexInfo();
         BuildMap();
         registerEventHandlers();
-        sendChat("","API Ready")
+        sendChat("","API Ready at " + displayCurrentTime());
         log("On Ready Done")
     });
     return {
