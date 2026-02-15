@@ -1943,12 +1943,12 @@ log(unit.name)
     }
 
     const ArtilleryAvailability2 = (player) => {
-log("In art availability")
         artUnits = [];
         let avail = [];
         let unavail = [];
         _.each(UnitArray,unit => {
             let passenger = false;
+            let mrlsRounds = 0;
             if (unit.player === player) {
                 if (unit.artFlag === true && unit.CheckSuppression() === false) {
 log(unit.name)
@@ -1970,20 +1970,21 @@ log(unit.name)
                         availMod++;
                         tipmods += "<br>On Board Artillery +1";
                     }         
-                    let result = ArtAvailTable(unit.nation,unit.artType,availMod);
 
-                    tip = "Final Result: " + result.result;
-                    tip = "Roll: " + result.roll + tipmods;
-
-
+                    let result = ArtAvailTable(unit,availMod);
+                    let s = (result.FU > 1) ? "s":"";
+                    tip = result.FU + " Fire Unit" + s;
+                    tip += "<br>Final Result: " + result.result;
+                    tip += "<br>Roll: " + result.roll + tipmods;
                     tip = '[🎲 ](#" class="showtip" title="' + tip + ')';
+
                     if (result.FU > 0 && passenger === false) {
-                        unit.FU = result.FU;
-                        artUnits.push(unit);
-                        avail.push(tip + unit.name + " is Available with " + result.FU + " FU");
-                        if (unit.artType === "Battalion") {
-                            avail.push("This is Battalion Artillery");
+                        let info = {
+                            unit: unit,
+                            fu: result.FU,
                         }
+                        artUnits.push(info);
+                        avail.push(tip + unit.name + " is Available");
                     } else {
                         if (unit.type === "Aircraft") {
                             unavail.push(tip + unit.name + " is Refuelling/Reloading");
@@ -1999,6 +2000,9 @@ log(unit.name)
                         if (unit.type === "Artillery" && offboard === true && passenger === true) {
                             unavail.push(unit.name + " is being Transported");
                         }
+                        if (unit.special.includes("MRLS") && mrlsRounds <= 0) {
+                            unavail.push(unit.name + " has fired all its Rockets");
+                        }              
                         if (offboard === false) {
                             unavail.push(tip + unit.name + " is Reloading and Unavailable");
                         }
@@ -2028,17 +2032,12 @@ log(unit.name)
 
 
 
-    const ArtAvailTable = (nation,type,availMod) => {
-log("In art availtable")
-log(nation)
-log(type)
-log(availMod)
+    const ArtAvailTable = (unit,availMod) => {
         let side = {
             "Wermacht": "Western",
             "Red Army": "Soviet",
         }
-        side = side[nation];
-log(side)
+        side = side[unit.nation];
         let FUTable = {
             "Western": {
                 "Self-Propelled": [0,1,1,2,2,3],
@@ -2051,16 +2050,28 @@ log(side)
                 "Battalion": [0,0,1,1,1,1,],
             },
         }
+
         let artRoll = randomInteger(6);
         let artResult = artRoll + availMod;
+        let FU;
         artResult = Math.min(Math.max(1,artResult),6);
-        let FU = FUTable[side][type][artResult - 1];
+        if (unit.special.includes("MRLS")) {
+            artRoll = "N/A";
+            if (parseInt(unit.token.get("bar3_value")) > 0) {
+                artResult = "Auto";
+                FU = 1;
+            } else {
+                artResult = "Expended";
+                FU = 0;
+            }
+        } else {
+            FU = FUTable[side][unit.artType][artResult - 1];
+        }
         let result = {
             roll: artRoll,
             result: artResult,
             FU: FU,
         }
-log(result)
         return result;
     }
 
