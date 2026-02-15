@@ -1931,17 +1931,17 @@ log(unit.name)
 
                     tip = '[🎲 ](#" class="showtip" title="' + tip + ')';
 
-                    if (result > target && passenger === false) {
+                    if (result >= target && passenger === false) {
                         artUnits.push(unit);
                         outputCard.body.push(tip + unit.name + " is Available");
                     } else {
                         if (unit.type === "Aircraft") {
                             unavail.push(tip + unit.name + " is Refuelling/Reloading");
                         }
-                        if (unit.type === "Artillery" && offboard === true && passenger === false) {
+                        if (unit.type === "Artillery" && offboard === true && passenger === false && unit.special.includes("MRLS") === false) {
                             let roll = randomInteger(6);
                             if (roll < 4) {
-                                unavail.push(tip + unit.name + " is Unavailable");
+                                unavail.push(tip + unit.name + " is Tasked Elsewhere");
                             } else {
                                 unavail.push(tip + unit.name + " is Reloading");
                             }
@@ -1950,10 +1950,10 @@ log(unit.name)
                             unavail.push(unit.name + " is being Transported");
                         }
                         if (unit.special.includes("MRLS")) {
-                            unavail.push(unit.name + " has fired all its Rockets");
+                            unavail.push(tip + unit.name + " has fired all its Rockets");
                         }              
                         if (offboard === false) {
-                            unavail.push(tip + unit.name + " is Reloading and Unavailable");
+                            unavail.push(tip + unit.name + " is Reloading");
                         }
                         unit.token.set(SM.unavail,true);
                     }
@@ -2565,7 +2565,6 @@ log(hex)
                 if (moved === false && cover === true) {threshold = 10};
             }
         }
-log(unit.name + " " + unit.id + ": " + threshold + " is Threshold")
     
 
         let spotted = false;
@@ -2575,7 +2574,6 @@ log(unit.name + " " + unit.id + ": " + threshold + " is Threshold")
             if (id === unit.id) {continue};
             let unit2 = UnitArray[id];
             if (!unit2) {log("No Unit2");continue};
-log(unit2.name + " looking")
             if (unit2.nation === unit.nation || unit2.nation === "Neutral") {continue};
             let distance = unit.Distance(unit2);
             let los = LOS(unit2,unit).los;
@@ -2596,7 +2594,6 @@ log(unit2.name + " looking")
             }
         }
         if (spotted === false && phase === "End") {
-log("Not Spotted")
             unit.token.set("tint_color","#000000");
         }
 
