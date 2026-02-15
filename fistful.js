@@ -3942,6 +3942,9 @@ const AddArtillery = (msg) => {
 
 const CommitArtillery = (msg) => {
     areaFireList.push(areaFire);
+    _.each(areaFire.artUnits,unit => {
+        artUnits.splice(artUnits.indexOf(unit),1);
+    })
     areaFire = {};
     sendChat("","Committed");
     let tokenID = msg.selected[0]._id;
