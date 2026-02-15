@@ -1881,67 +1881,6 @@ log(unit.name)
     }
 
 
-    const ArtilleryAvailability = (player) => {
-        artUnits = [];
-        let avail = [];
-        let unavail = [];
-        _.each(UnitArray,unit => {
-            if (unit.player === player) {
-                if (unit.artFlag === true && unit.CheckSuppression() === false) {
-                    let availRoll = randomInteger(6);
-                    let target = unit.avail;
-                    let tipmods = "";
-                    let offboard = HexMap[unit.hexLabel].offboard;
-                    if (offboard === false && target > 1) {
-                        target--;
-                        tipmods += "<br>On Board Artillery +1";
-                    }         
-                    
-                    tip = "Roll: " + availRoll + " vs. " + target + "+" + tipmods;
-
-
-                    tip = '[🎲 ](#" class="showtip" title="' + tip + ')';
-                    if (availRoll >= target) {
-                        artUnits.push(unit);
-                        avail.push(tip + unit.name + " is Available");
-                    } else {
-                        if (unit.type === "Aircraft") {
-                            unavail.push(tip + unit.name + " is Refuelling/Reloading");
-                        }
-                        if (unit.type === "Artillery" && offboard === true) {
-                            let roll = randomInteger(6);
-                            if (roll < 4) {
-                                unavail.push(tip + unit.name + " is Unavailable");
-                            } else {
-                                unavail.push(tip + unit.name + " is Reloading");
-                            }
-                        }
-                        if (offboard === false) {
-                            unavail.push(tip + unit.name + " is Reloading and Unavailable");
-                        }
-                        unit.token.set(SM.unavail,true);
-                    }
-                }
-            }
-        })
-        if (avail.length > 0) {
-            for (let i=0;i<avail.length;i++) {
-                outputCard.body.push(avail[i]);
-            }
-            if (unavail.length > 0) {
-                outputCard.body.push("[hr]");
-            }
-        }
-        if (avail.length === 0) {
-            outputCard.body.push("No Artillery or Air Support");
-        }
-        if (unavail.length > 0) {
-            for (let i=0;i<unavail.length;i++) {
-                outputCard.body.push(unavail[i]);
-            }
-        }
-    }
-
     const ArtilleryAvailability2 = (player) => {
         artUnits = [];
         let unavail = [];
@@ -1951,7 +1890,7 @@ log(unit.name)
                 if (unit.artFlag === true && unit.CheckSuppression() === false) {
 log(unit.name)
                     let type = unit.artType;
-                    let target, FU;
+                    let target, mrlsTip;
                     let formation = FormationArray[unit.formationID];
                     let availMod = parseInt(formation.artAvail) || 0;
                     let offboard = HexMap[unit.hexLabel].offboard;
@@ -1967,9 +1906,11 @@ log(unit.name)
                     }         
                     if (unit.special.includes("MRLS")) {
                         target = 7;
+                        mrlsTip = "Out of Rockets";
                         mrlsRounds = parseInt(unit.token.get("bar3_value"));
                         if (mrlsRounds > 0) {
                             target = 1;
+                            mrlsTip = "Automatic<br>" + mrlsRounds + " Turns of Fire Remaining";
                         }
                     } else {
                         target = ArtAvailTable[unit.nation][type];
@@ -1978,13 +1919,18 @@ log(unit.name)
                     let availRoll = randomInteger(6);
                     let result = availRoll + availMod;
 
-                    tip = "Final Result: " + result;
-                    tip += "Roll: " + availRoll;
+                    tip = "Final: " + result + " vs. "+ target + "+";
+                    tip += "<br>----------------";
+                    tip += "<br>Roll: " + availRoll;
                     if (availMod !== 0) {
-                        tip += " + Avail: " + availMod;
+                        tip += "<br>Availability: " + availMod;
+                    }
+                    if (unit.special.includes("MRLS")) {
+                        tip = mrlsTip;
                     }
 
                     tip = '[🎲 ](#" class="showtip" title="' + tip + ')';
+
                     if (result > target && passenger === false) {
                         artUnits.push(unit);
                         outputCard.body.push(tip + unit.name + " is Available");
