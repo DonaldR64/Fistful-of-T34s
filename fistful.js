@@ -1984,7 +1984,7 @@ log(unit.name)
                             fu: result.FU,
                         }
                         artUnits.push(info);
-                        avail.push(tip + unit.name + " is Available");
+                        avail.push(tip + unit.name + " -> " + result.FU + " FU");
                     } else {
                         if (unit.type === "Aircraft") {
                             unavail.push(tip + unit.name + " is Refuelling/Reloading");
