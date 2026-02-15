@@ -2910,6 +2910,8 @@ log(symbol)
 
 
     const CheckLOS = (msg) => {
+
+//add in spotted/unspotted units
         let Tag = msg.content.split(";");
         let shooterID = Tag[1];
         let targetID = Tag[2];
@@ -2928,7 +2930,13 @@ log(symbol)
 
         SetupCard(shooter.name,"LOS",shooter.nation);
         let losResult = LOS(shooter,target);
-        outputCard.body.push("Distance: " + losResult.distance);
+        let distance = losResult.distance
+        if (distance < 10) {
+            distance = distance + " (" + distance * 100 + "m)";
+        } else {
+            distance = distance + " (" + distance/10 + "km)";
+        }
+        outputCard.body.push("Distance: " + distance);
         if (losResult.los === false) {
             outputCard.body.push("[#ff0000]No LOS to Target[/#]");
             outputCard.body.push(losResult.losReason);
@@ -2938,10 +2946,10 @@ log(symbol)
             if (losResult.inSmoke === true) {
                 outputCard.body.push("Target is in Smoke");
             }
-            outputCard.body.push("Target has " + areaCover + " vs. Indirect Fire");
             outputCard.body.push("Target is in the " + losResult.shooterFacing + " Arc");
             outputCard.body.push("Target is being hit on the " + losResult.targetFacing + " Arc");
-
+/*
+needs fix for different weapons
             let bands = ["in Short","in Effective","in Long","Out of"];
             let final = 3;
             for (let band = 0;band < 3;band++) {
@@ -2951,7 +2959,7 @@ log(symbol)
                 }
             }
             outputCard.body.push("Target is " + bands[final] + " Range");
-
+*/
 
 
         }
@@ -3662,7 +3670,7 @@ const ResolveAreaPhase = () => {
     areaFire = areaFireList.shift();
     if (areaFire) {
         sendPing(areaFire.centre.x,areaFire.centre.y,Campaign().get("playerpageid"),null,true);
-        SetupCard("Area Fire","",state.FFT.nations[activePLayer]);
+        SetupCard("Area Fire","",state.FFT.nations[activePlayer]);
         ButtonInfo("Resolve","!AreaFire");
         PrintCard();
     } else {
@@ -3869,8 +3877,8 @@ const CreateArtilleryToken = (spotter) => {
     } 
     //create a macro for each avail artillery unit, labelled 1 - name etc
     for (let i=0;i<artUnits.length;i++) {
-        let abilityName = (i+1) + ": " + artUnit.name;
-        let action = "!AddArtillery;" + newToken.id + ";" + spotter.id + ";" + artUnit.id + ";?{Type|HE|Smoke";
+        let abilityName = (i+1) + ": " + artUnits[i].name;
+        let action = "!AddArtillery;" + newToken.id + ";" + spotter.id + ";" + artUnits[i].id + ";?{Type|HE|Smoke";
         AddAbility(abilityName,action,charID);
     }
     //then add a macro for check LOS, and a macro for Commit and Cancel
@@ -3888,6 +3896,7 @@ const CreateArtilleryToken = (spotter) => {
         artUnits: [],
         type: "",
     };
+    let target = new Unit(newToken.id);
 }
 
 const AddArtillery = (msg) => {
@@ -3926,7 +3935,7 @@ const AddArtillery = (msg) => {
         areaFire.centre = HexMap[target.hexLabel].centre;
         target.token.set("lockMovement",true);
     }
-    areaFire.units.push(artillery);
+    areaFire.artUnits.push(artillery);
     sendChat("",artillery.name + " Added to Barrage");
 }
 
