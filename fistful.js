@@ -1947,7 +1947,6 @@ log(unit.name)
         let unavail = [];
         _.each(UnitArray,unit => {
             let passenger = false;
-            let mrlsRounds = 0;
             if (unit.player === player) {
                 if (unit.artFlag === true && unit.CheckSuppression() === false) {
 log(unit.name)
@@ -1967,10 +1966,13 @@ log(unit.name)
                         type = "Battalion";
                     }         
                     if (unit.special.includes("MRLS")) {
-                        target = 1;
+                        target = 7;
+                        mrlsRounds = parseInt(unit.token.get("bar3_value"));
+                        if (mrlsRounds > 0) {
+                            target = 1;
+                        }
                     } else {
                         target = ArtAvailTable[unit.nation][type];
-
                     }
 
                     let availRoll = randomInteger(6);
@@ -2001,7 +2003,7 @@ log(unit.name)
                         if (unit.type === "Artillery" && offboard === true && passenger === true) {
                             unavail.push(unit.name + " is being Transported");
                         }
-                        if (unit.special.includes("MRLS") && mrlsRounds <= 0) {
+                        if (unit.special.includes("MRLS")) {
                             unavail.push(unit.name + " has fired all its Rockets");
                         }              
                         if (offboard === false) {
