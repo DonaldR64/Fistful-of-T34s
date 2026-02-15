@@ -3888,13 +3888,11 @@ const CreateArtilleryToken = (spotter) => {
     abilityName = "Commit";
     action = "!CommitArtillery";
     AddAbility(abilityName,action,charID);
-    abilityName = "Cancel";
-    action = "!CancelArtillery";
-    AddAbility(abilityName,action,charID);
     areaFire = {
         centre: "",
         artUnits: [],
         type: "",
+        spotter: spotter,
     };
     let target = new Unit(newToken.id);
 }
@@ -3958,17 +3956,6 @@ const CommitArtillery = (msg) => {
     }
 }
 
-const CancelArtillery = (msg) => {
-    areaFire = {
-        centre: "",
-        artUnits: [],
-        type: "",
-    };
-    sendChat("","Cleared all Artillery Attached to this Target");
-    let tokenID = msg.selected[0]._id;
-    let token =  findObjs({_type:"graphic", id: tokenID})[0];
-    token.set("lockMovement",false);
-}
 
 
 
@@ -4350,9 +4337,7 @@ log("Final Hex Label: " + finalHexLabel)
             case '!CommitArtillery':
                 CommitArtillery(msg);
                 break;
-            case '!CancelArtillery':
-                CancelArtillery(msg);
-                break;
+
         }
     };
 
