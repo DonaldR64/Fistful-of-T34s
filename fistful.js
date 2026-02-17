@@ -1905,13 +1905,13 @@ log(unit.name)
                     } else if (offboard === false) {
                         type = "Battalion";
                     }         
-                    if (unit.special.includes("MRLS")) {
+                    if (unit.mrls === true) {
                         target = 7;
                         mrlsTip = "Out of Rockets";
                         mrlsRounds = parseInt(unit.token.get("bar3_value"));
                         if (mrlsRounds > 0) {
                             target = 1;
-                            mrlsTip = "Automatic<br>" + mrlsRounds + " Turns of Fire Remaining";
+                            mrlsTip = "Automatic<br>" + mrlsRounds + " Fire Units Available";
                         }
                     } else {
                         target = ArtAvailTable[unit.nation][type];
@@ -1926,7 +1926,7 @@ log(unit.name)
                     if (availMod !== 0) {
                         tip += "<br>Availability: " + availMod;
                     }
-                    if (unit.special.includes("MRLS")) {
+                    if (unit.mrls === true) {
                         tip = mrlsTip;
                     }
 
@@ -1939,7 +1939,7 @@ log(unit.name)
                         if (unit.type === "Aircraft") {
                             unavail.push(tip + unit.name + " is Refuelling/Reloading");
                         }
-                        if (unit.type === "Artillery" && offboard === true && passenger === false && unit.special.includes("MRLS") === false) {
+                        if (unit.type === "Artillery" && offboard === true && passenger === false && unit.mrls === false) {
                             let roll = randomInteger(6);
                             if (roll < 4) {
                                 unavail.push(tip + unit.name + " is Tasked Elsewhere");
@@ -1950,7 +1950,7 @@ log(unit.name)
                         if (unit.type === "Artillery" && offboard === true && passenger === true) {
                             unavail.push(unit.name + " is being Transported");
                         }
-                        if (unit.special.includes("MRLS")) {
+                        if (unit.mrls === true) {
                             unavail.push(tip + unit.name + " has fired all its Rockets");
                         }              
                         if (offboard === false) {
@@ -1988,7 +1988,9 @@ log(unit.name)
         },    
     }
 
+    const MainCalibres = ["HE 30-69","HE 70-89","HE 90-119","HE 120-139","HE 140-169","HE 170+"];
 
+    const MRLSCalibres = ["Light HE","Medium HE","Heavy HE","Very Heavy HE"]
 
     const AreaFireIndexTable = {
         //ref by calibre first, then FU to get fire index #
@@ -2338,7 +2340,7 @@ log(target)
         PrintCard();
     }
 
-    const PlaceSmoke = (artillery,hexLabels) => {
+    const PlaceSmoke = (player,hexLabels) => {
         let img = getCleanImgSrc("https://files.d20.io/images/196609276/u8gp3vcjYAunqphuw6tgWw/thumb.png?1611938031");
         _.each(hexLabels,hexLabel => {
             let left = HexMap[hexLabel].centre.x;
@@ -2351,10 +2353,10 @@ log(target)
                 pageid: Campaign().get("playerpageid"),
                 imgsrc: img,
                 layer: "foreground",
-                name: artillery.player + "Smoke",
+                name: player + "Smoke",
             });
             HexMap[hexLabel].smoke = newToken.id;
-            HexMap[hexLabel].smokePlayer = artillery.player;
+            HexMap[hexLabel].smokePlayer = player;
         })
     }
 
@@ -3669,14 +3671,130 @@ const AreaFirePhase = () => {
 const ResolveAreaPhase = () => {
     areaFire = areaFireList.shift();
     if (areaFire) {
-        sendPing(areaFire.centre.x,areaFire.centre.y,Campaign().get("playerpageid"),null,true);
         SetupCard("Area Fire","",state.FFT.nations[activePlayer]);
-        ButtonInfo("Resolve","!AreaFire");
+        ButtonInfo("Resolve Next","!AreaFire");
         PrintCard();
     } else {
         MovementPhase();
     }
 }
+
+const ResolveAreaFire = () => {
+log(areaFire)
+return
+
+    //areaFire is info - centre, artUnits, type, spotter, fu for MRLS
+    let centre = areaFire.centre; //hexlabel where target is centred
+    sendPing(HexMap[centre].centre.x,HexMap[centre].centre.y,Campaign().get("playerpageid"),null,true);
+    let artUnits = areaFire.artUnitIDs.map((e) => UnitArray[e]);
+    let type = areaFire.type; //HE or smoke
+    let soundType = "Mortar";
+    let spotter = UnitArray[areaFire.spotterID] //for accuracy
+
+    let calibre,radius;
+    let fu = areaFire.fu; //will be 0 if non-MRLS
+    let artUnitNames = [];
+    let calNum = 100;
+    _.each(artUnits,artUnit => {
+        artUnitNames.push(artUnit.name);
+        if (artUnit.mrls === true) {
+            cal = MRLSCalibres.indexOf(artUnit.artCalibre);
+            let indFU = parseInt(artUnit.token.get("bar3_value")) - areaFire.info[artUnit.id];
+            artUnit.token.set("bar3_value",indFU);
+            soundType = "Katyusha";
+        } else {
+            cal = MainCalibres.indexOf(artUnit.artCalibre);
+            if (HexMap[artUnit.hexLabel].offboard === true && artUnit.artType !== "Battalion") {
+                fu += 2;
+                radius = 1;
+            } else {
+                fu += 1;
+                radius = 0;
+            }
+            if (artUnit.type !== "Mortar") {
+                soundType = "Howitzer";
+            }
+        }
+        if (cal > -1 && cal < calNum) {
+            cal = calNum; //lowest calibre
+        }
+        artUnit.token.set(SM.fired,true);
+        artUnit.token.set("tint_color","transparent");
+    })
+    let fuTip = "<br>" + fu + " Fire Units Total";
+
+    if (areaFire.fu > 0) {
+        calibre = MRLSCalibres[cal];
+        radius = (fu > 4) ? 2.5:2;
+    } else {
+        calibre = MainCalibres[cal];
+        if (radius > 0 && fu > 4) {radius = 1.5};
+    }
+
+    let accuracy = Nations[spotter.nation].artAccuracy;
+    let accTip = "";
+    if (spotter.quality === "Good" || spotter.quality === "Excellent") {
+        accuracy--;
+        accTip += "<br>(Spotter Quality +1)";
+    }
+    if (spotter.CheckSuppression() === true) {
+        accuracy++;
+        accTip += "<br>(Spotter Suppressed -1)";
+    }
+    accTip = "Accuracy: " + accuracy + accTip;
+
+    let hexLabels = [centre];
+    if (radius > 0) {
+        let cubes = HexMap[centre].cube.radius(radius);       
+        _.each(cubes,cube => {
+            hexLabels.push(cube.label());
+        })
+    }
+    hexLabels = [...new Set(hexLabels)];
+log(hexLabels)
+
+    //Sound
+    PlaySound(soundType);
+
+    const CreateExplosion = (x,y)=>{
+        spawnFx(x,y,"bomb-smoke");
+    };
+
+    let numExplosions = 3 * hexLabels.length;
+
+    const ChainExplosions = () => {
+        if(numExplosions--){
+            let hexLabel = hexLabels[randomInteger(hexLabels.length) - 1];
+            CreateExplosion(HexMap[hexLabel].centre.x,HexMap[hexLabel].centre.y);
+            setTimeout(ChainExplosions,250);
+        }
+    };
+
+    ChainExplosions();
+
+
+//accuracy
+//fireindex
+
+
+
+    if (type === "Smoke") {
+        PlaceSmoke(spotter.player,hexLabels);
+    } else if (type === "HE") {
+        let targetArray = TA(radius,target,hexLabels);
+        HE(targetArray);
+    }
+
+
+
+
+
+
+}
+
+
+
+
 
 
 const MovementPhase = () => {
@@ -3878,7 +3996,17 @@ const CreateArtilleryToken = (spotter) => {
     //create a macro for each avail artillery unit, labelled 1 - name etc
     for (let i=0;i<artUnits.length;i++) {
         let abilityName = (i+1) + ": " + artUnits[i].name;
-        let action = "!AddArtillery;" + newToken.id + ";" + spotter.id + ";" + artUnits[i].id + ";?{Type|HE|Smoke";
+        let add = "";
+        if (artUnits[i].mrls === true) {
+            let poss = parseInt(artUnits[i].token.get("bar3_value"));
+            for (let p=0;p<poss;p++) {
+                add += "|" + (p+1);
+            }
+            add = ";?{Fire Units" + add + "}"
+        }
+
+
+        let action = "!AddArtillery;" + newToken.id + ";" + spotter.id + ";" + artUnits[i].id + ";?{Type|HE|Smoke}" + add;
         AddAbility(abilityName,action,charID);
     }
     //then add a macro for check LOS, and a macro for Commit and Cancel
@@ -3890,9 +4018,11 @@ const CreateArtilleryToken = (spotter) => {
     AddAbility(abilityName,action,charID);
     areaFire = {
         centre: "",
-        artUnits: [],
+        artUnitIDs: [],
         type: "",
-        spotter: spotter,
+        spotterID: spotter.id,
+        fu: 0, //MRLS can add variable #
+        info: {},  //unit IDs and how many FU contributed for MRLS
     };
     let target = new Unit(newToken.id);
 }
@@ -3906,6 +4036,7 @@ const AddArtillery = (msg) => {
     let artilleryID = Tag[3];
     let artillery = UnitArray[artilleryID];
     let type = Tag[4]; //HE Or Smoke
+    let fu = Tag[5];//for MRLS
 
     //check LOS first
     let losResult = LOS(spotter,target);
@@ -3930,19 +4061,25 @@ const AddArtillery = (msg) => {
     } 
     //lock target token in place
     if (areaFire.centre === "") {
-        areaFire.centre = HexMap[target.hexLabel].centre;
+        areaFire.centre = target.hexLabel;
         target.token.set("lockMovement",true);
     }
-    areaFire.artUnits.push(artillery);
+    areaFire.artUnitIDs.push(artilleryID);
+    if (fu) {
+        areaFire.fu += parseInt(fu);
+        areaFire.info[artilleryID] = parseInt(fu);
+    }
     sendChat("",artillery.name + " Added to Barrage");
 }
 
 
 const CommitArtillery = (msg) => {
     areaFireList.push(areaFire);
-    _.each(areaFire.artUnits,unit => {
-        artUnits.splice(artUnits.indexOf(unit),1);
+    _.each(areaFire.artUnitIDs,unitID => {
+        let index = artUnits.map(e => e.id).indexOf(unitID);
+        artUnits.splice(index,1);
     })
+    UnitArray[areaFire.spotterID].spotter++;
     areaFire = {};
     sendChat("","Committed");
     let tokenID = msg.selected[0]._id;
@@ -4336,6 +4473,9 @@ log("Final Hex Label: " + finalHexLabel)
                 break;
             case '!CommitArtillery':
                 CommitArtillery(msg);
+                break;
+            case '!AreaFire':
+                ResolveAreaFire();
                 break;
 
         }
