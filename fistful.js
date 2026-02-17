@@ -2001,16 +2001,81 @@ log(unit.name)
         "HE 120-139": [0,8,10,14,15,16,18,18,19,19,19],
         "HE 140-169": [0,8,12,14,16,17,18,18,20,20,20],
         "HE 170+": [0,14,16,18,19,21,21,21,22,22,22],
-    };
-
-    const MRLSAreaFireIndexTable = {
         //ref by size, and maxes at 10 FU
         //ICM not in yet
         "Light HE": [0,1,1,1,1,1,1,2,2,3,3],
         "Medium HE": [0,1,1,2,4,5,6,8,8,9,10],
         "Heavy HE": [0,8,12,15,16,18,19,19,21,21,21],
         "Very Heavy HE": [0,12,15,17,18,19,21,21,22,22,22],
+    };
+
+    const IndirectAreaFireProblem = (spotter,centre) => {
+        let roll = randomInteger(6);
+        let note,info;
+        if (spotter.quality === "Good" || spotter.quality === "Excellent") {roll++};
+        if (spotter.CheckSuppression() === true) {roll--};
+        if (roll < 1 || roll === 3) {
+            info = SNAFU(centre,spotter);
+        } else if (roll === 1 || roll === 2) {
+            centre = ScatterCentre(centre,(3-roll));
+            note = "Scatters, Reduced Effectiveness";
+        } else if (roll === 4) {
+            note = "Full Effectiveness, but hit with Counterbattery Fire";
+        } else if (roll > 4) {
+            note = "Reduced Effectiveness";
+        }
+        if (roll > 0 && roll !== 3) {
+            let info = {
+                note: note,
+                centre: centre,
+            }
+        }
+
     }
+
+    const SNAFU = (centre,spotter) = () => {
+        let roll = randomInteger(6) + randomInteger(6) + randomInteger(6);
+        let note;
+        if (roll < 6) {
+            note = "Observer gave Own Coordinates, Full Effectiveness";
+            centre = spotter.hexLabel;
+        } else if (roll === 6) {
+            //nearest friendlies to spotter
+        } else if (roll === 7) {
+            note = "Target Location Error, Full Effectiveness";
+            centre = ScatterCentre(centre,10);
+        } else if (roll === 8) {
+            note = "Target Location Error, Reduced Effectiveness";
+            centre = ScatterCentre(centre,10);
+        } else if (roll === 9) {
+            note = "Map Confusion, Full Effectiveness";
+            centre = ScatterCentre(centre,5);
+        } else if (roll === 10 || roll === 1) {
+            note = "Observer Range Measurement Error, Reduced Effectiveness";
+            //move either 1/4 closer to spotter or 1/4 further past centre
+        } else if (roll === 12) {
+            note = "Barrage Cancelled due to Uncertainty";
+        } else if (roll === 13) {
+            note = "Target Location Error, Reduced Effectiveness";
+            centre = ScatterCentre(centre,5);
+        } else if (roll === 14) {
+            note = "Target Location Error, Full Effectiveness";
+            centre = ScatterCentre(centre,5);
+        } else if (roll === 15) {
+            note = "Fire lands with Full Effectiveness, but Counterbattery Fire eliminated a group";
+//if air, change to shot down by AA
+
+        } else if (roll > 15) {
+            note = "Barrage cancelled due to communications problems";
+        }
+        let info = {
+            note: note,
+            centre: centre,
+        }
+        return info;
+    }
+
+
 
 
 
@@ -3723,7 +3788,7 @@ log(areaFire)
     })
     let fuTip = "<br>" + fu + " Fire Units Total";
     if (calNum === 100) {calNum = 0};
-    if (areaFire.fu > 0) {
+    if (areaFire.mrls === true) {
         calibre = MRLSCalibres[calNum];
         radius = (fu > 4) ? 2.5:2;
     } else {
@@ -3775,9 +3840,22 @@ log(fuTip)
 
     ChainExplosions();
 
+    //fireindex
+    let FI = AreaFireIndexTable[calibre][fu];
+    //accuracy
+    let fiTip = "Full Effectiveness";
+//spotting for self means auto 6 on accuracy roll essentially
+    let accRoll = randomInteger(6);
+    if (accRoll === 1) {
+//tie this back, pick out full or reduced, cancelled etc
+        let info = IndirectAreaFireProblem(spotter,centre);
+    } else if (accRoll < accuracy) {
+        FI = Math.max(1,(FI - 5));
+        fiTip = "Reduced Effectiveness";
+    }
 
-//accuracy
-//fireindex
+
+
 
 
 
@@ -4024,6 +4102,7 @@ const CreateArtilleryToken = (spotter) => {
         artUnitIDs: [],
         type: "",
         spotterID: spotter.id,
+        mrls: false, //flag
         fu: 0, //MRLS can add variable #
         info: {},  //unit IDs and how many FU contributed for MRLS
     };
@@ -4054,6 +4133,10 @@ const AddArtillery = (msg) => {
         sendChat("","Cannot mix HE and Smoke in same Barrage");
         return;
     }
+
+//cant mix MRLS and non
+
+
     //check range for the artillery selected
     if (HexMap[artillery.hexLabel].offboard === false) {
         let distance = artillery.Distance(target);
@@ -4071,6 +4154,7 @@ const AddArtillery = (msg) => {
     if (fu) {
         areaFire.fu += parseInt(fu);
         areaFire.info[artilleryID] = parseInt(fu);
+        areaFire.mrls = true;
     }
     sendChat("",artillery.name + " Added to Barrage");
 }
