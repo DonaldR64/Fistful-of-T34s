@@ -2050,9 +2050,11 @@ log(unit.name)
         } else if (roll === 9) {
             note = "Map Confusion, Full Effectiveness";
             centre = ScatterCentre(centre,5);
-        } else if (roll === 10 || roll === 1) {
+        } else if (roll === 10 || roll === 11) {
             note = "Observer Range Measurement Error, Reduced Effectiveness";
-            //move either 1/4 closer to spotter or 1/4 further past centre
+            let distance = HexMap[spotter.hexLabel].cube.distance(HexMap[centre].cube);
+            distance = Math.round(distance/4);
+            centre = ScatterCentre(centre,distance);
         } else if (roll === 12) {
             note = "Barrage Cancelled due to Uncertainty";
         } else if (roll === 13) {
@@ -2075,7 +2077,13 @@ log(unit.name)
         return info;
     }
 
+    const ScatterCentre = (centre,distance) => {
+        //random direction, distance is in hexes
 
+
+
+        return centre;
+    }
 
 
 
