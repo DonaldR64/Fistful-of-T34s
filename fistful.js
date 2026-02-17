@@ -3681,7 +3681,7 @@ const ResolveAreaPhase = () => {
 
 const ResolveAreaFire = () => {
 log(areaFire)
-return
+
 
     //areaFire is info - centre, artUnits, type, spotter, fu for MRLS
     let centre = areaFire.centre; //hexlabel where target is centred
@@ -3692,7 +3692,7 @@ return
     let spotter = UnitArray[areaFire.spotterID] //for accuracy
 
     let calibre,radius;
-    let fu = areaFire.fu; //will be 0 if non-MRLS
+    let fu = parseInt(areaFire.fu); //will be 0 if non-MRLS
     let artUnitNames = [];
     let calNum = 100;
     _.each(artUnits,artUnit => {
@@ -3716,18 +3716,18 @@ return
             }
         }
         if (cal > -1 && cal < calNum) {
-            cal = calNum; //lowest calibre
+            calNum = cal; //lowest calibre
         }
         artUnit.token.set(SM.fired,true);
         artUnit.token.set("tint_color","transparent");
     })
     let fuTip = "<br>" + fu + " Fire Units Total";
-
+    if (calNum === 100) {calNum = 0};
     if (areaFire.fu > 0) {
-        calibre = MRLSCalibres[cal];
+        calibre = MRLSCalibres[calNum];
         radius = (fu > 4) ? 2.5:2;
     } else {
-        calibre = MainCalibres[cal];
+        calibre = MainCalibres[calNum];
         if (radius > 0 && fu > 4) {radius = 1.5};
     }
 
@@ -3752,6 +3752,9 @@ return
     }
     hexLabels = [...new Set(hexLabels)];
 log(hexLabels)
+log(calibre)
+log(fuTip)
+
 
     //Sound
     PlaySound(soundType);
@@ -3779,10 +3782,10 @@ log(hexLabels)
 
 
     if (type === "Smoke") {
-        PlaceSmoke(spotter.player,hexLabels);
+        //PlaceSmoke(spotter.player,hexLabels);
     } else if (type === "HE") {
-        let targetArray = TA(radius,target,hexLabels);
-        HE(targetArray);
+        //let targetArray = TA(radius,target,hexLabels);
+        //HE(targetArray);
     }
 
 
