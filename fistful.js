@@ -2060,7 +2060,7 @@ log(unit.name)
         let theta = Angle(unit.token.get("rotation")) * Math.PI/180;
         let w = unit.token.get("width");
         let h = unit.token.get("height");
-        let squareTokens = ["Infantry","Mortar","Artillery","AT Gun"]; //tokens without a direction triangle
+        let squareTokens = ["Infantry","Mortar"]; //tokens without a direction triangle
         if (squareTokens.includes(unit.type) === false) {
             h -= 10;
         }
