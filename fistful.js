@@ -2030,53 +2030,53 @@ log(unit.name)
             info = SNAFU(centre,spotter);
         } else if (roll === 1 || roll === 2) {
             centre = ScatterCentre(centre,(3-roll));
-            note = "Scatters, Reduced Effectiveness";
+            note = "Scatters and Lands with Reduced Effectiveness";
         } else if (roll === 4) {
-            note = "Full Effectiveness, but hit with Counterbattery Fire";
+            note = "Lands with Full Effectiveness, but hit with Counterbattery Fire";
         } else if (roll > 4) {
-            note = "Reduced Effectiveness";
+            note = "Lands with Reduced Effectiveness";
         }
         if (roll > 0 && roll !== 3) {
-            let info = {
+            outputCard.body.push("[#ff0000]" + note + "[/#]");
+            outputCard.body.push("[hr]");
+            info = {
                 note: note,
                 centre: centre,
             }
         }
-
+        return info;
     }
 
     const SNAFU = (centre,spotter) = () => {
         let roll = randomInteger(6) + randomInteger(6) + randomInteger(6);
         let note;
         if (roll < 6) {
-            note = "Observer gave Own Coordinates, Full Effectiveness";
+            note = "Observer gave Own Coordinates, Lands with Full Effectiveness";
             centre = spotter.hexLabel;
-        } else if (roll === 6) {
-            //nearest friendlies to spotter
         } else if (roll === 7) {
-            note = "Target Location Error, Full Effectiveness";
+            note = "Target Location Error, Lands with Full Effectiveness";
             centre = ScatterCentre(centre,10);
-        } else if (roll === 8) {
-            note = "Target Location Error, Reduced Effectiveness";
+        } else if (roll === 8 || roll === 6) {
+            note = "Target Location Error, Lands with Reduced Effectiveness";
             centre = ScatterCentre(centre,10);
         } else if (roll === 9) {
-            note = "Map Confusion, Full Effectiveness";
+            note = "Map Confusion, Lands with Full Effectiveness";
             centre = ScatterCentre(centre,5);
         } else if (roll === 10 || roll === 11) {
-            note = "Observer Range Measurement Error, Reduced Effectiveness";
+            note = "Observer Range Measurement Error, Lands with Reduced Effectiveness";
             let distance = HexMap[spotter.hexLabel].cube.distance(HexMap[centre].cube);
             distance = Math.round(distance/4);
             centre = ScatterCentre(centre,distance);
         } else if (roll === 12) {
-            note = "Barrage Cancelled due to Uncertainty";
+            note = "Barrage cancelled due to Uncertainty";
         } else if (roll === 13) {
-            note = "Target Location Error, Reduced Effectiveness";
+            note = "Target Location Error, Lands with Reduced Effectiveness";
             centre = ScatterCentre(centre,5);
         } else if (roll === 14) {
-            note = "Target Location Error, Full Effectiveness";
+            note = "Target Location Error, Lands with Full Effectiveness";
             centre = ScatterCentre(centre,5);
         } else if (roll === 15) {
-            note = "Fire lands with Full Effectiveness, but Counterbattery Fire eliminated a group";
+            note = "Fire lands with Full Effectiveness, but Counterbattery Fire eliminates a group";
 //if air, change to shot down by AA
 
         } else if (roll > 15) {
@@ -2086,14 +2086,17 @@ log(unit.name)
             note: note,
             centre: centre,
         }
+        outputCard.body.push("[#ff0000]SNAFU[/#]");
+        outputCard.body.push(info.note);
+        outputCard.body.push("[hr]");
         return info;
     }
 
     const ScatterCentre = (centre,distance) => {
         //random direction, distance is in hexes
-
-
-
+        let possibles = HexLabel[centre].cube.ring(distance);
+        let newC = possibles[randomInteger(possibles.length) - 1];
+        centre = newC.label();
         return centre;
     }
 
@@ -3776,7 +3779,7 @@ log(areaFire)
     let soundType = "Mortar";
     let spotter = UnitArray[areaFire.spotterID] //for accuracy
 
-    let calibre,radius;
+    let calibre,radius,info;
     let fu = parseInt(areaFire.fu); //will be 0 if non-MRLS
     let artUnitNames = [];
     let calNum = 100;
@@ -3839,17 +3842,16 @@ log(areaFire)
 log(hexLabels)
 log(calibre)
 log(fuTip)
-
-
-    //Sound
+    SetupCard("Artillery Fire","",spotter.nation);
+    outputCard.body.push("[U]Units Involved[/u]");
+    outputCard.body.push(artUnitNames.toString());
+    outputCard.body.push("[hr]");
+    //Sound and FX
     PlaySound(soundType);
-
     const CreateExplosion = (x,y)=>{
         spawnFx(x,y,"bomb-smoke");
     };
-
     let numExplosions = 3 * hexLabels.length;
-
     const ChainExplosions = () => {
         if(numExplosions--){
             let hexLabel = hexLabels[randomInteger(hexLabels.length) - 1];
@@ -3857,33 +3859,100 @@ log(fuTip)
             setTimeout(ChainExplosions,250);
         }
     };
-
     ChainExplosions();
-
-    //fireindex
-    let FI = AreaFireIndexTable[calibre][fu];
-    //accuracy
-    let fiTip = "Full Effectiveness";
-//spotting for self means auto 6 on accuracy roll essentially
-    let accRoll = randomInteger(6);
-    if (accRoll === 1) {
-//tie this back, pick out full or reduced, cancelled etc
-        let info = IndirectAreaFireProblem(spotter,centre);
-    } else if (accRoll < accuracy) {
-        FI = Math.max(1,(FI - 5));
-        fiTip = "Reduced Effectiveness";
-    }
-
-
-
-
-
 
     if (type === "Smoke") {
         //PlaceSmoke(spotter.player,hexLabels);
     } else if (type === "HE") {
         //let targetArray = TA(radius,target,hexLabels);
         //HE(targetArray);
+
+        //fireindex
+        let FI = AreaFireIndexTable[calibre][fu];
+        //accuracy
+        let fiTip = "Full Effectiveness";
+        let info = "Lands with Full Effectiveness";
+    //spotting for self means auto 6 on accuracy roll essentially
+        let accRoll = randomInteger(6);
+        if (accRoll === 1) {
+    //tie this back, pick out full or reduced, cancelled etc
+            info = IndirectAreaFireProblem(spotter,centre);
+            centre = info.centre;
+            info = info.note;
+            if (info.includes("Reduced")) {
+                fiTip = "Lands with Reduced Effectiveness";
+            }
+            if (info.includes("Counterbattery")) {
+                if (info.includes("eliminates")) {
+                    let companies = [];
+                    _.each(artUnits,artUnit => {
+                        let company = CompanyArray[artUnit.companyID];
+                        if (companies.includes(company) === false) {
+                            companies.push(company);
+                        }
+                    })
+                    let company = companies[randomInteger(companies.length) - 1];
+                    outputCard.body.push(company.name + " is eliminated");
+                    let ids = company.tokenIDs;
+                    _.each(ids,id => {
+                        let unit = UnitArray[id];
+                        unit.Destroyed();
+                    })
+                } else {
+                    let formations = [];
+                    let companies = [];
+                    _.each(artUnits,artUnit => {
+                        if (HexMap[artUnit.hexLabel].offboard === true) {
+                            let formation = FormationArray[artUnit.formation];
+                            if (formations.includes(formation) === false) {
+                                formations.push(formation);
+                            }
+                        } else {
+                            let company = CompanyArray[artUnit.companyID];
+                            if (companies.includes(company) === false) {
+                                companies.push(company);
+                            }
+                        }
+                    })
+                    for (let i=0;i<formations.length;i++) {
+                        let formation = formations[i];
+                        outputCard.body.push(formation.name + "gets -1 on availability");
+                        formation.artAvail--;
+                        state.FFT.formationInfo[formation.id].artAvail--;
+                    }
+                    for (let i=0;i<companies.length;i++) {
+                        let company = companies[i];
+                        let ids = company.tokenIDs;
+                        let possibleIDs = artUnits.map((e) => e.id);
+                        for (let j=0;j<ids.length;j++) {
+                            let id = ids[j];
+                            if (possibleIDs.includes(id)){
+                                let unit = UnitArray[id];
+                                outputCard.body.push(unit.name + " is eliminated");
+                                unit.Destroyed();
+                                break; //1 participating unit per onboard company
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (accRoll < accuracy) {
+            fiTip = "Lands with Reduced Effectiveness";
+        }
+
+        if (info.includes("cancelled")) {
+            PrintCard();
+            return;
+        }
+
+        if (fiTip === "Reduced Effectiveness") {
+            FI = Math.max(1,(FI - 5));
+        }
+
+
+        //let targetArray = TA(radius,target,hexLabels);
+        //HE(targetArray);
+
     }
 
 
