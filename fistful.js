@@ -2009,6 +2009,18 @@ log(unit.name)
         "Very Heavy HE": [0,12,15,17,18,19,21,21,22,22,22],
     };
 
+    //A = Soft in Open, B = Soft in Light Cover or AFV in Open, C = Soft in Heavy Cover or AFV in any Cover, then reference by fire index - 1 (0 index)
+    //open topped = never in cover, +1 to die roll
+    const AreaFireChart = {
+        "A": ["-,2+S","S,6+Q","S,6+Q","S,5+Q","S,5+Q","S,5+Q","S,4+Q","S,4+Q","S,4+Q","S,3+Q","S,3+Q","S,3+Q","S,2+Q","S,2+Q","Q,6+D","Q,6+D","Q,6+D","Q,6+D","Q,6+D","Q,6+D","Q,5+D","Q,5+D"],
+        "B": ["-,5+S","-,4+S","-,3+S","-,2+S","S,6+Q","S,6+Q","S,6+Q","S,6+Q","S,6+Q","S,6+Q","S,6+Q","S,5+Q","S,5+Q","S,5+Q","S,5+Q","S,4+Q","S,4+Q","S,3+Q","S,2+Q","S,2+Q","Q,6+D","Q,6+D"],
+        "C": ["-,6+S","-,5+S","-,5+S","-,4+S","-,4+S","-,3+S","-,3+S","-,3+S","-,2+S","-,2+S","S,6+Q","S,6+Q","S,6+Q","S,6+Q","S,6+Q","S,6+Q","S,5+Q","S,5+Q","S,5+Q","S,4+Q","S,4+Q","S,3+Q"],
+    }
+
+
+
+
+
     const IndirectAreaFireProblem = (spotter,centre) => {
         let roll = randomInteger(6);
         let note,info;
