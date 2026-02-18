@@ -3949,9 +3949,9 @@ log(fuTip)
             FI = Math.max(1,(FI - 5));
         }
 
-
-        //let targetArray = TA(radius,target,hexLabels);
-        //HE(targetArray);
+        //get units under artillery
+        
+        //for each unit, apply the FI
 
     }
 
