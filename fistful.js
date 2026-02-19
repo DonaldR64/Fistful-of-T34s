@@ -92,7 +92,10 @@ const FFT = (() => {
     const companyMarkers = [1,51,101,151,201,251];
     const companyMarkerNumbers = [5982118,5982169,5982220,5982270,5982320,5982371];
 
-
+    const Doctrines = {
+        "Red Army": "Soviet",
+        "Wermacht": "Western",
+    }
 
     const Nations = {
         "Red Army": {
@@ -722,6 +725,10 @@ const FFT = (() => {
             this.artCalibre = aa.artcalibre;
             this.mrls = (this.special.includes("MRLS")) ? true:false;
 
+            this.shellTypes = aa.artshelltypes || "HE";
+
+
+
             let weapons = [];
             for (let i=1;i<3;i++) {
                 let flag = aa["weapon" + i + "flag"];
@@ -756,7 +763,7 @@ const FFT = (() => {
             }
             this.weapons = weapons;
 
-            this.spotter = 0;
+            this.spotUses = 0;
             this.artQC = false;
 
             this.formationID = "";
@@ -963,6 +970,7 @@ log(this)
             this.name = name;
             this.quality = "-";
             this.hq = false;
+            this.spotUses = 0;
             CompanyArray[cID] = this;
         }
         AddUnit(uID) {
@@ -2098,31 +2106,6 @@ log(unit.name)
         let newC = possibles[randomInteger(possibles.length) - 1];
         centre = newC.label();
         return centre;
-    }
-
-
-
-
-    const CallArtilleryONe = (msg) => {
-        let spotterID = msg.selected[0]._id;
-        let spotter = UnitArray[spotterID];
-        SetupCard(spotter.name,"Call Artillery",spotter.nation);
-
-        if (((spotter.special.includes("Recon") || spotter.special.includes("Forward Observer")) && spotter.spotter >= 2) ||  (spotter.special.includes("Recon") === false && spotter.special.includes("Forward Observer") === false && spotter.spotter >= 1)) {
-            outputCard.body.push("Unit unable to Spot for any more Barrages");
-        } else if (artUnits.length === 0) {
-            outputCard.body.push("There is no Available Artillery or Airstrikes");
-        } else {
-            for (let i=0;i<artUnits.length;i++) {
-                let artUnit = artUnits[i];
-                let pt2 = ";?{Type|HE|Smoke}";
-                if (artUnit.type === "Aircraft") {
-                    pt2 = ";HE";
-                }
-                ButtonInfo(artUnit.name,"!Artillery;" + spotterID + ";" + artUnit.id + pt2);
-            }
-        }
-        PrintCard();
     }
 
 
@@ -3714,14 +3697,18 @@ const AreaFirePhase = () => {
             if (unit.CheckSuppression()) {m -= 2};
             unit.token.set("bar1_value",m);
         }
-
         unit.startRotation = unit.token.get("rotation");
         unit.startHexLabel = unit.hexLabel;
-        unit.spotter = false;
+        unit.spotUses = 0;
         unit.artQC = false;
         unit.coverTest = false;
         unit.CC = false;
     })
+    _.each(CompanyArray,company => {
+        company.spotUses = 0;
+    })
+
+
     //remove smoke
     _.each(HexMap,hex => {
         if (hex.smokePlayer === activePlayer) {
@@ -4102,11 +4089,29 @@ const RunFormQC = () => {
 const CallArtillery = (msg) => {
     let spotterID = msg.selected[0]._id;
     let spotter = UnitArray[spotterID];
+    let number = spotter.spotUses || 0;
+
     SetupCard(spotter.name,"Call Artillery",spotter.nation);
-    if (((spotter.special.includes("Recon") || spotter.special.includes("Forward Observer")) && spotter.spotter >= 2) ||  (spotter.special.includes("Recon") === false && spotter.special.includes("Forward Observer") === false && spotter.spotter >= 1)) {
-        outputCard.body.push("Unit unable to Spot for any more Barrages");
-    } else if (artUnits.length === 0) {
-        outputCard.body.push("There is no Available Artillery or Airstrikes");
+
+    let errorMsg = [];
+    if (Doctrines[spotter.nation] === "Soviet" && spotter.special.includes("Recon") === false && spotter.special.includes("Forward Observer") === false) {
+        number = CompanyArray[spotter.companyID].spotUses || 0;
+        if (number > 1) {
+            errorMsg.push("Company FO has already spotted this round");
+        }
+    } else if (spotter.special.includes("Recon") || spotter.special.includes("Forward Observer") && number > 1) {
+        errorMsg.push("FO Has spotted already spotted twice this round");
+    } else if (number > 0) {
+        errorMsg.push("Unit has spotted already spotted this round");
+    }
+    if (artUnits.length === 0) {
+        errorMsg.push("There is no Available Artillery");
+    }
+
+    if (errorMsg.length > 0) {
+        _.each(errorMsg,msg => {
+            outputCard.body.push(msg);
+        })
     } else {
         CreateArtilleryToken(spotter);
         outputCard.body.push("Place Target and Select Artillery");
@@ -4162,9 +4167,14 @@ const CreateArtilleryToken = (spotter) => {
             }
             add = ";?{Fire Units" + add + "}"
         }
-
-
-        let action = "!AddArtillery;" + newToken.id + ";" + spotter.id + ";" + artUnits[i].id + ";?{Type|HE|Smoke}" + add;
+        let shellType = ";?{Type";
+        if (artUnit.shellType.includes("HE")) {
+            shellType += "|HE";
+        }
+        if (artUnit.shellType.includes("Smoke")) {
+            shellType += "|Smoke";
+        }
+        let action = "!AddArtillery;" + newToken.id + ";" + spotter.id + ";" + artUnits[i].id + shellType + "}" + add;
         AddAbility(abilityName,action,charID);
     }
     //then add a macro for check LOS, and a macro for Commit and Cancel
@@ -4243,7 +4253,12 @@ const CommitArtillery = (msg) => {
         let index = artUnits.map(e => e.id).indexOf(unitID);
         artUnits.splice(index,1);
     })
-    UnitArray[areaFire.spotterID].spotter++;
+    let spotter = UnitArray[areaFire.spotterID];
+    if (Doctrines[spotter.nation] === "Soviet" && spotter.special.includes("Recon") === false && spotter.special.includes("FO") === false) {
+        CompanyArray[spotter.companyID].spotUses++;
+    } else {
+        spotter.spotUses++;
+    }
     areaFire = {};
     sendChat("","Committed");
     let tokenID = msg.selected[0]._id;
