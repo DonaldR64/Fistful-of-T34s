@@ -2047,7 +2047,7 @@ log(unit.name)
         return info;
     }
 
-    const SNAFU = (centre,spotter) = () => {
+    const SNAFU = (centre,spotter) => {
         let roll = randomInteger(6) + randomInteger(6) + randomInteger(6);
         let note;
         if (roll < 6) {
@@ -2164,14 +2164,14 @@ log(unit.name)
 
         A = (eX - cX)
         B = (eY - cY)
-
+        
+        let caught = false;
         C = Math.sqrt(A*A + B*B)
         C = Math.round(C/70)*scale
         if (C<=radius) {
             caught = true
         }
-        if (C>radius) {caught = false}
-        return caught
+        return caught;
     }
 
     const Clamp = (val,min,max) => {
