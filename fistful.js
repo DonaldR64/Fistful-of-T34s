@@ -2141,16 +2141,15 @@ log(unit.name)
         PrintCard();
     }
 
-    const BlastCheck = (target,unit,radius) => {
+    const BlastCheck = (targetCentre,unit,radius) => {
         radius = radius * HexInfo.size * 2;
-        let targetCentre = HexMap[target.hexLabel].centre;
         let unitCentre = HexMap[unit.hexLabel].centre;
         let theta = Angle(unit.token.get("rotation")) * Math.PI/180;
         let w = unit.token.get("width");
         let h = unit.token.get("height");
         let squareTokens = ["Infantry","Mortar"]; //tokens without a direction triangle
         if (squareTokens.includes(unit.type) === false) {
-            h -= 10;
+            h -= 10;    
         }
         dXmin = unitCentre.x - (w/2);
         dXmax = unitCentre.x + (w/2);
@@ -2179,28 +2178,14 @@ log(unit.name)
         return (val>max) ? max:(val <min) ? min: val;
     }
 
-    const TA = (radius,target,areaHexLabels) => {
+    const TA = (radius,centreLabel,areaHexLabels) => {
         let targetArray = [];
         _.each(UnitArray,unit => {
-            if (unit.id === target.id) {return};
+            if (unit.name.includes("Target")) {return};
             if (areaHexLabels.includes(unit.hexLabel)) {
-                let info = {
-                    unitID: unit.id,
-                    coverage: "Full",
-                }
-                targetArray.push(info);
-            } else {
-                let d = target.Distance(unit);
-                if (d <= (radius +1)) {
-                    //to capture those just outside hexes
-                    let check = BlastCheck(target,unit,radius)
-                    if (check === true) {
-                        let info = {
-                            unitID: unit.id,
-                            coverage: "Partial",
-                        }
-                        targetArray.push(info);
-                    }
+                let check = BlastCheck(centreLabel,unit,radius)
+                if (check === true) {
+                    targetArray.push(unit);
                 }
             }
         })
@@ -3794,10 +3779,10 @@ log(areaFire)
             cal = MainCalibres.indexOf(artUnit.artCalibre);
             if (HexMap[artUnit.hexLabel].offboard === true && artUnit.artType !== "Battalion") {
                 fu += 2;
-                radius = 1;
+                radius = 2;
             } else {
                 fu += 1;
-                radius = 0;
+                radius = 1;
             }
             if (artUnit.type !== "Mortar") {
                 soundType = "Howitzer";
@@ -3813,10 +3798,10 @@ log(areaFire)
     if (calNum === 100) {calNum = 0};
     if (areaFire.mrls === true) {
         calibre = MRLSCalibres[calNum];
-        radius = (fu > 4) ? 2.5:2;
+        radius = (fu > 4) ? 3.5:3;
     } else {
         calibre = MainCalibres[calNum];
-        if (radius > 0 && fu > 4) {radius = 1.5};
+        if (radius > 0 && fu > 4) {radius = 2.5};
     }
 
     let accuracy = Nations[spotter.nation].artAccuracy;
@@ -3864,9 +3849,9 @@ log(fuTip)
     if (type === "Smoke") {
         //PlaceSmoke(spotter.player,hexLabels);
     } else if (type === "HE") {
-        //let targetArray = TA(radius,target,hexLabels);
-        //HE(targetArray);
-
+        let targetArray = TA(radius,centre,hexLabels);
+log(targetArray)
+return
         //fireindex
         let FI = AreaFireIndexTable[calibre][fu];
         //accuracy
@@ -3875,7 +3860,6 @@ log(fuTip)
     //spotting for self means auto 6 on accuracy roll essentially
         let accRoll = randomInteger(6);
         if (accRoll === 1) {
-    //tie this back, pick out full or reduced, cancelled etc
             info = IndirectAreaFireProblem(spotter,centre);
             centre = info.centre;
             info = info.note;
@@ -3949,8 +3933,12 @@ log(fuTip)
             FI = Math.max(1,(FI - 5));
         }
 
-        //get units under artillery
+        //get units under artillery barrage, using centre and radius
         
+
+
+
+
         //for each unit, apply the FI
 
     }
