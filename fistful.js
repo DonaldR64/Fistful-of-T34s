@@ -4177,7 +4177,7 @@ const CreateArtilleryToken = (spotter) => {
         let action = "!AddArtillery;" + newToken.id + ";" + spotter.id + ";" + artUnits[i].id + shellType + "}" + add;
         AddAbility(abilityName,action,charID);
     }
-    //then add a macro for check LOS, and a macro for Commit and Cancel
+    //then add a macro for check LOS, and a macro for Commit
     abilityName = "Check LOS";
     action = "!CheckLOS;" + spotter.id + ";" + newToken.id;
     AddAbility(abilityName,action,charID);
