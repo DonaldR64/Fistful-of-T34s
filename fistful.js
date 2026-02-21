@@ -3929,6 +3929,7 @@ return
             }
         })
         outputCard.body.push("Overwatch Fire can occur at any time");
+        outputCard.body.push("Defender’s stands pivot, if eligible");
         outputCard.body.push("Quality Checks will be done at the end of the Phase");
         PrintCard();
     }
