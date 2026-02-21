@@ -134,8 +134,7 @@ const FFT = (() => {
 
 
     const SM = {
-        suppA: "status_brown",
-        suppB: "status_yellow",
+        supp: "status_yellow",
         qc: "status_red",
         fired: "status_Shell::5553215",
         move: "status_Advantage-or-Up::2006462",
@@ -866,29 +865,6 @@ log(this)
                 return true;
             }
         }
-
-
-
-
-        CheckSuppression = () => {
-            if (this.token.get(SM.suppA) === true || this.token.get(SM.suppB) === true) {
-                return true;
-            } else {return false};
-        }
-
-        Suppress = (type,flag) => {
-            let marker = (type === "A") ? SM.suppA:SM.suppB;
-            let otherMarker = (type === "A") ? SM.suppB:SM.suppA;
-            if (flag === true) {
-                //can only have one, set the other to false
-                this.token.set(marker,true);
-                this.token.set(otherMarker,false);
-            } else {
-                this.token.set(marker,false);
-            }
-        }
-
-
 
 
 
@@ -1896,7 +1872,7 @@ log(unit.name)
         _.each(UnitArray,unit => {
             let passenger = false;
             if (unit.player === player) {
-                if (unit.artFlag === true && unit.CheckSuppression() === false) {
+                if (unit.artFlag === true && unit.token.get(SM.supp) === false) {
 log(unit.name)
                     let type = unit.artType;
                     let target, mrlsTip;
@@ -2033,7 +2009,7 @@ log(unit.name)
         let roll = randomInteger(6);
         let note,info;
         if (spotter.quality === "Good" || spotter.quality === "Excellent") {roll++};
-        if (spotter.CheckSuppression() === true) {roll--};
+        if (spotter.token.get(SM.supp) === true) {roll--};
         if (roll < 1 || roll === 3) {
             info = SNAFU(centre,spotter);
         } else if (roll === 1 || roll === 2) {
@@ -2464,12 +2440,12 @@ log(hex)
                     if (hex.cover > 0 || unit.armoured === true) {
                         if (unit.artQC === false) {
                             unit.artQC = true;
-                            unit.Suppress("A",true);
+                            unit.token.set(SM.supp,true);
                             let qc = QualityCheck(unit);
                             let noun = (qc.pass === true) ? "Suppressed":"Routs";
                             outputCard.body.push(unit.name + ' is ' + tip + ' and ' + qc.tip + ' its QC and is ' + noun);
                         } else {
-                            unit.Suppress("A",true);
+                            unit.token.set(SM.supp,true);
                             outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
                         }         
                     } else {
@@ -2483,11 +2459,11 @@ log(hex)
                         let noun = (qc.pass === true) ? "Suppressed":"Routed";
                         outputCard.body.push(unit.name + ' is ' + tip + ', ' + qc.tip + ' its QC and is ' + noun);
                         if (noun === "Suppressed") {
-                            unit.Suppress("A",true);
+                            unit.token.set(SM.supp,true);
                         }
                     } else {
                         outputCard.body.push(unit.name + ' is ' + tip + ' and Suppressed');
-                        unit.Suppress("A",true);
+                        unit.token.set(SM.supp,true);
                     }
                 }
             } else {
@@ -2518,7 +2494,7 @@ log(hex)
             unit.token.set(SM.passed,true);
             if (unit.armoured === false) {
                 effect = " and is Suppressed";
-                unit.Suppress("B",true);
+                unit.token.set(SM.supp,true);
             }
         } else {
             if (unit.armoured === true) {
@@ -2648,7 +2624,7 @@ log(hex)
             }
             if (distance <= (threshold + mod)) {
                 //spotted
-                log(unit2.name + " Has spotted")
+                //log(unit2.name + " Has spotted")
                 unit.token.set("tint_color","transparent");
                 spotted = true;
                 break;
@@ -3402,7 +3378,7 @@ needs fix for different weapons
             toHit++;
             toHitTip += "<br>-1 Long Range";
         }
-        if (shooter.CheckSuppression() === true) {
+        if (shooter.token.get(SM.supp) === true) {
             if (shooter.armoured === true) {
                 toHit++;
                 toHitTip += "<br>-1 Suppressed";
@@ -3524,7 +3500,8 @@ needs fix for different weapons
                                 if (target.token.get(SM.flag)) {
                                     passenger.token.set(SM.flag,true);
                                 }
-                                passenger.token.set(SM.suppB,true);
+                                passenger.token.set(SM.supp,true);
+;
                                 line += " and Dismounts;"
                             } else {
                                 line += " and is Destroyed";
@@ -3610,7 +3587,7 @@ needs fix for different weapons
             }
 
             if (qc.pass === true && target.armoured === false && destroyed === false) {
-                target.Suppress("B",true);
+                target.token.set(SM.supp,true);
             } else if (qc.pass === false && m > 0) {
                 outputCard.body.push("[hr]");
                 outputCard.body.push(shooter.name + " has " + m + " Movement Points left");
@@ -3625,7 +3602,7 @@ needs fix for different weapons
 const AdvancePhase = () => {
     let turn = state.FFT.turn;
     let phase = state.FFT.phase;
-    let phases = ["Deployment","Airstrikes & Area Fire","Movement","Close Combat","Direct Fire","End Phase"];
+    let phases = ["Deployment","Airstrikes & Area Fire","Movement","Close Combat","Airstrikes & Area Fire","Direct Fire","End Phase"];
     if (turn === 0) {
         currentPhase = "Deployment";
         turn = 1;
@@ -3655,20 +3632,22 @@ log("Phase" + currentPhase)
         case "Deployment":
             DeploymentPhase();
             break;
-        case "Airstrikes & Area Fire":
-            AreaFirePhase();
-            break;
         case "Movement":
-            ResolveAreaPhase();
+            MovementPhase();
             break;
         case "Close Combat":
-            FirstQC();
+            QCChecks("Close Combat"); //qcs from overwatch
+            //qcs from cc done during cc
+            break;
+        case "Airstrikes & Area Fire":
+            AreaFirePhase();
+            //qcs from area done during area
             break;
         case "Direct Fire":
             DirectFirePhase();
             break;
         case "End Phase":
-            SecondQC();
+            QCChecks("End Phase"); //qcs from direct fire
             break;
     }
     
@@ -3689,12 +3668,12 @@ const AreaFirePhase = () => {
         unit.token.set(SM.double,false);
         unit.token.set(SM.down,false);
         if (unit.player !== activePlayer) {
-            unit.Suppress("A",false);
+            unit.token.set(SM.supp,false);
         }
         if (unit.player === activePlayer) {
             unit.SetOverwatch(false);
             let m = unit.movement;
-            if (unit.CheckSuppression()) {m -= 2};
+            if (unit.token.get(SM.supp) === true) {m -= 2};
             unit.token.set("bar1_value",m);
         }
         unit.startRotation = unit.token.get("rotation");
@@ -3797,7 +3776,7 @@ log(areaFire)
         accuracy--;
         accTip += "<br>(Spotter Quality +1)";
     }
-    if (spotter.CheckSuppression() === true) {
+    if (spotter.token.get(SM.supp) === true) {
         accuracy++;
         accTip += "<br>(Spotter Suppressed -1)";
     }
@@ -3942,133 +3921,122 @@ return
 
 
 
-const MovementPhase = () => {
-    RemoveDead();
-log(currentPhase)
-
-    _.each(CompanyArray,company => {
-        if (company.player === activePlayer) {
-log(company.player)
-            company.Cohesion();
-        }
-    })
-    outputCard.body.push("Overwatch Fire can occur at any time");
-    outputCard.body.push("Quality Checks will be done at the end of the Phase");
-    PrintCard();
-}
-
-const FirstQC = () => {
-    _.each(CompanyArray,company => {
-        if (company.player === activePlayer) {
-            company.Cohesion();
-        }
-    })
-    RemoveMoveMarkers();   
-    //qc from overwatch, note on unit somewhere has passed, ? a green dot
-    QCCheck(); //builds array qcUnits
-    nextPhase = "CloseCombat";
-    RunQC(); //checks it, when 'empty' feed to nextPhase
-}
-
-const CloseCombatPhase = () => {
-    RemoveDead();
-    //qc from overwatch, note on unit somewhere has passed, ? a green dot
-    outputCard.body.push("Resolve Close Combats");
-    outputCard.body.push("The Active Player determines the order of the Close Combats");
-    PrintCard();
-}
-
-const DirectFirePhase = () => {
-    RemoveMoveMarkers();   
-    RemoveDead();
-    //spotting from movement phase
-    _.each(UnitArray,unit => {
-        if (unit.player !== activePlayer) {
-            unit.Suppress("B",false);
-        }
-    })
-    outputCard.body.push("Overwatch Fire must take place BEFORE the Active Player begins their own fire");
-    outputCard.body.push("Quality Checks will be done at the end of the Phase");
-    PrintCard();
-}
-
-const SecondQC = () => {
-    //qc from Direct Fire
-    QCCheck(); //builds array qcUnits
-    nextPhase = "FormQC";
-    RunQC(); //checks it, when 'empty' feed to nextPhase
-}
-
-const StartFormQC = () => {
-    RemoveDead();
-    //check formations for their quality checks if warranted
-    let qcFormations = [];
-    _.each(FormationArray, formation => {
-        if (formation.casualties >= formation.breakpoint) {
-            qcFormations.push(formation);
-        }
-    })
-    RunFormQC();
-}
-
-const EndPhase = () => {
-    RemoveDead();
-    //place any unit of active players that didnt move or fire on overwatch
-    _.each(UnitArray,unit => {
-        if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false && unit.player === activePlayer && unit.token.get(SM.unavail) === false && unit.weapons.length > 0) {
-            //sets overwatch
-            unit.SetOverwatch(true);
-        }
-        //spotting for end phase
-        CheckSpotting(unit,"End")
-    })
-    ButtonInfo("Next Turn ?","!AdvancePhase");
-    PrintCard();
-}
-
-const RunQC = () => {
-    let unit = qcUnits.shift();
-    if (unit) {
-        sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
-        SetupCard(unit.name,"Quality Check",unit.nation);
-        ButtonInfo("Make Quality Check","!TakeQC;" + unit.id);
+    const MovementPhase = () => {
+        _.each(CompanyArray,company => {
+            if (company.player === activePlayer) {
+    log(company.player)
+                company.Cohesion();
+            }
+        })
+        outputCard.body.push("Overwatch Fire can occur at any time");
+        outputCard.body.push("Quality Checks will be done at the end of the Phase");
         PrintCard();
-    } else {
-        if (nextPhase === "CloseCombat") {
-            CloseCombatPhase();
-        } else if (nextPhase === "EndPhase") {
-            EndPhase();
-        } else if (nextPhase === "FormQC") {
-            StartFormQC();
-        } else {
-            sendChat("","??")
-        }
     }
-}
 
-const QCCheck = () => {
-    qcUnits = [];
-        _.each(UnitArray,unit => {
-        if (unit.token.get(SM.qc)) {
-            qcUnits.push(unit);
+    const QCChecks = (phase) => {
+        if (phase === "Close Combat") {
+            _.each(CompanyArray,company => {
+                if (company.player === activePlayer) {
+                    company.Cohesion();
+                }
+            })
+            RemoveMoveMarkers();   
+            _.each(UnitArray,unit => {
+                CheckSpotting(unit,"Movement")
+            })
         }
-    })
-}
 
-const RunFormQC = () => {
-    let formation = qcFormations.shift();
-    if (formation) {
-        let unit = UnitArray[formation.tokenIDs[0]];
+        //qc from overwatch, note on unit somewhere has passed, ? a green dot
+        QCCheck(); //builds array qcUnits
+        RunQC(phase); //checks it, when 'empty' feed to nextPhase
+    }
+
+    const CloseCombatPhase = () => {
+        RemoveDead();
+        //qc from overwatch, note on unit somewhere has passed, ? a green dot
+        outputCard.body.push("Resolve Close Combats");
+        outputCard.body.push("The Active Player determines the order of the Close Combats");
+        PrintCard();
+    }
+
+    const DirectFirePhase = () => {
+        RemoveMoveMarkers();   
+        RemoveDead();
+        //spotting from movement phase
+
+        outputCard.body.push("Overwatch Fire must take place BEFORE the Active Player begins their own fire");
+        outputCard.body.push("Quality Checks will be done at the end of the Phase");
+        PrintCard();
+    }
+
+    const StartFormQC = () => {
+        RemoveDead();
+        //check formations for their quality checks if warranted
+        let qcFormations = [];
+        _.each(FormationArray, formation => {
+            if (formation.casualties >= formation.breakpoint) {
+                qcFormations.push(formation);
+            }
+        })
+        RunFormQC();
+    }
+
+    const EndPhase = () => {
+        RemoveDead();
+        //place any unit of active players that didnt move or fire on overwatch
+        _.each(UnitArray,unit => {
+            if (unit.token.get(SM.fired) === false && unit.token.get(SM.move) === false && unit.token.get(SM.double) === false && unit.player === activePlayer && unit.token.get(SM.unavail) === false && unit.weapons.length > 0) {
+                //sets overwatch
+                unit.SetOverwatch(true);
+            }
+            //spotting for end phase
+            CheckSpotting(unit,"End")
+        })
+        ButtonInfo("Next Turn ?","!AdvancePhase");
+        PrintCard();
+    }
+
+    const RunQC = (phase) => {
+        let unit = qcUnits.shift();
         if (unit) {
             sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
-            SetupCard(formation.name,"Formation QC",unit.nation);
-            ButtonInfo("Make Quality Check","!TakeFQC;" + unit.id);
+            SetupCard(unit.name,"Quality Check",unit.nation);
+            ButtonInfo("Make Quality Check","!TakeQC;" + unit.id);
             PrintCard();
+        } else {
+            if (phase === "Close Combat") {
+                CloseCombatPhase();
+            } else if (phase === "End Phase") {
+                StartFormQC();
+            } else {
+                sendChat("","??")
+            }
         }
-    } else {
-       EndPhase();
     }
-}
+
+    const QCCheck = () => {
+        qcUnits = [];
+            _.each(UnitArray,unit => {
+            if (unit.token.get(SM.qc)) {
+                qcUnits.push(unit);
+            }
+        })
+    }
+
+    const RunFormQC = () => {
+        let formation = qcFormations.shift();
+        if (formation) {
+            let unit = UnitArray[formation.tokenIDs[0]];
+            if (unit) {
+                sendPing(unit.token.get("left"),unit.token.get("top"),Campaign().get("playerpageid"),null,true);
+                SetupCard(formation.name,"Formation QC",unit.nation);
+                ButtonInfo("Make Quality Check","!TakeFQC;" + unit.id);
+                PrintCard();
+            }
+        } else {
+        EndPhase();
+        }
+    }
 
     const UnitQC = (msg) => {
         if (!msg.selected) {
@@ -4370,7 +4338,7 @@ const CommitArtillery = (msg) => {
 log("Start: " + startHex.label)
 log("End: " + endHex.label)
         let move = unit.movement;
-        if (unit.CheckSuppression() === true) {
+        if (unit.token.get(SM.supp) === true) {
             move = Math.max(0,move - 2);
         }
 
