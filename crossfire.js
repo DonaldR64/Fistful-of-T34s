@@ -1,12 +1,9 @@
 const FFT = (() => {
     const version = '2026.2.16';
-    if (!state.FFT) {state.FFT = {}};
+    if (!state.CF) {state.CF = {}};
 
     const pageInfo = {};
     const rowLabels = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","AA","AB","AC","AD","AE","AF","AG","AH","AI","AJ","AK","AL","AM","AN","AO","AP","AQ","AR","AS","AT","AU","AV","AW","AX","AY","AZ","BA","BB","BC","BD","BE","BF","BG","BH","BI"];
-
-
-    const MoveMarkers = ["https://files.d20.io/images/344441274/R0eEVMFzhYmwv6rigIA7GA/thumb.png?1685718541","https://s3.amazonaws.com/files.d20.io/images/435360245/m3tKJi3Pqb_40g75O6ouSg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360246/pXI3HBrGMZ05ldDfH-zYCQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360229/JKMY922qxhf0E3z1l10jQg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360228/YDGEQNR_qVFprdHJSjYNPg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360232/1TysQcieJ5zbgYvXV4pqiA/thumb.png?1743563857","https://s3.amazonaws.com/files.d20.io/images/435360240/KfCmoF5WyWTStCWOTPrkJg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360230/zjvzMFGWotZUORDeIVXrEw/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360226/-TXBFvMfahwOIjXEuS0mTQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360237/gEr7oP4z0ByUKTXpvSHYQQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360241/2HAnTYlC0uVR6mqyMoaACA/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360244/CDOLr8RkQ-pPhwjaOHTbEA/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360243/023KSjjB8QHtrMNbuO3ENQ/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360242/xx2msq4HjqRN5dUaPl0vfA/thumb.png?1743563857","https://s3.amazonaws.com/files.d20.io/images/435360236/L-iuGURhzreq2t2mKOj3Qg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360247/v2Y15K10F2qZK268wPzYyw/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360239/SXny1fVCh5PeYxLGtnoPTA/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360233/EdB3z27csNyykkc2lWTefw/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360227/JpFvEVLKlKV6n6JsE8zrVg/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360234/5b2XrhzPgfgjdoI5y97LnQ/thumb.png?174356385","https://s3.amazonaws.com/files.d20.io/images/435360238/_sWU7YtYJsWT1NZC-wb80Q/thumb.png?1743563857","https://s3.amazonaws.com/files.d20.io/images/435360231/n7HVTuMwWch59Aofq1v96w/thumb.png?1743563856","https://s3.amazonaws.com/files.d20.io/images/435360235/yVtSNUPJOkxq0n2_FknMcA/thumb.png?1743563856"];
 
     let HexSize, HexInfo, DIRECTIONS;
 
@@ -75,27 +72,11 @@ const FFT = (() => {
     }
 
     let UnitArray = {};
-    let FormationArray = {};
     let CompanyArray = {};
-    let qcUnits = [];
-    let qcFormations = [];
-    let artUnits = [];
-    let activePlayer = state.FFT.activePlayer || 0;
-    let currentPhase = state.FFT.phase || "Deployment";
-    let nextPhase = "";
-    let MapAreas = {};
-    let areaFire = {};
-    let areaFireList = [];
+
+    let activePlayer = state.CF.activePlayer || 0;
 
     let outputCard = {title: "",subtitle: "",side: "",body: [],buttons: [],};
-
-    const companyMarkers = [1,51,101,151,201,251];
-    const companyMarkerNumbers = [5982118,5982169,5982220,5982270,5982320,5982371];
-
-    const Doctrines = {
-        "Red Army": "Soviet",
-        "Wermacht": "Western",
-    }
 
     const Nations = {
         "Red Army": {
@@ -105,9 +86,6 @@ const FFT = (() => {
             "fontColour": "#000000",
             "borderColour": "#ff0000",
             "borderStyle": "5px groove",
-            "hq": "Soviet::6433738",
-            "response": 3,
-            "artAccuracy": 5.
         },
         "Wermacht": {
             "image": "",
@@ -116,9 +94,6 @@ const FFT = (() => {
             "fontColour": "#000000",
             "borderColour": "#000000",
             "borderStyle": "5px double",
-            "hq": "Iron-Cross::7650254",
-            "response": 3,
-            "artAccuracy": 5,
         },
 
         "Neutral": {
@@ -134,27 +109,16 @@ const FFT = (() => {
 
 
     const SM = {
-        supp: "status_yellow",
-        qc: "status_red",
-        fired: "status_Shell::5553215",
-        move: "status_Advantage-or-Up::2006462",
-        double: "status_Fast::5868456",
+        pin: "status_yellow",
+        supp: "status_red",
         unavail: "status_oneshot::5503748",
-        down: "status_Disadvantage-or-Down::2006464",
-        passed: "status_green",
-        flag: "status_Red_Flag::5610550",
-        full: "status_Cover-Full::2006474",
+        hug: "status_Disadvantage-or-Down::2006464",
+
 
 
 
     }
 
-    const areaColours = {
-        "#000000": "Wermacht",
-        "#ff0000": "Red Army"
-
-
-    }
 
 
 
@@ -689,12 +653,12 @@ const FFT = (() => {
             this.special = aa.special || " ";
 
             this.nation = aa.nation || "Neutral";
-            if (state.FFT.nations[0] === "") {
-                state.FFT.nations[0] = this.nation;
-            } else if (state.FFT.nations[0] !== this.nation && state.FFT.nations[1] === "") {
-                state.FFT.nations[1] = this.nation;
+            if (state.CF.nations[0] === "") {
+                state.CF.nations[0] = this.nation;
+            } else if (state.CF.nations[0] !== this.nation && state.CF.nations[1] === "") {
+                state.CF.nations[1] = this.nation;
             }
-            this.player = (this.nation === "Neutral") ? 2:(state.FFT.nations[0] === this.nation)? 0:1;
+            this.player = (this.nation === "Neutral") ? 2:(state.CF.nations[0] === this.nation)? 0:1;
             this.type = aa.type;
             this.movement = parseInt(aa.movement) || 0;
             this.moveType = aa.movetype ? aa.movetype.toLowerCase(): "NA";
@@ -887,7 +851,7 @@ log(this)
             this.companyIDs = [];
             this.quality = quality;
             FormationArray[fID] = this;
-            if (!state.FFT.formationInfo[fID]) {
+            if (!state.CF.formationInfo[fID]) {
                 let info = {
                     name: name,
                     nation: this.nation,
@@ -896,9 +860,9 @@ log(this)
                     tokenIDs: this.tokenIDs,
                     quality: quality,
                 }
-                state.FFT.formationInfo[fID] = info;
+                state.CF.formationInfo[fID] = info;
             } else {
-                let info = state.FFT.formationInfo[fID]
+                let info = state.CF.formationInfo[fID]
                 this.casualties = info.casualties;
                 this.breakpoint = info.breakpoint;
                 this.type = info.type;
@@ -1540,7 +1504,7 @@ log(vertices)
         let transportID = Tag[2];
         let transport = UnitArray[transportID];
         let errorMsg = [];
-        let passengerID = (type === "Disembark") ? state.FFT.transportInfo[transportID]:Tag[3];
+        let passengerID = (type === "Disembark") ? state.CF.transportInfo[transportID]:Tag[3];
         let passenger = UnitArray[passengerID];
         let pMove,tMove,dist;
 
@@ -1552,7 +1516,7 @@ log(vertices)
             dist = (type === "Embark") ? transport.Distance(passenger):0;
             pMove = parseInt(passenger.token.get("bar1_value")) - 2;
             tMove = parseInt(transport.token.get("bar1_value")) - 2;
-            if (dist > 1 && state.FFT.turn > 0 && HexMap[passenger.hexLabel].offboard === false) {
+            if (dist > 1 && state.CF.turn > 0 && HexMap[passenger.hexLabel].offboard === false) {
                 errorMsg.push("Need to be Adjacent");
             }
             if (pMove < 0 && passenger.moveType === "Leg") {
@@ -1576,7 +1540,7 @@ log(vertices)
         }
 
         if (type === "Embark") {
-            state.FFT.transportInfo[transportID] = passengerID;
+            state.CF.transportInfo[transportID] = passengerID;
             transport.token.set(SM.full,true);
             transport.token.set("bar1_value",tMove);
             let area = MapAreas[transport.nation];
@@ -1594,7 +1558,7 @@ log(vertices)
             }
         } else if (type === "Disembark") {
             pMove++;
-            delete state.FFT.transportInfo[transportID];
+            delete state.CF.transportInfo[transportID];
             transport.token.set(SM.full,false);
             transport.token.set("bar1_value",tMove);
             passenger.token.set({
@@ -1642,12 +1606,12 @@ log(vertices)
             if (character && fID && fID.includes("TargetIcon") === false) {
                 let unit = new Unit(token.get("id"));
                 let formation = FormationArray[fID];
-                let formationInfo = state.FFT.formationInfo[fID];
+                let formationInfo = state.CF.formationInfo[fID];
                 let company = CompanyArray[cID];
-                let companyInfo = state.FFT.companyInfo[cID];
+                let companyInfo = state.CF.companyInfo[cID];
                 if (!formation) {
                     if (formationInfo) {
-                        formation = new Formation(state.FFT.formationInfo[fID].name,unit.id,state.FFT.formationInfo[fID].quality,fID);
+                        formation = new Formation(state.CF.formationInfo[fID].name,unit.id,state.CF.formationInfo[fID].quality,fID);
                         if (!company) {
                             company = new Company(companyInfo.name,cID);
                             formation.AddCompany(company.id);
@@ -1739,16 +1703,16 @@ log(vertices)
         let Tag = msg.content.split(";");
         let firstNation = Tag[1];
         let roads = Tag[2];
-        let firstPlayer = state.FFT.nations[0] === firstNation ? 0:1;
-        state.FFT.firstPlayer = firstPlayer;
-        state.FFT.turn = 0;
-        state.FFT.activePlayer = 2;
-        state.FFT.phase = "";
+        let firstPlayer = state.CF.nations[0] === firstNation ? 0:1;
+        state.CF.firstPlayer = firstPlayer;
+        state.CF.turn = 0;
+        state.CF.activePlayer = 2;
+        state.CF.phase = "";
         RemoveMoveMarkers();
-        state.FFT.moveMarkers = [];
-        state.FFT.visibility = 70; //can later alter this
+        state.CF.moveMarkers = [];
+        state.CF.visibility = 70; //can later alter this
 
-        state.FFT.roads = (roads === "True") ? true:false;
+        state.CF.roads = (roads === "True") ? true:false;
 
 
 
@@ -2088,8 +2052,8 @@ log(unit.name)
 
 
     const CheckArtillery = () => {
-        let player = state.FFT.activePlayer;
-        let nation = state.FFT.nations[player];
+        let player = state.CF.activePlayer;
+        let nation = state.CF.nations[player];
         SetupCard("Available Artillery","",nation);
         _.each(artUnits,unit => {
             outputCard.body.push(unit.name);
@@ -2214,13 +2178,13 @@ log(unit.name)
             }
         }
         if ((!id || !unit) && playerID) {
-            nation = state.FFT.players[playerID];
-            player = (state.FFT.nations[0] === nation) ? 0:1;
+            nation = state.CF.players[playerID];
+            player = (state.CF.nations[0] === nation) ? 0:1;
         }
 
-        if (!state.FFT.players[playerID] || state.FFT.players[playerID] === undefined) {
+        if (!state.CF.players[playerID] || state.CF.players[playerID] === undefined) {
             if (nation !== "Neutral") {    
-                state.FFT.players[playerID] = nation;
+                state.CF.players[playerID] = nation;
             } else {
                 sendChat("","Click on one of your tokens then select Roll again");
                 return;
@@ -2571,7 +2535,7 @@ log(hex)
         let unitHex = HexMap[unit.hexLabel];
         let cover = unitHex.cover > 0 ? true:false;
         let fired = unit.token.get(SM.fired);
-        let vis = state.FFT.visibility;
+        let vis = state.CF.visibility;
 
         let threshold;
         if (unit.moveType === "Leg") {
@@ -2677,7 +2641,7 @@ log(hex)
     
         RemoveDead("All");
 
-        state.FFT = {
+        state.CF = {
             playerIDs: ["",""],
             players: {},
             nations: ["",""],
@@ -2700,8 +2664,8 @@ log(hex)
 
 
     const RemoveDepLines = () => {
-        for (let i=0;i<state.FFT.deployLines.length;i++) {
-            let id = state.FFT.deployLines[i];
+        for (let i=0;i<state.CF.deployLines.length;i++) {
+            let id = state.CF.deployLines[i];
             let path = findObjs({_type: "path", id: id})[0];
             if (path) {
                 path.remove();
@@ -2764,13 +2728,13 @@ log(hex)
         formation.breakpoint = breakpoint;
         formation.type = formationType;
         formation.artAvail = artAvail;
-        state.FFT.formationInfo[formation.id].breakpoint = breakpoint;
-        state.FFT.formationInfo[formation.id].type = formationType;
-        state.FFT.formationInfo[formation.id].artAvail = artAvail;
+        state.CF.formationInfo[formation.id].breakpoint = breakpoint;
+        state.CF.formationInfo[formation.id].type = formationType;
+        state.CF.formationInfo[formation.id].artAvail = artAvail;
 
 
         if (formationType === "Combat") {
-            state.FFT.formNum[formation.player]++;
+            state.CF.formNum[formation.player]++;
         } 
 
         for (let i=0;i<msg.selected.length;i++) {
@@ -2840,7 +2804,7 @@ log(hex)
         let noFlag = false;
         let symbol;
         let formation = FormationArray[unitI.formationID];
-        let formNum = state.FFT.formNum[player] - 1;
+        let formNum = state.CF.formNum[player] - 1;
         if (formNum > 5) {
             formNum -= 6;
         }
@@ -2901,7 +2865,7 @@ log(symbol)
             name: companyName,
             hq: company.hq,
         }
-        state.FFT.companyInfo[company.id] = info;
+        state.CF.companyInfo[company.id] = info;
         sendChat("",companyName + " Added")
     }
 
@@ -3600,8 +3564,8 @@ needs fix for different weapons
 
 
 const AdvancePhase = () => {
-    let turn = state.FFT.turn;
-    let phase = state.FFT.phase;
+    let turn = state.CF.turn;
+    let phase = state.CF.phase;
     let phases = ["Deployment","Airstrikes & Area Fire","Movement","Close Combat","Airstrikes & Area Fire","Direct Fire","End Phase"];
     if (turn === 0) {
         currentPhase = "Deployment";
@@ -3622,11 +3586,11 @@ const AdvancePhase = () => {
         currentPhase = phases[phaseNum];
     }
 
-    state.FFT.turn = turn;
-    state.FFT.activePlayer = activePlayer;
-    state.FFT.phase = currentPhase;
+    state.CF.turn = turn;
+    state.CF.activePlayer = activePlayer;
+    state.CF.phase = currentPhase;
 
-    SetupCard(currentPhase,"Turn " + turn,state.FFT.nations[activePlayer]);
+    SetupCard(currentPhase,"Turn " + turn,state.CF.nations[activePlayer]);
 log("Phase" + currentPhase)
     switch(currentPhase) {
         case "Deployment":
@@ -3710,7 +3674,7 @@ const AreaFirePhase = () => {
 const ResolveAreaPhase = () => {
     areaFire = areaFireList.shift();
     if (areaFire) {
-        SetupCard("Area Fire","",state.FFT.nations[activePlayer]);
+        SetupCard("Area Fire","",state.CF.nations[activePlayer]);
         ButtonInfo("Resolve Next","!AreaFire");
         PrintCard();
     } else {
@@ -3868,7 +3832,7 @@ return
                         let formation = formations[i];
                         outputCard.body.push(formation.name + "gets -1 on availability");
                         formation.artAvail--;
-                        state.FFT.formationInfo[formation.id].artAvail--;
+                        state.CF.formationInfo[formation.id].artAvail--;
                     }
                     for (let i=0;i<companies.length;i++) {
                         let company = companies[i];
@@ -4256,7 +4220,7 @@ const CommitArtillery = (msg) => {
             if (label !== unit.hexLabel || tok.get("rotation") !== prev.rotation) {
                 RemoveMoveMarkers();   
                 let move = parseInt(tok.get("bar1_value")) || 0;
-                if (state.FFT.turn > 0 && tok.get("name").includes("Target") === false && currentPhase !== "Deployment") {
+                if (state.CF.turn > 0 && tok.get("name").includes("Target") === false && currentPhase !== "Deployment") {
                     if (HexMap[label].moveCosts[unit.moveType] === -1 || (move <= 0 && prevLabel !== label) || unit.token.get(SM.down)) {
                         tok.set("left",prev.left);
                         tok.set("top",prev.top);
@@ -4383,7 +4347,7 @@ log("Node: " + node.label)
                 if (stepHex.offboard === true) {continue};
                 let cost = stepHex.moveCosts[unit.moveType];
                 if (cost === -1) {continue}
-                if (stepHex.road === true && HexMap[node.label].road === true && state.FFT.roads === true && stepHex.terrain.includes("Wrecks") === false && stepHex.terrain.includes("Craters") === false) {
+                if (stepHex.road === true && HexMap[node.label].road === true && state.CF.roads === true && stepHex.terrain.includes("Wrecks") === false && stepHex.terrain.includes("Craters") === false) {
                     cost = RoadCosts[unit.moveType];
                 }
 
@@ -4469,13 +4433,13 @@ log("Final Hex Label: " + finalHexLabel)
     }
 
     const RemoveMoveMarkers = () => {
-        _.each(state.FFT.moveMarkers,markerID => {
+        _.each(state.CF.moveMarkers,markerID => {
             let tok = findObjs({_type:"graphic", id: markerID})[0];
             if (tok) {
                 tok.remove();
             }
         })
-        state.FFT.moveMarkers = [];
+        state.CF.moveMarkers = [];
     }
 
     const AddMoveMarker = (cost,hexLabel) => {
@@ -4499,7 +4463,7 @@ log("Final Hex Label: " + finalHexLabel)
         if (newToken) {
             toFront(newToken);
         } 
-        state.FFT.moveMarkers.push(newToken.id);
+        state.CF.moveMarkers.push(newToken.id);
     }
 
 
@@ -4539,7 +4503,7 @@ log("Final Hex Label: " + finalHexLabel)
         switch(args[0]) {
             case '!Dump':
                 log("State");
-                log(state.FFT);
+                log(state.CF);
                 log("Map Areas");
                 log(MapAreas);
                 log("Units");
