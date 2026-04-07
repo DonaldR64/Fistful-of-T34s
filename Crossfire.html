@@ -15,9 +15,9 @@
                 <option value="" selected disabled hidden>Choose here</option>
                 <option value="Squad">Squad</option>
                 <option value="Leader">Leader</option>
-                <option value="HMG Section">HMG Section</option>
-                <option value="Mortar Section">Mortar Section</option>
-
+                <option value="Heavy Weapon">Heavy Weapon</option>
+                <option value="Gun">Gun</option>
+                <option value="Vehicle">Vehicle</option>
             </select>
             <label for="attr_nation">Nation:</label>
             <select name="attr_nation">
@@ -31,24 +31,14 @@
 
         </div>
         <div class="col">
-            <h3>Attributes</h3>
-            <label for="attr_movetype">Movement Type:</label>
-            <select name="attr_movetype">
-                <option value="" selected disabled hidden>Choose here</option>
-                <option value="Leg">Leg</option>
-                <option value="Towed">Towed</option>
-                <option value="Wheeled">Wheeled</option>
-                <option value="Halftrack">Halftrack</option>
-                <option value="Tracked">Tracked</option>
-                <option value="Aircraft">Aircraft</option>
-            </select>
+            <h3>Armour</h3>
             <label for="attr_armour">Armour:</label>
             <select name="attr_armour">
-                <option selected="selected" value = "None">None</option>
-                <option value="Light">Light</option>
-                <option value="Medium">Medium</option>
-                <option value="Heavy">Heavy</option>
-                <option value="Super-Heavy">Super-Heavy</option>
+                <option selected="selected" value = "">None</option>
+                <option value="Light Armour">Light Armour</option>
+                <option value="Medium Armour">Medium Armour</option>
+                <option value="Heavy Armour">Heavy Armour</option>
+                <option value="Super-Heavy Armour">Super-Heavy Armour</option>
             </select>
             <br>
         </div>
@@ -144,25 +134,11 @@
                 <div class="top-right">
                     <h1><span name="attr_character_name"></span></h1>   
                     <h3><span name="attr_nation"></span> <span name="attr_type"></span></h3>
+                    <h4><span name="attr_armour"></span></h4>
                     <h4><span name="attr_special"></span></h4>
                 </div>
               <img alt="Character Avatar" name="attr_character_avatar" style="width:600px;height:auto; bottom: 0;"/>
           </section>
-
-          <section class="attr">
-            <div class="attrinfo">
-                <h3>Movement Type</h3>
-                <h3 style="color: darkred;"><span name="attr_movetype"></span></h3>
-            </div>
-          </section>
-
-          <section class="attr3">
-            <div class="attr3info">
-                <h3>Armour</h3>
-                <h3 style="color: darkred;"><span name="attr_armour"></span></h3>
-            </div>
-          </section>
-
 
 
           <section class="attr2">
