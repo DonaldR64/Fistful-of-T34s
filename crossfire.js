@@ -139,12 +139,10 @@ const FFT = (() => {
 
 
     const TerrainInfo = {
-        "Heavy Woods": {name: "Heavy Woods",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2, towed: 2}, cover: 1},
-        "Town": {name: "Town",height: 1, moveCosts: {leg: 1, tracked: 2, wheeled: 2, halftrack: 2, towed: 2}, cover: 2},
+        "Woods": {name: "Woods",},
+        "Building 1": {name: "Building 1",},
         "River": {name: "River",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1, towed: -1}, cover: 0,},
         "Craters": {name: "Craters",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 3, halftrack: 3,towed: 2}, cover: 0,},
-        "Wrecks": {name: "Wrecks",height: 0, moveCosts: {leg: 1, tracked:2, wheeled: 3, halftrack: 3,towed: 2}, cover: 0,},
-        "Water": {name: "Water",height: 0, moveCosts: {leg: -1, tracked:-1, wheeled: -1, halftrack: -1,towed: -1}, cover: 0,},
 
 
 
